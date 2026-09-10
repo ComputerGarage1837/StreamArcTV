@@ -1,6 +1,6 @@
 # Update manifest format
 
-Each stable GitHub release must use a tag matching v<versionName> and attach exactly one update.json file with schema version 1:
+Before publishing a stable GitHub release, update `release/update.json` on `main`. The release must use a tag matching `v<versionName>` and attach the APK asset named in that feed. The metadata uses schema version 1:
 
 ```json
 {
@@ -16,6 +16,6 @@ Each stable GitHub release must use a tag matching v<versionName> and attach exa
 }
 ```
 
-The named APK asset must exist exactly once in the same release. Its GitHub asset size must match sizeBytes. The app rejects prerelease or draft releases and rejects unknown fields, mismatched tags, package names, asset names, sizes, hashes, versions, or signing certificates.
+The named APK asset must exist in the release. Keep `sha256` and `sizeBytes` accurate for release management and auditing. The app compares `versionCode` with the installed version and only offers a newer build.
 
 The application ID and signing certificate must remain unchanged for all later updates. The Android version code must increase with every release.
