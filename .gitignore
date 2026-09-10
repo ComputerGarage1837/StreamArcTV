@@ -1,0 +1,18 @@
+# Local build and reverse-engineering output
+build/
+out/
+dist/
+.gradle/
+.idea/
+*.iml
+*.apk
+*.aab
+*.aab.zip
+*.keystore
+*.jks
+local.properties
+
+# Local credentials and test data
+*.env
+secrets/
+test-accounts/
