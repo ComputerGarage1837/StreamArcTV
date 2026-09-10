@@ -11,7 +11,7 @@ Each stable GitHub release should contain:
 - `Stream-Arc-TV-<version>.apk` — the installable Android TV application.
 - The matching `release/update.json` update feed is committed on `main` before publishing the release.
 
-The updater reads the feed from `main`, compares the Android version code, and downloads the named APK from the latest GitHub release. Android will only accept a later APK when it is signed with the same release key.
+The updater checks the feed automatically when Stream Arc TV opens, compares the Android version code, and only shows the update screen when a newer build is available. The download screen reports progress before handing the APK to Android for installation. Android will only accept a later APK when it is signed with the same release key.
 
 ## Installation
 
