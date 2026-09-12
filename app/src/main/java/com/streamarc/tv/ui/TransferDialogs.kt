@@ -96,8 +96,8 @@ object TransferDialogs {
         val startCal = (now.clone() as java.util.Calendar).apply { add(java.util.Calendar.MINUTE, 1) }
         val endCal = (startCal.clone() as java.util.Calendar).apply { add(java.util.Calendar.HOUR_OF_DAY, 1) }
 
-        val start = TimeWheels(vb.startHour, vb.startMinute, vb.startAmPm)
-        val end = TimeWheels(vb.endHour, vb.endMinute, vb.endAmPm)
+        val start = TimeWheels(vb.startHour, vb.startMinute)
+        val end = TimeWheels(vb.endHour, vb.endMinute)
         start.set(startCal.get(java.util.Calendar.HOUR_OF_DAY), startCal.get(java.util.Calendar.MINUTE))
         end.set(endCal.get(java.util.Calendar.HOUR_OF_DAY), endCal.get(java.util.Calendar.MINUTE))
 
@@ -141,51 +141,30 @@ object TransferDialogs {
         vb.startHour.requestFocus()
     }
 
-    /** Hour (1–12), minute (00–59) and AM/PM wheels that work by touch and with a remote. */
-    private class TimeWheels(val hour: android.widget.NumberPicker, val minute: android.widget.NumberPicker, val ampm: android.widget.NumberPicker) {
+    /**
+     * One hour wheel that runs through the whole day (12 AM … 11 AM, 12 PM … 11 PM and
+     * wraps to the next day) plus a minute wheel. Works by touch and with a remote.
+     */
+    private class TimeWheels(val hour: android.widget.NumberPicker, val minute: android.widget.NumberPicker) {
         var onChange: (() -> Unit)? = null
 
         init {
-            hour.minValue = 1; hour.maxValue = 12; hour.wrapSelectorWheel = true
+            hour.minValue = 0; hour.maxValue = 23; hour.wrapSelectorWheel = true
+            hour.displayedValues = Array(24) { h ->
+                val h12 = if (h % 12 == 0) 12 else h % 12
+                "$h12 ${if (h < 12) "AM" else "PM"}"
+            }
             minute.minValue = 0; minute.maxValue = 59; minute.wrapSelectorWheel = true
             minute.setFormatter { v -> String.format(Locale.US, "%02d", v) }
-            ampm.minValue = 0; ampm.maxValue = 1; ampm.displayedValues = arrayOf("AM", "PM"); ampm.wrapSelectorWheel = true
-            for (p in listOf(hour, minute, ampm)) {
-                p.descendantFocusability = android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS   // no keyboard pop-up; wheels only
+            for (p in listOf(hour, minute)) {
+                p.descendantFocusability = android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS   // wheels only, no keyboard
                 p.setOnValueChangedListener { _, _, _ -> onChange?.invoke() }
             }
         }
 
-        fun set(hour24: Int, min: Int) {
-            hour.value = if (hour24 % 12 == 0) 12 else hour24 % 12
-            minute.value = min
-            ampm.value = if (hour24 >= 12) 1 else 0
-        }
-
-        fun hour24(): Int = (hour.value % 12) + if (ampm.value == 1) 12 else 0
+        fun set(hour24: Int, min: Int) { hour.value = hour24; minute.value = min }
+        fun hour24(): Int = hour.value
         fun minute(): Int = minute.value
-    }
-
-    /**
-     * Turns start/end clock times into epoch millis: a start earlier than now means
-     * tomorrow (unless it is within the last minute, which means "now"), and an end
-     * at or before the start rolls over to the next day.
-     */
-    private fun resolve(sh: Int, sm: Int, eh: Int, em: Int): Pair<Long, Long> {
-        val now = System.currentTimeMillis()
-        val start = java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, sh); set(java.util.Calendar.MINUTE, sm); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
-        }
-        var st = start.timeInMillis
-        if (st < now - 90_000) st += 24 * 3600 * 1000L
-        if (st < now) st = now
-        val end = java.util.Calendar.getInstance().apply {
-            timeInMillis = st
-            set(java.util.Calendar.HOUR_OF_DAY, eh); set(java.util.Calendar.MINUTE, em); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
-        }
-        var en = end.timeInMillis
-        if (en <= st) en += 24 * 3600 * 1000L
-        return st to en
     }
 
     private fun schedule(activity: AppCompatActivity, channel: String, url: String, startAt: Long, endAt: Long, folder: String?) {
