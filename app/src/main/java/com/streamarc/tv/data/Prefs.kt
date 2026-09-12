@@ -62,6 +62,10 @@ class Prefs(context: Context) {
         get() = sp.getString("live_default_cat", null)
         set(value) { sp.edit().putString("live_default_cat", value).apply() }
 
+    /** Size of the last full guide download, used to estimate progress when the panel sends no length. */
+    fun guideSize(service: Service): Long = sp.getLong(k(service, "guide_size"), 0L)
+    fun setGuideSize(service: Service, bytes: Long) { sp.edit().putLong(k(service, "guide_size"), bytes).apply() }
+
     // ---- Favorites -----------------------------------------------------
 
     private fun favKey(service: Service, kind: ContentKind) = k(service, "favs_${kind.name.lowercase()}")

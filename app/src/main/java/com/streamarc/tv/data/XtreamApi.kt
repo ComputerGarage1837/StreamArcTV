@@ -152,6 +152,10 @@ object XtreamApi {
                             count += n
                             if (count - lastReport >= 128 * 1024) { lastReport = count; onProgress?.invoke(count, total) }
                         }
+                        override fun close() {
+                            onProgress?.invoke(count, if (total > 0) total else count)   // final, exact
+                            super.close()
+                        }
                     }
                     counting.use { input -> XmltvParser.parse(input, fromEpoch, toEpoch) }
                 }
