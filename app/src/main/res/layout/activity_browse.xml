@@ -267,9 +267,10 @@
                     android:id="@+id/progressGuide"
                     style="?android:attr/progressBarStyleHorizontal"
                     android:layout_width="0dp"
-                    android:layout_height="5dp"
+                    android:layout_height="6dp"
                     android:layout_weight="1"
                     android:indeterminate="true"
+                    android:indeterminateTint="@color/accent"
                     android:max="1000"
                     android:progressDrawable="@drawable/progress_epg" />
 

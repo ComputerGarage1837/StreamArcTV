@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.28 — 2026-09-12
+
+### Changed
+- The guide download shows real progress: megabytes received, a percentage when the provider
+  reports the file size, and a clearly visible bar. Filling in channels afterwards runs several
+  at a time, so that stage is much quicker.
+
 ## v1.0.27 — 2026-09-12
 
 ### Added

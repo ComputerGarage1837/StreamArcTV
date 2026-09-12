@@ -31,6 +31,7 @@ import com.streamarc.tv.databinding.ActivityBrowseBinding
 import com.streamarc.tv.databinding.ItemCategoryBinding
 import com.streamarc.tv.databinding.ItemCategoryChipBinding
 import com.streamarc.tv.databinding.ItemStreamBinding
+import com.streamarc.tv.update.UpdateChecker
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -109,7 +110,13 @@ class BrowseActivity : AppCompatActivity() {
             b.epgGrid.guideLookup = { ch -> EpgCache.guideFor(service, ch.epgChannelId, ch.name) }
             showGuideProgress(getString(R.string.guide_downloading), null)
             lifecycleScope.launch {
-                val ok = EpgCache.loadGuide(service, account)
+                val ok = EpgCache.loadGuide(service, account) { bytes, total ->
+                    runOnUiThread {
+                        val text = if (total > 0) getString(R.string.guide_downloading_pct_fmt, UpdateChecker.formatSize(bytes), UpdateChecker.formatSize(total), (bytes * 100 / total).toInt())
+                        else getString(R.string.guide_downloading_size_fmt, UpdateChecker.formatSize(bytes))
+                        showGuideProgress(text, if (total > 0) (bytes * 1000 / total).toInt() else null)
+                    }
+                }
                 if (ok) b.epgGrid.guideLoaded()
                 guideReady = true
                 prefetchEpg()
@@ -502,14 +509,22 @@ class BrowseActivity : AppCompatActivity() {
         prefetchJob = lifecycleScope.launch {
             val total = channels.size
             var done = 0
-            var lastShown = -1L
-            for (ch in channels) {
-                done++
-                val id = ch.streamId ?: continue
-                if (EpgCache.peek(service, id) == null) {
-                    val fromGuide = EpgCache.guideFor(service, ch.epgChannelId, ch.name)
-                    val list = fromGuide ?: EpgCache.get(service, account, id)
-                    b.epgGrid.setEpg(id, list)
+            var lastShown = 0L
+            showGuideProgress(getString(R.string.guide_filling_fmt, 0, total), 0)
+            // Several channels at a time (EpgCache limits real network calls to 6 at once).
+            channels.chunked(12).forEach { chunk ->
+                val results = chunk.map { ch ->
+                    kotlinx.coroutines.async {
+                        val id = ch.streamId ?: return@async null
+                        if (EpgCache.peek(service, id) != null) return@async null
+                        val fromGuide = EpgCache.guideFor(service, ch.epgChannelId, ch.name)
+                        id to (fromGuide ?: EpgCache.get(service, account, id))
+                    }
+                }
+                for (r in results) {
+                    val pair = r.await()
+                    if (pair != null) b.epgGrid.setEpg(pair.first, pair.second)
+                    done++
                 }
                 val now = System.currentTimeMillis()
                 if (now - lastShown > 150 || done == total) {

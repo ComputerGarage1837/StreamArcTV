@@ -207,7 +207,7 @@ object EpgCache {
      * Downloads the whole guide once (per service, refreshed every 30 minutes).
      * Returns true when a guide is available afterwards. Never throws.
      */
-    suspend fun loadGuide(service: Service, account: Account): Boolean {
+    suspend fun loadGuide(service: Service, account: Account, onProgress: ((Long, Long) -> Unit)? = null): Boolean {
         if (guideLoaded(service)) return true
         return guideMutex.withLock {
             if (guideLoaded(service)) return@withLock true
@@ -218,7 +218,7 @@ object EpgCache {
             val from = (now / 1800) * 1800 - 2 * 3600
             val to = from + 26 * 3600
             try {
-                val guide = XtreamApi.fullGuide(service, account, from, to)
+                val guide = XtreamApi.fullGuide(service, account, from, to, onProgress)
                 synchronized(guides) {
                     guides[service] = System.currentTimeMillis() to guide
                     guideFailedAt.remove(service)
