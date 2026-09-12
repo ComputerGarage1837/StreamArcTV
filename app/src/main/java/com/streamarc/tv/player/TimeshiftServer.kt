@@ -34,7 +34,14 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
 
     private val dir = File(context.cacheDir, DIR).apply { mkdirs() }
     private val socket = ServerSocket(0, 4, InetAddress.getByName("127.0.0.1"))
+    /** Plays from the start of what has been stored (the point the channel was opened). */
     val localUrl = "http://127.0.0.1:${socket.localPort}/live.ts"
+
+    /** Plays from an absolute byte offset into the stored stream. */
+    fun urlFrom(offset: Long) = "http://127.0.0.1:${socket.localPort}/live.ts?from=$offset"
+
+    /** Plays from just behind the newest data. */
+    fun urlLive() = "http://127.0.0.1:${socket.localPort}/live.ts?from=live"
 
     private val lock = Object()
     private val chunks = ArrayList<Chunk>()          // oldest first
@@ -148,11 +155,19 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
                 val reader = BufferedReader(InputStreamReader(sock.getInputStream(), Charsets.ISO_8859_1))
                 var start = 0L
                 var ranged = false
+                var first = true
                 while (true) {
                     val line = reader.readLine() ?: return
                     if (line.isEmpty()) break
+                    if (first) {
+                        first = false
+                        Regex("[?&]from=(\\d+|live)").find(line)?.groupValues?.get(1)?.let { v ->
+                            start = if (v == "live") liveOffset() else v.toLong()
+                        }
+                        continue
+                    }
                     if (line.startsWith("Range:", ignoreCase = true)) {
-                        Regex("bytes=(\\d+)-").find(line)?.groupValues?.get(1)?.toLongOrNull()?.let { start = it; ranged = true }
+                        Regex("bytes=(\\d+)-").find(line)?.groupValues?.get(1)?.toLongOrNull()?.let { start += it; ranged = true }
                     }
                 }
                 val out = sock.getOutputStream()
@@ -197,13 +212,21 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
 
     // ---- Status -----------------------------------------------------------------
 
-    /** Roughly how far behind the download the reader is, from the average bitrate seen so far. */
-    fun backlogMs(): Long = synchronized(lock) {
-        if (written == 0L || firstByteAt == 0L) return 0L
+    /** Absolute end of the stored data. */
+    fun writtenBytes(): Long = synchronized(lock) { written }
+
+    /** Absolute start of the oldest stored data. */
+    fun baseBytes(): Long = synchronized(lock) { base }
+
+    /** Average stream rate seen so far, in bytes per millisecond (0 until data arrives). */
+    fun rateBytesPerMs(): Double = synchronized(lock) {
+        if (written == 0L || firstByteAt == 0L) return 0.0
         val elapsed = (SystemClock.elapsedRealtime() - firstByteAt).coerceAtLeast(1L)
-        val backlog = (written - readerPos).coerceAtLeast(0L)
-        backlog * elapsed / written
+        written.toDouble() / elapsed
     }
+
+    /** Byte offset a little behind the newest data, so playback from there has something to read. */
+    private fun liveOffset(): Long = synchronized(lock) { (written - LIVE_HEADROOM).coerceAtLeast(base) }
 
     fun close() {
         closed = true
@@ -220,6 +243,7 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
         private const val MIN_FREE_BYTES = 1L * 1024 * 1024 * 1024   // keep at least 1 GB free
         private const val MAX_TOTAL_BYTES = 8L * 1024 * 1024 * 1024  // hard ceiling per channel
         private const val GIVE_UP_MS = 90_000L
+        private const val LIVE_HEADROOM = 512L * 1024
 
         /** Removes leftovers from a previous run (crash, task kill). */
         fun cleanup(context: Context) = cleanup(File(context.cacheDir, DIR))

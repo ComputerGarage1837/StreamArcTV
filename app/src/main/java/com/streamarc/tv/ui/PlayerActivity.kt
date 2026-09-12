@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
@@ -25,8 +26,6 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
-import androidx.media3.extractor.DefaultExtractorsFactory
-import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import com.streamarc.tv.R
 import com.streamarc.tv.data.BufferLevel
 import com.streamarc.tv.data.Prefs
@@ -41,6 +40,8 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var prefs: Prefs
     private var player: ExoPlayer? = null
     private var timeshift: TimeshiftServer? = null
+    /** Byte offset into the stored stream where the current media item starts (storage buffer only). */
+    private var itemFromBytes = 0L
     private lateinit var url: String
     private var title: String = ""
     private var isLive: Boolean = false
@@ -77,15 +78,23 @@ class PlayerActivity : AppCompatActivity() {
         b.txtTitle.text = title
         b.playerView.setShowNextButton(false)
         b.playerView.setShowPreviousButton(false)
+        b.playerView.setShowRewindButton(false)
+        b.playerView.setShowFastForwardButton(false)
         b.playerView.controllerShowTimeoutMs = 4000
         b.playerView.setControllerVisibilityListener(
             androidx.media3.ui.PlayerView.ControllerVisibilityListener { visibility ->
                 b.txtTitle.visibility = visibility
                 b.txtLiveStatus.visibility = if (isLive) visibility else View.GONE
+                b.btnSeekBack.visibility = visibility
+                b.btnSeekFwd.visibility = visibility
             }
         )
         b.txtLiveStatus.visibility = View.GONE
+        b.btnSeekBack.visibility = View.GONE
+        b.btnSeekFwd.visibility = View.GONE
         b.txtLiveStatus.setOnClickListener { goLive() }
+        b.btnSeekBack.setOnClickListener { seekBy(-SEEK_STEP_MS) }
+        b.btnSeekFwd.setOnClickListener { seekBy(SEEK_STEP_MS) }
         b.btnRetry.setOnClickListener { retries = 0; releasePlayer(); initPlayer() }
     }
 
@@ -103,6 +112,19 @@ class PlayerActivity : AppCompatActivity() {
         releasePlayer()
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_MEDIA_REWIND -> { seekBy(-SEEK_STEP_MS); return true }
+                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> { seekBy(SEEK_STEP_MS); return true }
+                // With the controls hidden, left/right on the remote skip; with them shown they move focus.
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (!b.playerView.isControllerFullyVisible) { seekBy(-SEEK_STEP_MS); return true }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> if (!b.playerView.isControllerFullyVisible) { seekBy(SEEK_STEP_MS); return true }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     // ---- Player set-up ---------------------------------------------------------
 
     private fun initPlayer() {
@@ -113,8 +135,12 @@ class PlayerActivity : AppCompatActivity() {
         pausedSince = 0L
         liveBaselineMs = C.TIME_UNSET
         behindNow = false
+        itemFromBytes = 0L
 
-        val level = BufferLevel.from(prefs.bufferLevel)
+        // Storage levels only make sense for live channels; movies and series get the biggest
+        // in-memory buffer instead, since they can already be scrubbed freely.
+        val chosen = BufferLevel.from(prefs.bufferLevel)
+        val level = if (chosen.onDisk && !isLive) BufferLevel.MAX else chosen
 
         val httpFactory = DefaultHttpDataSource.Factory()
             .setUserAgent(XtreamApi.USER_AGENT)
@@ -122,14 +148,8 @@ class PlayerActivity : AppCompatActivity() {
             .setConnectTimeoutMs(15_000)
             .setReadTimeoutMs(20_000)
 
-        // Faster start on raw MPEG-TS: don't wait for a full IDR key-frame and detect access units.
-        val extractors = DefaultExtractorsFactory()
-            .setTsExtractorFlags(
-                DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
-                    DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
-            )
-
-        val mediaSources = DefaultMediaSourceFactory(DefaultDataSource.Factory(this, httpFactory), extractors)
+        val mediaSources = DefaultMediaSourceFactory(this)
+            .setDataSourceFactory(DefaultDataSource.Factory(this, httpFactory))
             .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
 
         val renderers = DefaultRenderersFactory(this)
@@ -143,7 +163,6 @@ class PlayerActivity : AppCompatActivity() {
             .setBufferDurationsMs(level.minBufferMs, level.maxBufferMs, level.playbackMs, level.rebufferMs)
             .setTargetBufferBytes(level.bytes.coerceAtMost(heapCap))
             .setPrioritizeTimeOverSizeThresholds(false)
-            .setBackBuffer(level.backBufferMs, true)
             .build()
 
         val p = ExoPlayer.Builder(this, renderers)
@@ -193,11 +212,9 @@ class PlayerActivity : AppCompatActivity() {
         }
         val item = MediaItem.Builder().setUri(playUrl)
         if (isLive && !level.onDisk) {
-            // Start a little behind the live edge so there is always something buffered ahead,
-            // and never speed playback up to "catch up" - pausing must not creep back to live.
+            // Never speed playback up to "catch up" with the live edge: pausing must not creep back to live.
             item.setLiveConfiguration(
                 MediaItem.LiveConfiguration.Builder()
-                    .setTargetOffsetMs(level.liveOffsetMs)
                     .setMinPlaybackSpeed(1f)
                     .setMaxPlaybackSpeed(1f)
                     .build()
@@ -214,6 +231,62 @@ class PlayerActivity : AppCompatActivity() {
         b.playerView.player = null
         timeshift?.close()
         timeshift = null
+    }
+
+    // ---- Seeking ---------------------------------------------------------------
+
+    private fun seekBy(deltaMs: Long) {
+        val p = player ?: return
+        b.playerView.showController()
+        val ts = timeshift
+        when {
+            ts != null -> {
+                val rate = ts.rateBytesPerMs()
+                if (rate <= 0.0) return
+                val posBytes = itemFromBytes + (p.currentPosition * rate).toLong()
+                val target = (posBytes + (deltaMs * rate).toLong())
+                    .coerceIn(ts.baseBytes(), (ts.writtenBytes() - (rate * 1500).toLong()).coerceAtLeast(ts.baseBytes()))
+                if (target == posBytes) return
+                val wasPlaying = p.playWhenReady
+                itemFromBytes = target
+                p.setMediaItem(MediaItem.fromUri(ts.urlFrom(target)))
+                p.prepare()
+                p.playWhenReady = wasPlaying
+            }
+            p.isCurrentMediaItemSeekable -> {
+                val duration = p.duration
+                var target = p.currentPosition + deltaMs
+                if (target < 0) target = 0
+                if (duration != C.TIME_UNSET && target > duration) target = duration
+                p.seekTo(target)
+            }
+            isLive -> Toast.makeText(this, R.string.seek_needs_buffer, Toast.LENGTH_LONG).show()
+        }
+        updateStatus()
+    }
+
+    private fun goLive() {
+        val p = player ?: return
+        pausedTotalMs = 0L; pausedSince = 0L; liveBaselineMs = C.TIME_UNSET
+        val ts = timeshift
+        when {
+            ts != null -> {
+                itemFromBytes = (ts.writtenBytes() - 512L * 1024).coerceAtLeast(ts.baseBytes())
+                p.setMediaItem(MediaItem.fromUri(ts.urlLive()))
+                p.prepare()
+                p.play()
+            }
+            p.isCurrentMediaItemLive && p.isCurrentMediaItemSeekable -> {
+                p.seekToDefaultPosition()
+                p.play()
+            }
+            else -> {
+                // Raw .ts streams can't seek: reopen the stream at the live point.
+                retries = 0
+                releasePlayer()
+                initPlayer()
+            }
+        }
     }
 
     // ---- Errors & reconnects ---------------------------------------------------
@@ -282,27 +355,16 @@ class PlayerActivity : AppCompatActivity() {
                 ts.jumped = false
                 Toast.makeText(this, R.string.timeshift_window_lost, Toast.LENGTH_LONG).show()
             }
-            return maxOf(pausedEstimate, ts.backlogMs())
+            val rate = ts.rateBytesPerMs()
+            if (rate <= 0.0) return pausedEstimate
+            val posBytes = itemFromBytes + (p.currentPosition * rate).toLong()
+            return ((ts.writtenBytes() - posBytes) / rate).toLong().coerceAtLeast(0L)
         }
         if (p.isCurrentMediaItemLive && p.currentLiveOffset != C.TIME_UNSET) {
             val base = if (liveBaselineMs == C.TIME_UNSET) p.currentLiveOffset else liveBaselineMs
             return maxOf(pausedEstimate, p.currentLiveOffset - base)
         }
         return pausedEstimate
-    }
-
-    private fun goLive() {
-        val p = player ?: return
-        pausedTotalMs = 0L; pausedSince = 0L; liveBaselineMs = C.TIME_UNSET
-        if (timeshift == null && p.isCurrentMediaItemLive && p.isCurrentMediaItemSeekable) {
-            p.seekToDefaultPosition()
-            p.play()
-        } else {
-            // Raw .ts streams can't seek: reopen the stream at the live point.
-            retries = 0
-            releasePlayer()
-            initPlayer()
-        }
     }
 
     private fun clock(ms: Long): String {
@@ -325,6 +387,7 @@ class PlayerActivity : AppCompatActivity() {
         private const val EXTRA_LIVE = "live"
         private const val MAX_RETRIES = 4
         private const val BEHIND_THRESHOLD_MS = 2_000L
+        private const val SEEK_STEP_MS = 10_000L
         fun intent(ctx: Context, url: String, title: String, live: Boolean): Intent =
             Intent(ctx, PlayerActivity::class.java)
                 .putExtra(EXTRA_URL, url)

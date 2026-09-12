@@ -53,9 +53,9 @@
     <string name="skipped_cleared">Skipped version cleared.</string>
     <string name="playback">Playback</string>
     <string name="live_stream_format">Live stream format</string>
-    <string name="live_buffer">Live TV buffer</string>
+    <string name="live_buffer">Playback buffer (live TV &amp; VOD)</string>
     <string name="buffer_help_title">About buffer sizes</string>
-    <string name="buffer_help">The buffer is how much of the live stream the app downloads ahead of what you are watching. A bigger buffer rides out slow or patchy connections and lets you pause for longer without losing your place, but the channel takes a little longer to start and uses more memory.\n\nWhen you pause, the app keeps downloading until the buffer is full, and pressing play carries on exactly where you stopped. Once you have paused longer than the buffer allows, playback jumps back to live.\n\nHuge buffers are automatically limited to what this device\'s memory can hold.</string>
+    <string name="buffer_help">The buffer is how much of the stream the app downloads ahead of what you are watching, for live channels and for movies and series alike. A bigger buffer rides out slow or patchy connections and lets you pause for longer without losing your place, but the channel takes a little longer to start and uses more memory.\n\nWhen you pause, the app keeps downloading until the buffer is full, and pressing play carries on exactly where you stopped. Once you have paused longer than the buffer allows, playback jumps back to live.\n\nHuge buffers are automatically limited to what this device\'s memory can hold.</string>
     <string-array name="buffer_levels">
         <item>Small (30 s ahead, fastest start)</item>
         <item>Normal (1 min ahead)</item>
@@ -76,6 +76,9 @@
     <string name="playback_failed_fmt">Playback failed: %1$s</string>
     <string name="live_window_lost">Paused longer than the provider keeps; jumping back to live.</string>
     <string name="live_now">● LIVE</string>
+    <string name="seek_back_10">« 10 s</string>
+    <string name="seek_fwd_10">10 s »</string>
+    <string name="seek_needs_buffer">Skipping back and forward on an MPEG-TS channel needs a stored buffer: Settings → Playback → Playback buffer.</string>
     <string name="behind_live_fmt">%1$s behind live · select to go live</string>
     <string name="paused_behind_fmt">❚❚ Paused · %1$s behind live</string>
     <string name="accounts">Accounts</string>
