@@ -131,7 +131,7 @@ class TransferService : Service() {
                         .readTimeout(60, TimeUnit.SECONDS)
                         .callTimeout(0, TimeUnit.MILLISECONDS)
                         .build()
-                    val rb = Request.Builder().url(job.url).header("User-Agent", XtreamApi.USER_AGENT)
+                    val rb = Request.Builder().url(job.url).header("User-Agent", XtreamApi.USER_AGENT).header("Connection", "close")
                     val resuming = job.type == TransferType.DOWNLOAD && done > 0 && target != null
                     if (resuming) rb.header("Range", "bytes=$done-")
                     val call = client.newCall(rb.build())
@@ -192,6 +192,7 @@ class TransferService : Service() {
                         if (job.type == TransferType.DOWNLOAD && total > 0 && done < total && running.containsKey(id) && scope.isActive)
                             throw IllegalStateException("Connection closed early")
                     }
+                    XtreamApi.client.connectionPool.evictAll()   // the provider's slot is free the moment we finish
                     if (!running.containsKey(id)) return   // cancelled
                     store.update(id) { it.state = TransferState.DONE; it.error = null }
                     notifyDone(job, true, null)
@@ -225,6 +226,7 @@ class TransferService : Service() {
         } finally {
             live.remove(id)
             try { target?.stream?.close() } catch (_: Exception) {}
+            try { XtreamApi.client.connectionPool.evictAll() } catch (_: Exception) {}
         }
     }
 

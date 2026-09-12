@@ -12,6 +12,9 @@ version is shown to users inside the app when an update is available.
   connection outright and the player drops any idle provider connections before it asks for a
   stream.
 - The "received" figure under the spinner now counts live instead of only when a file finished.
+- Connections to the provider are cut the moment playback stops or a download or recording
+  finishes, and every stream request asks the server not to keep the connection alive, so the
+  account's stream slot is free straight away for the next thing you open.
 
 ## v1.0.41 — 2026-09-12
 

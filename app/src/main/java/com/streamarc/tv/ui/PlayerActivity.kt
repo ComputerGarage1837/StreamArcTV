@@ -25,7 +25,7 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.TransferListener
-import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -174,11 +174,11 @@ class PlayerActivity : AppCompatActivity() {
         // a stream on most panels; drop them so this stream gets the slot.
         Thread { try { XtreamApi.client.connectionPool.evictAll() } catch (_: Exception) {} }.start()
 
-        val httpFactory = DefaultHttpDataSource.Factory()
+        // The player shares the app's HTTP client (and its connection pool) so a connection can be
+        // cut the moment the player closes, and asks the server not to keep it alive at all.
+        val httpFactory = OkHttpDataSource.Factory(playerClient)
             .setUserAgent(XtreamApi.USER_AGENT)
-            .setAllowCrossProtocolRedirects(true)
-            .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(20_000)
+            .setDefaultRequestProperties(mapOf("Connection" to "close"))
             .setTransferListener(object : TransferListener {
                 override fun onTransferInitializing(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) {}
                 override fun onTransferStart(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) { loadsStarted++ }
@@ -318,6 +318,8 @@ class PlayerActivity : AppCompatActivity() {
         b.playerView.player = null
         timeshift?.close()
         timeshift = null
+        // Sever every connection to the provider now, not when the pool feels like it.
+        Thread { try { XtreamApi.client.connectionPool.evictAll() } catch (_: Exception) {} }.start()
     }
 
     // ---- Seeking ---------------------------------------------------------------
@@ -508,6 +510,15 @@ class PlayerActivity : AppCompatActivity() {
         private const val MAX_RETRIES = 4
         private const val BEHIND_THRESHOLD_MS = 2_000L
         private const val SEEK_STEP_MS = 10_000L
+        /** Same pool as the API client, with streaming timeouts. */
+        private val playerClient by lazy {
+            XtreamApi.client.newBuilder()
+                .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+                .callTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS)
+                .followRedirects(true).followSslRedirects(true)
+                .build()
+        }
         fun intent(ctx: Context, url: String, title: String, live: Boolean, watchKey: String? = null): Intent =
             Intent(ctx, PlayerActivity::class.java)
                 .putExtra(EXTRA_URL, url)
