@@ -214,9 +214,6 @@ class PlayerActivity : AppCompatActivity() {
                 bytesLoaded += loadEventInfo.bytesLoaded
                 lastLoadError = describeIo(error)
             }
-            override fun onBandwidthEstimate(eventTime: AnalyticsListener.EventTime, totalLoadTimeMs: Int, totalBytesLoaded: Long, bitrateEstimate: Long) {
-                bytesLoaded += totalBytesLoaded
-            }
         })
         // Subtitles follow the saved preference; the CC button in the controls changes and remembers it.
         p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
