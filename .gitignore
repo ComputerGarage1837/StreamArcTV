@@ -1,18 +1,27 @@
-# Local build and reverse-engineering output
+# Android / Gradle build output
 build/
+/app/build/
 out/
 dist/
 .gradle/
 .idea/
 *.iml
+.DS_Store
+/captures/
+.externalNativeBuild/
+.cxx/
+local.properties
 *.apk
 *.aab
 *.aab.zip
+
+# Signing material (never commit)
 *.keystore
 *.jks
-local.properties
+release-signing.env
+signing/
+secrets/
 
 # Local credentials and test data
 *.env
-secrets/
 test-accounts/

@@ -1,0 +1,156 @@
+package com.streamarc.tv.data
+
+import com.google.gson.Gson
+import com.google.gson.JsonSyntaxException
+import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.IOException
+import java.util.concurrent.TimeUnit
+
+/**
+ * Minimal Xtream Codes API client.
+ */
+object XtreamApi {
+
+    class ApiException(message: String) : Exception(message)
+
+    const val USER_AGENT = "StreamArcTV"
+
+    val client: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(40, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .build()
+
+    private val gson = Gson()
+
+    // ---- Public API ----------------------------------------------------
+
+    suspend fun login(service: Service, username: String, password: String): UserInfo =
+        withContext(Dispatchers.IO) {
+            val body = get(apiUrl(service, username, password))
+            val resp = try {
+                gson.fromJson(body, LoginResponse::class.java)
+            } catch (e: JsonSyntaxException) {
+                throw ApiException("Unexpected response from server")
+            }
+            val info = resp?.userInfo ?: throw ApiException("Unexpected response from server")
+            if (!info.isAuthenticated) {
+                throw ApiException(info.message?.takeIf { it.isNotBlank() } ?: "Invalid username or password")
+            }
+            info
+        }
+
+    suspend fun categories(service: Service, account: Account): List<Category> =
+        withContext(Dispatchers.IO) {
+            val action = when (service.kind) {
+                ContentKind.LIVE -> "get_live_categories"
+                ContentKind.MOVIE -> "get_vod_categories"
+            }
+            val body = get(apiUrl(service, account.username, account.password, action))
+            parseList<Category>(body)
+        }
+
+    suspend fun streams(service: Service, account: Account, categoryId: String?): List<Stream> =
+        withContext(Dispatchers.IO) {
+            val action = when (service.kind) {
+                ContentKind.LIVE -> "get_live_streams"
+                ContentKind.MOVIE -> "get_vod_streams"
+            }
+            val extra = if (categoryId != null) mapOf("category_id" to categoryId) else emptyMap()
+            val body = get(apiUrl(service, account.username, account.password, action, extra))
+            parseList<Stream>(body)
+        }
+
+    fun streamUrl(service: Service, account: Account, stream: Stream, liveFormat: String): String {
+        val base = serverUrl(service)
+        val id = stream.streamId ?: throw ApiException("Stream has no id")
+        val b = base.newBuilder()
+        when (service.kind) {
+            ContentKind.LIVE -> {
+                b.addPathSegment("live")
+                    .addPathSegment(account.username)
+                    .addPathSegment(account.password)
+                    .addPathSegment("$id.$liveFormat")
+            }
+            ContentKind.MOVIE -> {
+                val ext = stream.containerExtension?.takeIf { it.isNotBlank() } ?: "mp4"
+                b.addPathSegment("movie")
+                    .addPathSegment(account.username)
+                    .addPathSegment(account.password)
+                    .addPathSegment("$id.$ext")
+            }
+        }
+        return b.build().toString()
+    }
+
+    // ---- Internals -----------------------------------------------------
+
+    private fun serverUrl(service: Service): HttpUrl {
+        if (!service.isConfigured) {
+            throw ApiException("${service.title} isn't configured in this build")
+        }
+        return service.baseUrl.toHttpUrlOrNull()
+            ?: throw ApiException("Bad server URL: ${service.baseUrl}")
+    }
+
+    private inline fun <reified T> parseList(body: String): List<T> {
+        val trimmed = body.trim()
+        if (!trimmed.startsWith("[")) {
+            // Some panels answer with an object (e.g. an error) instead of a list.
+            return emptyList()
+        }
+        val type = TypeToken.getParameterized(List::class.java, T::class.java).type
+        return try {
+            gson.fromJson<List<T>>(trimmed, type) ?: emptyList()
+        } catch (e: JsonSyntaxException) {
+            throw ApiException("Unexpected response from server")
+        }
+    }
+
+    private fun apiUrl(
+        service: Service,
+        username: String,
+        password: String,
+        action: String? = null,
+        extra: Map<String, String> = emptyMap()
+    ): HttpUrl {
+        val base = serverUrl(service)
+        val b = base.newBuilder()
+            .addPathSegment("player_api.php")
+            .addQueryParameter("username", username)
+            .addQueryParameter("password", password)
+        if (action != null) b.addQueryParameter("action", action)
+        extra.forEach { (k, v) -> b.addQueryParameter(k, v) }
+        return b.build()
+    }
+
+    private fun get(url: HttpUrl): String {
+        val req = Request.Builder()
+            .url(url)
+            .header("User-Agent", USER_AGENT)
+            .header("Accept", "application/json, */*")
+            .build()
+        try {
+            client.newCall(req).execute().use { resp ->
+                val text = resp.body?.string() ?: ""
+                if (!resp.isSuccessful) {
+                    if (resp.code == 401 || resp.code == 403) {
+                        throw ApiException("Invalid username or password")
+                    }
+                    throw ApiException("Server error (HTTP ${resp.code})")
+                }
+                if (text.isBlank()) throw ApiException("Empty response from server")
+                return text
+            }
+        } catch (e: IOException) {
+            throw ApiException("Can't reach server: ${e.message ?: "network error"}")
+        }
+    }
+}
