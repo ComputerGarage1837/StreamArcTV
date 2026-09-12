@@ -3,6 +3,24 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.35 — 2026-09-12
+
+### Fixed
+- Live video could freeze after 20–30 seconds while the sound carried on, then jump ahead. The
+  MPEG-TS fast-start flags, the back buffer and the fixed HLS live offset added in 1.0.33 are
+  removed; playback is back on ExoPlayer's proven defaults, with only the buffer sizes and the
+  no-catch-up pause kept.
+
+### Added
+- Skip back and forward 10 seconds on live TV: on-screen « 10 s / 10 s » buttons on phones, and
+  left/right on the remote (or the rewind / fast-forward keys) while the controls are hidden.
+  HLS channels skip within the provider's window; with a stored buffer you can skip anywhere in
+  what has been kept. A plain MPEG-TS channel without a stored buffer explains why it cannot.
+
+### Changed
+- The buffer setting is now "Playback buffer (live TV & VOD)": the chosen size applies to movies
+  and series as well as live channels. The storage options give VOD the Huge memory buffer.
+
 ## v1.0.34 — 2026-09-12
 
 ### Added
