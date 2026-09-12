@@ -2,6 +2,7 @@ package com.streamarc.tv.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -32,6 +33,8 @@ class MainActivity : AppCompatActivity() {
 
         b.btnLive.setOnClickListener { open(Service.LIVE) }
         b.btnVod.setOnClickListener { open(Service.VOD) }
+        b.btnLive.onFocusChangeListener = cardFocus
+        b.btnVod.onFocusChangeListener = cardFocus
         b.btnSettings.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
         b.btnUpdate.setOnClickListener { UpdateChecker.check(this, manual = true) }
         b.txtVersion.text = getString(R.string.version_fmt, BuildConfig.VERSION_NAME)
@@ -47,6 +50,12 @@ class MainActivity : AppCompatActivity() {
         refreshStatus(Service.LIVE, b.txtLiveStatus)
         refreshStatus(Service.VOD, b.txtVodStatus)
         if (currentFocus == null) b.btnLive.requestFocus()
+    }
+
+    /** Grow the big cards slightly when the remote focuses them. */
+    private val cardFocus = View.OnFocusChangeListener { v, hasFocus ->
+        v.animate().scaleX(if (hasFocus) 1.05f else 1f).scaleY(if (hasFocus) 1.05f else 1f)
+            .setDuration(140).start()
     }
 
     private fun open(service: Service) {

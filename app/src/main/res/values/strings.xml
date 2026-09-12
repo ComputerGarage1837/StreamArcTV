@@ -57,4 +57,17 @@
     <string name="about">About</string>
     <string name="view_releases">View releases &amp; changelog on GitHub</string>
     <string name="retry">Retry</string>
+
+    <string name="favorites">Favorites</string>
+    <string name="add_to_favorites">Add to favorites</string>
+    <string name="remove_from_favorites">Remove from favorites</string>
+    <string name="play">Play</string>
+    <string name="added_to_favorites_fmt">%1$s added to favorites</string>
+    <string name="removed_from_favorites_fmt">%1$s removed from favorites</string>
+    <string name="no_favorites_yet">No favorites yet. Hold OK on a channel to add it.</string>
+    <string name="no_programme_info">No programme information</string>
+    <string name="next_fmt">Next: %1$s</string>
+    <string name="loading_guide">Loading guide…</string>
+    <string name="tv_guide">TV Guide</string>
+    <string name="hold_ok_hint">Hold OK for options</string>
 </resources>

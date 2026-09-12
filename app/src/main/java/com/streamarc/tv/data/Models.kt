@@ -48,6 +48,8 @@ data class Stream(
     @SerializedName("stream_icon") val icon: String?,
     @SerializedName("category_id") val categoryId: String?,
     @SerializedName("container_extension") val containerExtension: String?,
+    @SerializedName("epg_channel_id") val epgChannelId: String?,
+    @SerializedName("num") val number: String?,
     val rating: String?,
     val added: String?
 )

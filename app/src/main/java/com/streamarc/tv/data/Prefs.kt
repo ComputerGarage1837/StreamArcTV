@@ -47,6 +47,22 @@ class Prefs(context: Context) {
         e.apply()
     }
 
+    // ---- Favorites -----------------------------------------------------
+
+    fun favorites(service: Service): Set<String> =
+        sp.getStringSet(k(service, "favs"), emptySet())?.toSet() ?: emptySet()
+
+    fun isFavorite(service: Service, streamId: String?): Boolean =
+        streamId != null && favorites(service).contains(streamId)
+
+    /** Adds or removes the stream; returns true when it is now a favorite. */
+    fun toggleFavorite(service: Service, streamId: String): Boolean {
+        val set = favorites(service).toMutableSet()
+        val nowFav = if (set.contains(streamId)) { set.remove(streamId); false } else { set.add(streamId); true }
+        sp.edit().putStringSet(k(service, "favs"), set).apply()
+        return nowFav
+    }
+
     // ---- Updates -------------------------------------------------------
 
     var skippedVersion: String?

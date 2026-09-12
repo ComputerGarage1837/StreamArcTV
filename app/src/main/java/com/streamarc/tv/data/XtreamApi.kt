@@ -68,6 +68,18 @@ object XtreamApi {
             parseList<Stream>(body)
         }
 
+    /** Now/next programmes for one live channel (`get_short_epg`). */
+    suspend fun shortEpg(service: Service, account: Account, streamId: String, limit: Int = 6): List<EpgProgramme> =
+        withContext(Dispatchers.IO) {
+            val body = get(
+                apiUrl(
+                    service, account.username, account.password, "get_short_epg",
+                    mapOf("stream_id" to streamId, "limit" to limit.toString())
+                )
+            )
+            EpgParser.parse(body)
+        }
+
     fun streamUrl(service: Service, account: Account, stream: Stream, liveFormat: String): String {
         val base = serverUrl(service)
         val id = stream.streamId ?: throw ApiException("Stream has no id")

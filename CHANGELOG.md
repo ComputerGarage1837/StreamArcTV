@@ -3,6 +3,21 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.8 — 2026-09-12
+
+### Added
+- Live TV now opens as a TV guide: every channel shows what's on now with a progress bar and
+  what's next, and the panel above the list shows the focused channel's programme details and
+  upcoming shows.
+- Favorites: hold OK (long-press) on any channel or movie for a menu with Play and
+  Add / Remove favorites. A ★ Favorites category sits at the top of the list and is opened first
+  when you have favorites.
+
+### Changed
+- Home screen: Live TV and Video on Demand are now distinct gradient cards with their own icons
+  and grow slightly when focused; Settings is a gear icon and Update is a small plain button.
+- Search box text now sits properly inside its field.
+
 ## v1.0.7 — 2026-09-12
 
 ### Changed
