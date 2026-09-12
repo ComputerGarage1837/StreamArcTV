@@ -79,7 +79,6 @@ data class Episode(
     val number: Int,
     val containerExtension: String,
     val plot: String?,
-    val genre: String?,
     val duration: String?
 )
 
