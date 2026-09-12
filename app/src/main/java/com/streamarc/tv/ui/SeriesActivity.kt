@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.Toast
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -119,12 +120,32 @@ class SeriesActivity : AppCompatActivity() {
             .show()
     }
 
+    /** Episodes not yet watched and not already downloaded (or downloading), in viewing order. */
+    private fun unwatchedNotDownloaded(): List<Episode> {
+        val jobs = com.streamarc.tv.transfer.TransferStore.get(this).all()
+            .filter { it.state != com.streamarc.tv.transfer.TransferState.FAILED && it.state != com.streamarc.tv.transfer.TransferState.CANCELLED }
+            .map { it.url }.toSet()
+        return com.streamarc.tv.data.SeriesCache.ordered(episodes).filter { ep ->
+            !WatchProgress.isWatched(WatchProgress.episodeKey(ep.id)) && item(ep)?.url !in jobs
+        }
+    }
+
     private fun downloadAll() {
         if (episodes.isEmpty()) return
+        val pending = unwatchedNotDownloaded()
+        val options = arrayOf(
+            getString(R.string.download_next_n_fmt, 3), getString(R.string.download_next_n_fmt, 5), getString(R.string.download_next_n_fmt, 10),
+            getString(R.string.download_all_unwatched_fmt, pending.size), getString(R.string.download_entire_series_fmt, episodes.size)
+        )
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle(b.txtTitle.text)
-            .setMessage(getString(R.string.download_series_confirm_fmt, episodes.size))
-            .setPositiveButton(R.string.download_all) { _, _ -> TransferDialogs.download(this, picker, episodes.mapNotNull { item(it) }) }
+            .setItems(options) { _, which ->
+                val chosen = when (which) {
+                    0 -> pending.take(3); 1 -> pending.take(5); 2 -> pending.take(10); 3 -> pending; else -> episodes
+                }
+                if (chosen.isEmpty()) { Toast.makeText(this, R.string.nothing_to_download, Toast.LENGTH_SHORT).show(); return@setItems }
+                TransferDialogs.download(this, picker, chosen.mapNotNull { item(it) })
+            }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }

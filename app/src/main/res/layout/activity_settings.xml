@@ -131,6 +131,15 @@
                     android:textSize="15sp" />
             </LinearLayout>
 
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchAutoPlayNext"
+                style="@style/SettingsRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/auto_play_next"
+                android:textColor="@color/text"
+                android:textSize="16sp" />
+
             <LinearLayout
                 android:id="@+id/rowSubtitles"
                 style="@style/SettingsRow"
@@ -325,6 +334,24 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/storage" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchWifiOnly"
+                style="@style/SettingsRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/downloads_wifi_only"
+                android:textColor="@color/text"
+                android:textSize="16sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchDeleteWatched"
+                style="@style/SettingsRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/delete_after_watched"
+                android:textColor="@color/text"
+                android:textSize="16sp" />
 
             <LinearLayout
                 android:id="@+id/rowDownloadFolder"

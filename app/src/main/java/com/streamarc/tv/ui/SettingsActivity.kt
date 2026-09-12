@@ -46,6 +46,12 @@ class SettingsActivity : AppCompatActivity() {
         renderLiveFormat()
         b.rowBuffer.setOnClickListener { pickBuffer() }
         renderBuffer()
+        b.switchAutoPlayNext.isChecked = prefs.autoPlayNext
+        b.switchAutoPlayNext.setOnCheckedChangeListener { _, on -> prefs.autoPlayNext = on }
+        b.switchWifiOnly.isChecked = prefs.downloadsWifiOnly
+        b.switchWifiOnly.setOnCheckedChangeListener { _, on -> prefs.downloadsWifiOnly = on }
+        b.switchDeleteWatched.isChecked = prefs.deleteAfterWatched
+        b.switchDeleteWatched.setOnCheckedChangeListener { _, on -> prefs.deleteAfterWatched = on }
         b.rowSubtitles.setOnClickListener { pickSubtitles() }
         renderSubtitles()
         b.rowLayout.setOnClickListener { pickLayout() }

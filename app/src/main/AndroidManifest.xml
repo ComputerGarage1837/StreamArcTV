@@ -48,6 +48,7 @@
         <activity
             android:name=".ui.BrowseActivity"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden" />
+        <activity android:name=".ui.MultiViewActivity" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden" />
         <activity android:name=".ui.VodHomeActivity" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden" />
         <activity android:name=".ui.SeriesActivity" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden" />
         <activity android:name=".ui.TransfersActivity" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden" />

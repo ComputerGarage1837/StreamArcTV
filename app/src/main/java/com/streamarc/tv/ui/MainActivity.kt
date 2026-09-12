@@ -45,6 +45,16 @@ class MainActivity : AppCompatActivity() {
         inflateHome()
 
         if (prefs.layoutMode == null) askLayout() else maybeAskInstallPermission()
+        if (prefs.crashed) {
+            prefs.crashed = false
+            AlertDialog.Builder(this)
+                .setTitle(R.string.crash_title)
+                .setMessage(R.string.crash_msg)
+                .setPositiveButton(R.string.share) { _, _ -> com.streamarc.tv.util.AppLog.share(this) }
+                .setNeutralButton(R.string.copy) { _, _ -> com.streamarc.tv.util.AppLog.copy(this) }
+                .setNegativeButton(R.string.not_now, null)
+                .show()
+        }
 
         if (savedInstanceState == null && prefs.autoCheckUpdates && !checkedUpdatesThisLaunch) {
             checkedUpdatesThisLaunch = true

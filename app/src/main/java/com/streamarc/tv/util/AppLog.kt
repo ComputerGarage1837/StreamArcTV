@@ -36,6 +36,14 @@ object AppLog {
     fun e(tag: String, msg: String, t: Throwable? = null) =
         write("E", tag, if (t != null) msg + "\n" + Log.getStackTraceString(t) else msg)
 
+    /** Written on the crashing thread, synchronously, before the process dies. */
+    fun crash(tag: String, msg: String, t: Throwable) {
+        val line = "${fmt.format(Date())} E/$tag: $msg\n${Log.getStackTraceString(t)}\n"
+        Log.e(tag, msg, t)
+        val f = file ?: return
+        synchronized(lock) { try { f.appendText(line) } catch (_: Exception) {} }
+    }
+
     private fun write(level: String, tag: String, msg: String) {
         Log.println(if (level == "E") Log.ERROR else if (level == "W") Log.WARN else Log.INFO, tag, msg)
         val line = "${fmt.format(Date())} $level/$tag: $msg\n"

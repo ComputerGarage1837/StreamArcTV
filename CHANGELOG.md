@@ -3,6 +3,22 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.48 — 2026-09-12
+
+### Added
+- **Auto-play the next episode.** When an episode ends, "Up next" appears with a 10-second
+  countdown and Play now / Cancel; after three in a row it asks "Still watching?" first.
+  Settings → Playback → Auto-play the next episode turns it off.
+- **Multi-view for live TV.** The grid button on the Live TV screen opens two or four channels
+  at once. OK on a tile chooses its channel (with search, favourites first), the highlighted
+  tile carries the sound, and a long press offers full screen or remove. Your channel picks are
+  remembered. Your provider must allow that many streams on the account.
+- **Download options.** The series Download button now offers the next 3, 5 or 10 unwatched
+  episodes, all unwatched, or the entire series. Settings → Storage adds "Download only on
+  Wi-Fi / Ethernet" (downloads wait on mobile data) and "Delete downloads after watching".
+- **Crash safety net.** If the app ever crashes, the next start offers to share or copy the log,
+  which now includes the crash itself.
+
 ## v1.0.47 — 2026-09-12
 
 ### Fixed
