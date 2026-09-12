@@ -154,6 +154,10 @@
     <string name="transfers_idle">Waiting</string>
     <string name="transfers_count_fmt">%1$d transfers in progress</string>
     <string name="transfer_done_fmt">%1$s finished.</string>
+    <string name="retrying_fmt">Retrying (%1$d of %2$d) in %3$d s – %4$s</string>
+    <string name="err_provider_limit_fmt">Provider refused the connection (HTTP %1$d), usually because too many streams are open on this account. It is retried automatically; pause other playback if it keeps failing.</string>
+    <string name="err_not_found_fmt">The provider has no file for this episode (HTTP %1$d).</string>
+    <string name="err_http_fmt">Provider error (HTTP %1$d).</string>
     <string name="transfer_failed_fmt">%1$s failed: %2$s</string>
     <string name="download_folder">Download folder</string>
     <string name="recording_folder">Recordings folder</string>

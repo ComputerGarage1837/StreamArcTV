@@ -13,6 +13,15 @@ version is shown to users inside the app when an update is available.
   only the first time (or if the saved folder is no longer reachable); after that everything
   goes to the saved folder until you change it under Settings → Downloads & recordings.
 
+### Fixed
+- Season and whole-series downloads failing with "Failed": episodes were downloaded two at a
+  time and most providers only allow one connection per account. Downloads now run one after
+  another, and any download that is refused or cut off is retried automatically (up to six
+  attempts with growing delays), resuming from where it stopped when the provider allows it.
+  While waiting to retry the item shows the reason and the countdown. A download that still
+  fails after that is cleared from the Downloads list together with its partial file; the
+  failure notification tells you why. The list shows the remaining queue in order.
+
 ## v1.0.35 — 2026-09-12
 
 ### Fixed
