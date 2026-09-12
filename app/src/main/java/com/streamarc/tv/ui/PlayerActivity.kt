@@ -16,6 +16,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.C
+import androidx.media3.common.Format
+import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -29,6 +31,7 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.LoadEventInfo
@@ -79,6 +82,14 @@ class PlayerActivity : AppCompatActivity() {
     @Volatile private var loadsStarted = 0
     private var lastLoadError: String? = null
     private var bufferingSince = 0L
+    private var videoInfo: String? = null
+    private var decoderName: String? = null
+    private var firstFrame = false
+    private var nudges = 0
+    /** Set when the hardware decoder produced nothing: the player is rebuilt preferring software decoders. */
+    private var preferSoftware = false
+    /** Position to start from once the stream is ready (set by the resume prompt). */
+    private var startPositionMs = 0L
 
     private val ticker = object : Runnable {
         override fun run() {
@@ -120,15 +131,30 @@ class PlayerActivity : AppCompatActivity() {
         b.txtLiveStatus.setOnClickListener { goLive() }
         b.btnSeekBack.setOnClickListener { seekBy(-SEEK_STEP_MS) }
         b.btnSeekFwd.setOnClickListener { seekBy(SEEK_STEP_MS) }
-        b.btnRetry.setOnClickListener { retries = 0; releasePlayer(); initPlayer() }
+        b.btnRetry.setOnClickListener { retries = 0; nudges = 0; releasePlayer(); initPlayer() }
     }
 
     override fun onStart() {
         super.onStart()
         hideSystemUi()
         TransferService.playbackActive = true
-        initPlayer()
+        nudges = 0
+        val key = watchKey
+        val saved = if (key != null && !resumeAsked) WatchProgress.resumePosition(key) else 0L
+        if (saved > 0) askResume(saved) else initPlayer()
         handler.post(ticker)
+    }
+
+    /** Asked before the stream is opened, so the player itself never waits on the answer. */
+    private fun askResume(pos: Long) {
+        resumeAsked = true
+        AlertDialog.Builder(this)
+            .setTitle(title.ifBlank { getString(R.string.resume_title) })
+            .setMessage(getString(R.string.resume_msg_fmt, clock(pos)))
+            .setPositiveButton(getString(R.string.resume_from_fmt, clock(pos))) { _, _ -> startPositionMs = pos; initPlayer() }
+            .setNegativeButton(R.string.start_over) { _, _ -> startPositionMs = 0; initPlayer() }
+            .setOnCancelListener { startPositionMs = pos; initPlayer() }
+            .show()
     }
 
     override fun onStop() {
@@ -193,6 +219,12 @@ class PlayerActivity : AppCompatActivity() {
         val renderers = DefaultRenderersFactory(this)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
             .setEnableDecoderFallback(true)
+        if (preferSoftware) {
+            // Emulators and some boxes advertise a hardware decoder that never outputs a frame.
+            renderers.setMediaCodecSelector { mime, secure, tunneling ->
+                MediaCodecSelector.DEFAULT.getDecoderInfos(mime, secure, tunneling).sortedBy { if (it.softwareOnly) 0 else 1 }
+            }
+        }
 
         // Buffer sizes come from the user's choice; the byte cap keeps huge buffers inside
         // roughly half of the heap this device gives the app so we never run out of memory.
@@ -213,9 +245,19 @@ class PlayerActivity : AppCompatActivity() {
         player = p
         b.playerView.player = p
         bytesLoaded = 0L; loadsStarted = 0; lastLoadError = null; bufferingSince = SystemClock.elapsedRealtime()
+        videoInfo = null; decoderName = null; firstFrame = false
         p.addAnalyticsListener(object : AnalyticsListener {
             override fun onLoadError(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData, error: IOException, wasCanceled: Boolean) {
                 lastLoadError = describeIo(error)
+            }
+            override fun onVideoInputFormatChanged(eventTime: AnalyticsListener.EventTime, format: Format, decoderReuseEvaluation: DecoderReuseEvaluation?) {
+                videoInfo = "${format.sampleMimeType ?: "?"} ${format.width}x${format.height}"
+            }
+            override fun onVideoDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+                this@PlayerActivity.decoderName = decoderName
+            }
+            override fun onRenderedFirstFrame(eventTime: AnalyticsListener.EventTime, output: Any, renderTimeMs: Long) {
+                firstFrame = true
             }
         })
         // Subtitles follow the saved preference; the CC button in the controls changes and remembers it.
@@ -237,7 +279,6 @@ class PlayerActivity : AppCompatActivity() {
                 if (playbackState == Player.STATE_ENDED) watchKey?.let { WatchProgress.ended(it) }
                 if (playbackState == Player.STATE_READY) {
                     retries = 0
-                    maybeOfferResume(p)
                     if (liveBaselineMs == C.TIME_UNSET && p.isCurrentMediaItemLive && p.currentLiveOffset != C.TIME_UNSET)
                         liveBaselineMs = p.currentLiveOffset
                 }
@@ -276,27 +317,55 @@ class PlayerActivity : AppCompatActivity() {
                     .build()
             )
         }
-        p.setMediaItem(item.build())
-        // A title with a saved position waits for the resume question before playing.
-        p.playWhenReady = !(watchKey != null && !resumeAsked && WatchProgress.resumePosition(watchKey!!) > 0)
+        if (startPositionMs > 0) p.setMediaItem(item.build(), startPositionMs) else p.setMediaItem(item.build())
+        startPositionMs = 0
+        p.playWhenReady = true
         p.prepare()
     }
 
     // ---- Resume & watched ------------------------------------------------------
 
-    private fun maybeOfferResume(p: ExoPlayer) {
-        val key = watchKey ?: return
-        if (resumeAsked) return
-        resumeAsked = true
-        val pos = WatchProgress.resumePosition(key)
-        if (pos <= 0) { p.play(); return }
-        AlertDialog.Builder(this)
-            .setTitle(title.ifBlank { getString(R.string.resume_title) })
-            .setMessage(getString(R.string.resume_msg_fmt, clock(pos)))
-            .setPositiveButton(getString(R.string.resume_from_fmt, clock(pos))) { _, _ -> p.seekTo(pos); p.play() }
-            .setNegativeButton(R.string.start_over) { _, _ -> p.seekTo(0); p.play() }
-            .setOnCancelListener { p.seekTo(pos); p.play() }
-            .show()
+    /**
+     * A player that has plenty buffered but never becomes ready is stuck in the decoder, not the
+     * network. Nudge it with a seek, then a fresh prepare, then give up with a clear message.
+     */
+    private fun watchdog(p: ExoPlayer) {
+        if (p.playbackState != Player.STATE_BUFFERING) return
+        val waited = SystemClock.elapsedRealtime() - bufferingSince
+        val buffered = p.totalBufferedDuration
+        if (buffered < 4_000 || waited < 8_000) return
+        if (!p.playWhenReady) p.playWhenReady = true
+        when (nudges) {
+            0 -> { nudges = 1; bufferingSince = SystemClock.elapsedRealtime(); p.seekTo(p.currentPosition) }
+            1 -> { nudges = 2; bufferingSince = SystemClock.elapsedRealtime(); val pos = p.currentPosition; p.stop(); p.seekTo(pos); p.prepare(); p.play() }
+            2 -> if (!firstFrame && !preferSoftware) {
+                // Data is there but no frame has ever been drawn: try the software decoder.
+                nudges = 3
+                preferSoftware = true
+                val pos = p.currentPosition
+                releasePlayer()
+                startPositionMs = pos
+                initPlayer()
+                bufferingSince = SystemClock.elapsedRealtime()
+            } else {
+                nudges = 4
+                p.pause()
+                b.bufferBox.visibility = View.GONE
+                b.txtError.text = getString(R.string.err_decoder_stuck_fmt, videoInfo ?: "?", decoderName ?: "?")
+                b.txtError.visibility = View.VISIBLE
+                b.btnRetry.visibility = View.VISIBLE
+                b.btnRetry.requestFocus()
+            }
+            3 -> {
+                nudges = 4
+                p.pause()
+                b.bufferBox.visibility = View.GONE
+                b.txtError.text = getString(R.string.err_decoder_stuck_fmt, videoInfo ?: "?", decoderName ?: "?")
+                b.txtError.visibility = View.VISIBLE
+                b.btnRetry.visibility = View.VISIBLE
+                b.btnRetry.requestFocus()
+            }
+        }
     }
 
     private fun saveProgress(force: Boolean = false) {
@@ -446,6 +515,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun updateStatus() {
         val p = player ?: return
         if (!isLive) saveProgress()
+        watchdog(p)
         if (p.playbackState == Player.STATE_BUFFERING && pendingRetry == null) {
             val ready = (p.totalBufferedDuration / 1000).toInt()
             val waited = (SystemClock.elapsedRealtime() - bufferingSince) / 1000
@@ -453,7 +523,10 @@ class PlayerActivity : AppCompatActivity() {
             val detail = if (waited >= 3) "\n" + getString(
                 R.string.buffer_detail_fmt, UpdateChecker.formatSize(bytesLoaded), waited,
                 if (loadsStarted == 0) getString(R.string.connecting) else ""
-            ).trimEnd() + (lastLoadError?.let { "\n$it" } ?: "") else ""
+            ).trimEnd() +
+                (if (waited >= 6) "\n" + getString(R.string.video_detail_fmt, videoInfo ?: "?", decoderName ?: "?",
+                    getString(if (firstFrame) R.string.frame_yes else R.string.frame_no)) else "") +
+                (lastLoadError?.let { "\n$it" } ?: "") else ""
             b.txtBuffer.text = head + detail
         }
         if (!isLive) return

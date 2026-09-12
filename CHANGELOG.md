@@ -3,6 +3,21 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.43 — 2026-09-12
+
+### Fixed
+- Movies and episodes could sit "buffering" with minutes of video already downloaded and the
+  play button showing paused. The resume question is now asked before the stream is opened, so
+  playback never waits on it, and a watchdog now steps in when plenty is buffered but nothing
+  plays: it nudges the player, then reopens the stream, then explains that the device's video
+  decoder is not producing a picture rather than spinning forever.
+- The line under the spinner now also names the video format, resolution and decoder in use and
+  whether a picture has been produced.
+- When the device's hardware decoder never draws a frame (emulators such as BlueStacks, some
+  boxes), the player automatically reopens the title with the software decoder.
+- The Video on Demand home was blank on an upright phone: the rows area was sized for the side
+  rail and collapsed to nothing once the navigation became a row of tabs.
+
 ## v1.0.42 — 2026-09-12
 
 ### Fixed

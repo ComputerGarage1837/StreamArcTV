@@ -192,6 +192,10 @@
     <string name="err_connect">Can\'t connect to the provider\'s server.</string>
     <string name="connecting">connecting…</string>
     <string name="buffer_detail_fmt">%1$s received · waiting %2$d s %3$s</string>
+    <string name="video_detail_fmt">Video %1$s · decoder %2$s · %3$s</string>
+    <string name="frame_yes">picture OK</string>
+    <string name="frame_no">no picture yet</string>
+    <string name="err_decoder_stuck_fmt">The video is downloaded but this device\'s decoder is not producing a picture (%1$s via %2$s). Try again, or pick a different quality/format of this title if the provider offers one.</string>
     <string name="err_not_found_fmt">The provider has no file for this episode (HTTP %1$d).</string>
     <string name="err_http_fmt">Provider error (HTTP %1$d).</string>
     <string name="transfer_failed_fmt">%1$s failed: %2$s</string>
