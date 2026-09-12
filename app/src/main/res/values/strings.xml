@@ -187,6 +187,11 @@
     <string name="err_provider_limit_fmt">Provider refused the connection (HTTP %1$d), usually because too many streams are open on this account. It is retried automatically; pause other playback if it keeps failing.</string>
     <string name="paused_for_playback">Paused while you watch – resumes when the player closes</string>
     <string name="err_stream_limit_fmt">The provider refused this stream (HTTP %1$d): too many streams open on this account. Close other players or wait for a download to finish, then retry.</string>
+    <string name="err_timeout">The provider stopped sending data (timed out).</string>
+    <string name="err_dns">Can\'t find the provider\'s server (no internet or wrong address).</string>
+    <string name="err_connect">Can\'t connect to the provider\'s server.</string>
+    <string name="connecting">connecting…</string>
+    <string name="buffer_detail_fmt">%1$s received · waiting %2$d s %3$s</string>
     <string name="err_not_found_fmt">The provider has no file for this episode (HTTP %1$d).</string>
     <string name="err_http_fmt">Provider error (HTTP %1$d).</string>
     <string name="transfer_failed_fmt">%1$s failed: %2$s</string>
