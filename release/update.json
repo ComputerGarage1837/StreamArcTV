@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "packageName": "com.computergarage.streamarctv",
-  "versionName": "1.0.6",
-  "versionCode": 10006,
+  "versionName": "1.0.7",
+  "versionCode": 10007,
   "apk": {
-    "assetName": "Stream-Arc-TV-1.0.6.apk",
-    "sha256": "c4a138c5529a8cfc7b7aeaecf4b89b1c77572d59eaa984524ac3a979ccd7b7ca",
-    "sizeBytes": 80251307
+    "assetName": "Stream-Arc-TV-1.0.7.apk",
+    "sha256": "d8a1a8f4a18b8ad5d521d5448bc723fb02778ecd1667afe9abcbb94bac745b6f",
+    "sizeBytes": 8766911
   }
 }
