@@ -3,6 +3,12 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.9 — 2026-09-12
+
+### Fixed
+- "Check for updates" could report "up to date" for a few minutes after a new release because
+  GitHub's file cache served the previous update feed. Each check now bypasses that cache.
+
 ## v1.0.8 — 2026-09-12
 
 ### Added
