@@ -89,30 +89,29 @@ object TransferDialogs {
         Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
     }
 
-    /** Start and end clock times (to the minute), the folder line, then the schedule. */
+    /** Start and end clock times (to the minute) on hour / minute / AM-PM wheels, then folder and schedule. */
     fun record(activity: AppCompatActivity, picker: FolderPicker, channelName: String, url: String) {
         val vb = DialogRecordBinding.inflate(LayoutInflater.from(activity))
-        val portraitPhone = activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT &&
-            activity.resources.configuration.smallestScreenWidthDp < 600
-        if (portraitPhone) vb.pickers.orientation = android.widget.LinearLayout.VERTICAL
-
         val now = java.util.Calendar.getInstance()
-        val startCal = (now.clone() as java.util.Calendar).apply { add(java.util.Calendar.MINUTE, 1); set(java.util.Calendar.SECOND, 0) }
+        val startCal = (now.clone() as java.util.Calendar).apply { add(java.util.Calendar.MINUTE, 1) }
         val endCal = (startCal.clone() as java.util.Calendar).apply { add(java.util.Calendar.HOUR_OF_DAY, 1) }
-        setTime(vb.pickStart, startCal)
-        setTime(vb.pickEnd, endCal)
 
-        fun times(): Pair<Long, Long> = resolve(getHour(vb.pickStart), getMinute(vb.pickStart), getHour(vb.pickEnd), getMinute(vb.pickEnd))
+        val start = TimeWheels(vb.startHour, vb.startMinute, vb.startAmPm)
+        val end = TimeWheels(vb.endHour, vb.endMinute, vb.endAmPm)
+        start.set(startCal.get(java.util.Calendar.HOUR_OF_DAY), startCal.get(java.util.Calendar.MINUTE))
+        end.set(endCal.get(java.util.Calendar.HOUR_OF_DAY), endCal.get(java.util.Calendar.MINUTE))
+
+        fun times(): Pair<Long, Long> = resolve(start.hour24(), start.minute(), end.hour24(), end.minute())
         fun summarize() {
             val (st, en) = times()
             val day = SimpleDateFormat("EEE MMM d", Locale.getDefault())
             val t = SimpleDateFormat("h:mm a", Locale.getDefault())
             val sameDay = day.format(Date(st)) == day.format(Date(en))
-            vb.txtSummary.text = if (sameDay) "${day.format(Date(st))}  ${t.format(Date(st))} – ${t.format(Date(en))}"
+            vb.txtSummary.text = if (sameDay) "${day.format(Date(st))}   ${t.format(Date(st))} – ${t.format(Date(en))}"
             else "${day.format(Date(st))} ${t.format(Date(st))} – ${day.format(Date(en))} ${t.format(Date(en))}"
         }
-        vb.pickStart.setOnTimeChangedListener { _, _, _ -> summarize() }
-        vb.pickEnd.setOnTimeChangedListener { _, _, _ -> summarize() }
+        start.onChange = { summarize() }
+        end.onChange = { summarize() }
         summarize()
 
         val prefs = Prefs(activity)
@@ -139,6 +138,32 @@ object TransferDialogs {
                 vb.txtFolder.text = activity.getString(R.string.folder_current_fmt, Folders.describe(activity, f, TransferType.RECORDING))
             }
         }
+        vb.startHour.requestFocus()
+    }
+
+    /** Hour (1–12), minute (00–59) and AM/PM wheels that work by touch and with a remote. */
+    private class TimeWheels(val hour: android.widget.NumberPicker, val minute: android.widget.NumberPicker, val ampm: android.widget.NumberPicker) {
+        var onChange: (() -> Unit)? = null
+
+        init {
+            hour.minValue = 1; hour.maxValue = 12; hour.wrapSelectorWheel = true
+            minute.minValue = 0; minute.maxValue = 59; minute.wrapSelectorWheel = true
+            minute.setFormatter { v -> String.format(Locale.US, "%02d", v) }
+            ampm.minValue = 0; ampm.maxValue = 1; ampm.displayedValues = arrayOf("AM", "PM"); ampm.wrapSelectorWheel = true
+            for (p in listOf(hour, minute, ampm)) {
+                p.descendantFocusability = android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS   // no keyboard pop-up; wheels only
+                p.setOnValueChangedListener { _, _, _ -> onChange?.invoke() }
+            }
+        }
+
+        fun set(hour24: Int, min: Int) {
+            hour.value = if (hour24 % 12 == 0) 12 else hour24 % 12
+            minute.value = min
+            ampm.value = if (hour24 >= 12) 1 else 0
+        }
+
+        fun hour24(): Int = (hour.value % 12) + if (ampm.value == 1) 12 else 0
+        fun minute(): Int = minute.value
     }
 
     /**
@@ -162,18 +187,6 @@ object TransferDialogs {
         if (en <= st) en += 24 * 3600 * 1000L
         return st to en
     }
-
-    @Suppress("DEPRECATION")
-    private fun setTime(p: android.widget.TimePicker, cal: java.util.Calendar) {
-        if (Build.VERSION.SDK_INT >= 23) { p.hour = cal.get(java.util.Calendar.HOUR_OF_DAY); p.minute = cal.get(java.util.Calendar.MINUTE) }
-        else { p.currentHour = cal.get(java.util.Calendar.HOUR_OF_DAY); p.currentMinute = cal.get(java.util.Calendar.MINUTE) }
-    }
-
-    @Suppress("DEPRECATION")
-    private fun getHour(p: android.widget.TimePicker): Int = if (Build.VERSION.SDK_INT >= 23) p.hour else p.currentHour
-
-    @Suppress("DEPRECATION")
-    private fun getMinute(p: android.widget.TimePicker): Int = if (Build.VERSION.SDK_INT >= 23) p.minute else p.currentMinute
 
     private fun schedule(activity: AppCompatActivity, channel: String, url: String, startAt: Long, endAt: Long, folder: String?) {
         ensureNotifications(activity)
