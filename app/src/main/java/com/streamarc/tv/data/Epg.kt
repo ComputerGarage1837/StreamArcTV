@@ -123,7 +123,11 @@ object XmltvParser {
                 org.xmlpull.v1.XmlPullParser.END_TAG -> when (parser.name) {
                     "display-name" -> {
                         val id = channelId
-                        if (id != null && text != null) { names.putIfAbsent(normalize(text!!), id); text = null }
+                        if (id != null && text != null) {
+                            val key = normalize(text!!)
+                            if (key.isNotEmpty() && !names.containsKey(key)) names[key] = id
+                            text = null
+                        }
                     }
                     "channel" -> channelId = null
                     "title" -> if (inProgramme && text != null) { if (title.isBlank()) title = text.trim(); text = null }
