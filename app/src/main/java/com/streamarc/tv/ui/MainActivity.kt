@@ -58,6 +58,7 @@ class MainActivity : AppCompatActivity() {
         val mode = currentLayout()
         appliedLayout = mode
         setContentView(if (mode == "phone") R.layout.activity_main_phone else R.layout.activity_main_tv)
+        Edge.pad(findViewById(R.id.content))
 
         txtLiveStatus = findViewById(R.id.txtLiveStatus)
         txtVodStatus = findViewById(R.id.txtVodStatus)

@@ -3,6 +3,19 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.11 — 2026-09-12
+
+### Changed
+- Live TV is now a real programme grid: channels down the side with logos, a time ruler with a
+  "now" marker, programme blocks sized by duration, and a details panel showing the focused
+  programme's picture, time and description. Move with the remote, press OK to watch, hold OK for
+  favorites; touch and drag to scroll on phones.
+- Home screen uses the original design artwork: the scenery backdrop, card images, round Update and
+  Settings buttons and the bottom-bar icons. TV/tablet layout is smaller so the scenery and headline
+  stay visible; phone cards are shorter and squarer, and the phone home scrolls in landscape.
+- Content no longer sits under the phone's status bar or notch.
+- Movies / Series tabs are a clear segmented control with readable labels.
+
 ## v1.0.10 — 2026-09-12
 
 ### Fixed
