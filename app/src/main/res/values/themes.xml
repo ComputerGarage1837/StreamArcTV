@@ -124,6 +124,11 @@
         <item name="android:lineSpacingMultiplier">0.98</item>
     </style>
 
+    <style name="PickerTheme">
+        <item name="android:textColorPrimary">@color/text</item>
+        <item name="colorControlNormal">@color/accent</item>
+    </style>
+
     <style name="PrimaryButton" parent="Widget.AppCompat.Button">
         <item name="android:background">@drawable/bg_primary_button</item>
         <item name="android:textColor">@color/bg</item>

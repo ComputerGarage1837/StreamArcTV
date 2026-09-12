@@ -33,6 +33,14 @@
             android:maxLines="1"
             android:textColor="@color/text"
             android:textSize="20sp" />
+
+        <Button
+            android:id="@+id/btnDownloadAll"
+            style="@style/SmallButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/download_all"
+            android:visibility="gone" />
     </LinearLayout>
 
     <ImageView

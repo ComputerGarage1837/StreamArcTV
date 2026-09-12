@@ -57,6 +57,14 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
                 android:text="@string/series" />
+
+            <Button
+                android:id="@+id/btnTabDownloads"
+                style="@style/TabButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="@string/tab_downloads" />
         </LinearLayout>
 
         <TextView

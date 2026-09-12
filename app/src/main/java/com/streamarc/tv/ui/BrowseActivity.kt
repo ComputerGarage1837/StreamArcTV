@@ -51,6 +51,7 @@ class BrowseActivity : AppCompatActivity() {
     private var kind: ContentKind = ContentKind.LIVE
     private val isLive: Boolean get() = kind == ContentKind.LIVE
 
+    private val picker = FolderPicker(this)
     private val categoryAdapter = CategoryAdapter { cat -> selectCategory(cat) }
     private val streamAdapter = StreamAdapter({ s -> play(s) }, { s -> showItemMenu(s) })
 
@@ -89,6 +90,7 @@ class BrowseActivity : AppCompatActivity() {
             b.tabs.visibility = View.VISIBLE
             b.btnTabMovies.setOnClickListener { switchKind(ContentKind.MOVIE) }
             b.btnTabSeries.setOnClickListener { switchKind(ContentKind.SERIES) }
+            b.btnTabDownloads.setOnClickListener { startActivity(TransfersActivity.intent(this, com.streamarc.tv.transfer.TransferType.DOWNLOAD)) }
             renderTabs()
         }
 
@@ -299,11 +301,14 @@ class BrowseActivity : AppCompatActivity() {
         val isFav = prefs.isFavorite(service, kind, id)
         val favLabel = getString(if (isFav) R.string.remove_from_favorites else R.string.add_to_favorites)
         val first = getString(if (kind == ContentKind.SERIES) R.string.open else R.string.play)
-        val entries = mutableListOf(first, favLabel)
-        if (kind == ContentKind.MOVIE) entries.add(getString(R.string.download))
+        val third = when (kind) {
+            ContentKind.LIVE -> getString(R.string.record_menu)
+            ContentKind.MOVIE -> getString(R.string.download)
+            ContentKind.SERIES -> getString(R.string.download_series)
+        }
         AlertDialog.Builder(this)
             .setTitle(stream.name ?: "")
-            .setItems(entries.toTypedArray()) { _, which ->
+            .setItems(arrayOf(first, favLabel, third)) { _, which ->
                 when (which) {
                     0 -> play(stream)
                     1 -> {
@@ -312,17 +317,53 @@ class BrowseActivity : AppCompatActivity() {
                         Toast.makeText(this, getString(msg, stream.name ?: ""), Toast.LENGTH_SHORT).show()
                         applyFilter()
                     }
-                    2 -> {
-                        val url = try { XtreamApi.streamUrl(service, account, stream, prefs.liveFormat) } catch (e: Exception) {
-                            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show(); return@setItems
-                        }
-                        DownloadDialogs.askAndStart(this, stream.name ?: "Movie", getString(R.string.movies), url,
-                            stream.containerExtension?.takeIf { it.isNotBlank() } ?: "mp4")
+                    2 -> when (kind) {
+                        ContentKind.LIVE -> recordChannel(stream)
+                        ContentKind.MOVIE -> downloadMovie(stream)
+                        ContentKind.SERIES -> downloadSeries(stream)
                     }
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    private fun downloadMovie(stream: Stream) {
+        val url = try { XtreamApi.streamUrl(service, account, stream, prefs.liveFormat) } catch (e: Exception) {
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show(); return
+        }
+        val ext = stream.containerExtension?.takeIf { it.isNotBlank() } ?: "mp4"
+        TransferDialogs.download(this, picker, listOf(DownloadItem(stream.name ?: "Movie", getString(R.string.movies), url, ext)))
+    }
+
+    private fun downloadSeries(stream: Stream) {
+        val seriesId = stream.seriesId ?: stream.streamId ?: return
+        val name = stream.name ?: "Series"
+        lifecycleScope.launch {
+            val episodes = try { XtreamApi.seriesInfo(service, account, seriesId) } catch (e: Exception) {
+                Toast.makeText(this@BrowseActivity, e.message ?: getString(R.string.load_failed), Toast.LENGTH_LONG).show(); return@launch
+            }
+            if (episodes.isEmpty()) { Toast.makeText(this@BrowseActivity, R.string.no_episodes, Toast.LENGTH_SHORT).show(); return@launch }
+            AlertDialog.Builder(this@BrowseActivity)
+                .setTitle(name)
+                .setMessage(getString(R.string.download_series_confirm_fmt, episodes.size))
+                .setPositiveButton(R.string.download_all) { _, _ ->
+                    val items = episodes.map { ep ->
+                        DownloadItem("$name S${ep.season}E${ep.number} ${ep.title}", name, XtreamApi.episodeUrl(service, account, ep), ep.containerExtension)
+                    }
+                    TransferDialogs.download(this@BrowseActivity, picker, items)
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+    }
+
+    private fun recordChannel(stream: Stream) {
+        // Recordings always use the MPEG-TS stream so the file plays back directly.
+        val url = try { XtreamApi.streamUrl(service, account, stream, "ts") } catch (e: Exception) {
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show(); return
+        }
+        TransferDialogs.record(this, picker, stream.name ?: "Channel", url)
     }
 
     /**
