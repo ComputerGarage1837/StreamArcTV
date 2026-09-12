@@ -10,7 +10,6 @@ import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -80,9 +79,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.navHome).isSelected = true
         findViewById<View>(R.id.navHome).setOnClickListener { live.requestFocus() }
         findViewById<View>(R.id.navSearch).setOnClickListener { pickSearch() }
-        findViewById<View>(R.id.navDownloads).setOnClickListener {
-            Toast.makeText(this, R.string.downloads_unavailable, Toast.LENGTH_SHORT).show()
-        }
+        findViewById<View>(R.id.navDownloads).setOnClickListener { startActivity(Intent(this, DownloadsActivity::class.java)) }
         findViewById<View>(R.id.navProfile).setOnClickListener { pickProfile() }
     }
 
