@@ -3,6 +3,22 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.37 — 2026-09-12
+
+### Added
+- Movies, episodes and downloaded files remember where you left off. Opening one again asks
+  whether to resume from that point or start over. Posters and episode rows show a progress bar,
+  and a tick once watched (near the end counts as watched). Hold OK on a movie or episode for
+  "Mark as watched" / "Mark as unwatched".
+- Subtitle control: Settings → Playback → Subtitles chooses whether subtitle tracks are shown by
+  default (now off unless you turn them on), and the player's CC button lets you pick a track or
+  turn them off while watching. Your choice in the player is remembered.
+
+### Fixed
+- The Downloads list fell far behind the real progress. Each row was asking Android for its
+  folder's name on every refresh; that is now looked up once, the list reads progress directly
+  from the download service twice a second, and shows percentage, size and current speed.
+
 ## v1.0.36 — 2026-09-12
 
 ### Changed

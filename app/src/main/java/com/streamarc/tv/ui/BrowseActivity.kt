@@ -26,6 +26,7 @@ import com.streamarc.tv.data.Format
 import com.streamarc.tv.data.Prefs
 import com.streamarc.tv.data.Service
 import com.streamarc.tv.data.Stream
+import com.streamarc.tv.data.WatchProgress
 import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.databinding.ActivityBrowseBinding
 import com.streamarc.tv.databinding.ItemCategoryBinding
@@ -178,6 +179,7 @@ class BrowseActivity : AppCompatActivity() {
             b.panelEpg.visibility = View.GONE
             streamAdapter.grid = true
             streamAdapter.columns = resources.getInteger(R.integer.poster_columns)
+            streamAdapter.watchKey = { s -> if (kind == ContentKind.MOVIE) s.streamId?.let { WatchProgress.movieKey(service, it) } else null }
             b.listStreams.layoutManager = GridLayoutManager(this, streamAdapter.columns)
             b.listStreams.adapter = streamAdapter
         }
@@ -191,6 +193,8 @@ class BrowseActivity : AppCompatActivity() {
         super.onResume()
         // If the user signed out from the profile screen, leave.
         if (!prefs.isSignedIn(service)) finish()
+        // Watched marks may have changed in the player.
+        if (streamAdapter.grid) streamAdapter.notifyDataSetChanged()
     }
 
     override fun onStart() {
@@ -485,7 +489,8 @@ class BrowseActivity : AppCompatActivity() {
         } catch (e: Exception) {
             showError(e.message ?: getString(R.string.load_failed)); return
         }
-        startActivity(PlayerActivity.intent(this, url, stream.name ?: "", isLive))
+        val key = if (kind == ContentKind.MOVIE) stream.streamId?.let { WatchProgress.movieKey(service, it) } else null
+        startActivity(PlayerActivity.intent(this, url, stream.name ?: "", isLive, key))
     }
 
     /** Context menu opened by holding OK / long-pressing an item. */
@@ -499,10 +504,14 @@ class BrowseActivity : AppCompatActivity() {
             ContentKind.MOVIE -> getString(R.string.download)
             ContentKind.SERIES -> getString(R.string.download_series)
         }
+        val watchKey = if (kind == ContentKind.MOVIE) stream.streamId?.let { WatchProgress.movieKey(service, it) } else null
+        val options = arrayListOf(first, favLabel, third)
+        if (watchKey != null) options.add(getString(if (WatchProgress.isWatched(watchKey)) R.string.mark_unwatched else R.string.mark_watched))
         AlertDialog.Builder(this)
             .setTitle(stream.name ?: "")
-            .setItems(arrayOf(first, favLabel, third)) { _, which ->
+            .setItems(options.toTypedArray()) { _, which ->
                 when (which) {
+                    3 -> { WatchProgress.setWatched(watchKey!!, !WatchProgress.isWatched(watchKey)); streamAdapter.notifyDataSetChanged() }
                     0 -> play(stream)
                     1 -> {
                         val nowFav = prefs.toggleFavorite(service, kind, id)
@@ -691,6 +700,8 @@ class BrowseActivity : AppCompatActivity() {
         private var items: List<Stream> = emptyList()
         private var favs: Set<String> = emptySet()
         var grid: Boolean = false
+        /** Set for movies so posters show watched progress; null for live channels and series. */
+        var watchKey: ((Stream) -> String?)? = null
 
         class VH(val vb: ItemStreamBinding) : RecyclerView.ViewHolder(vb.root)
 
@@ -735,7 +746,11 @@ class BrowseActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: VH, position: Int) {
             val s = items[position]
             sizePoster(holder)
-            holder.vb.txtName.text = (if (favs.contains(s.id)) "★ " else "") + (s.name ?: "—")
+            val key = watchKey?.invoke(s)
+            val frac = key?.let { WatchProgress.fraction(it) }
+            holder.vb.txtName.text = (if (favs.contains(s.id)) "★ " else "") + (if (frac != null && frac >= 1f) "✓ " else "") + (s.name ?: "—")
+            holder.vb.progressWatch.visibility = if (frac != null) View.VISIBLE else View.GONE
+            if (frac != null) holder.vb.progressWatch.progress = (frac * 1000).toInt()
             Glide.with(holder.vb.imgIcon)
                 .load(s.image)
                 .placeholder(R.drawable.ic_placeholder)

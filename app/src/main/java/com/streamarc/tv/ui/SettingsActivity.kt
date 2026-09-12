@@ -46,6 +46,8 @@ class SettingsActivity : AppCompatActivity() {
         renderLiveFormat()
         b.rowBuffer.setOnClickListener { pickBuffer() }
         renderBuffer()
+        b.rowSubtitles.setOnClickListener { pickSubtitles() }
+        renderSubtitles()
         b.rowLayout.setOnClickListener { pickLayout() }
         renderLayout()
         b.rowDiagnostics.setOnClickListener { runDiagnostics() }
@@ -95,6 +97,22 @@ class SettingsActivity : AppCompatActivity() {
             .setSingleChoiceItems(options, current) { d, which ->
                 prefs.liveFormat = if (which == 1) "ts" else "m3u8"
                 renderLiveFormat()
+                d.dismiss()
+            }
+            .show()
+    }
+
+    private fun renderSubtitles() {
+        b.txtSubtitlesValue.text = getString(if (prefs.subtitles) R.string.subtitles_on else R.string.subtitles_off)
+    }
+
+    private fun pickSubtitles() {
+        val options = arrayOf(getString(R.string.subtitles_off), getString(R.string.subtitles_on))
+        AlertDialog.Builder(this)
+            .setTitle(R.string.subtitles)
+            .setSingleChoiceItems(options, if (prefs.subtitles) 1 else 0) { d, which ->
+                prefs.subtitles = which == 1
+                renderSubtitles()
                 d.dismiss()
             }
             .show()

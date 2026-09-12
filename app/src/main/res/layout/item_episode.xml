@@ -61,5 +61,15 @@
             android:maxLines="2"
             android:textColor="@color/text_muted"
             android:textSize="12sp" />
+
+        <ProgressBar
+            android:id="@+id/progressWatch"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="6dp"
+            android:max="1000"
+            android:progressDrawable="@drawable/progress_epg"
+            android:visibility="gone" />
     </LinearLayout>
 </LinearLayout>

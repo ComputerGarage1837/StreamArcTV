@@ -53,6 +53,15 @@
     <string name="skipped_cleared">Skipped version cleared.</string>
     <string name="playback">Playback</string>
     <string name="live_stream_format">Live stream format</string>
+    <string name="subtitles">Subtitles</string>
+    <string name="subtitles_on">On when available</string>
+    <string name="subtitles_off">Off</string>
+    <string name="resume_title">Resume?</string>
+    <string name="resume_msg_fmt">You stopped at %1$s last time.</string>
+    <string name="resume_from_fmt">Resume from %1$s</string>
+    <string name="start_over">Start over</string>
+    <string name="mark_watched">Mark as watched</string>
+    <string name="mark_unwatched">Mark as unwatched</string>
     <string name="live_buffer">Playback buffer (live TV &amp; VOD)</string>
     <string name="buffer_help_title">About buffer sizes</string>
     <string name="buffer_help">The buffer is how much of the stream the app downloads ahead of what you are watching, for live channels and for movies and series alike. A bigger buffer rides out slow or patchy connections and lets you pause for longer without losing your place, but the channel takes a little longer to start and uses more memory.\n\nWhen you pause, the app keeps downloading until the buffer is full, and pressing play carries on exactly where you stopped. Once you have paused longer than the buffer allows, playback jumps back to live.\n\nHuge buffers are automatically limited to what this device\'s memory can hold.</string>
