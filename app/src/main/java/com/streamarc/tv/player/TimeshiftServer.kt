@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.StatFs
 import android.os.SystemClock
 import android.util.Log
+import com.streamarc.tv.util.AppLog
 import com.streamarc.tv.data.XtreamApi
 import okhttp3.Call
 import okhttp3.OkHttpClient
@@ -107,7 +108,7 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
                 val now = SystemClock.elapsedRealtime()
                 if (attempt == 0) lastFailure = now
                 attempt++
-                Log.w(TAG, "Upstream dropped (attempt $attempt): ${e.message}")
+                AppLog.w(TAG, "upstream dropped (attempt $attempt): ${e.message}")
                 if (now - lastFailure > GIVE_UP_MS) {
                     failed = true
                     synchronized(lock) { lock.notifyAll() }

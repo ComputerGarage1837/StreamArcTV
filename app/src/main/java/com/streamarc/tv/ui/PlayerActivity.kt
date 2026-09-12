@@ -48,11 +48,14 @@ import com.streamarc.tv.databinding.ActivityPlayerBinding
 import com.streamarc.tv.player.TimeshiftServer
 import com.streamarc.tv.transfer.TransferService
 import com.streamarc.tv.update.UpdateChecker
+import com.streamarc.tv.util.AppLog
 
 @UnstableApi
 class PlayerActivity : AppCompatActivity() {
 
     private lateinit var b: ActivityPlayerBinding
+    /** The PlayerView in use: a TextureView-backed one on emulators, SurfaceView elsewhere. */
+    private lateinit var pv: androidx.media3.ui.PlayerView
     private lateinit var prefs: Prefs
     private var player: ExoPlayer? = null
     private var timeshift: TimeshiftServer? = null
@@ -107,17 +110,24 @@ class PlayerActivity : AppCompatActivity() {
         url = intent.getStringExtra(EXTRA_URL) ?: run { finish(); return }
         title = intent.getStringExtra(EXTRA_TITLE) ?: ""
         isLive = intent.getBooleanExtra(EXTRA_LIVE, false)
+        AppLog.i(TAG, "open live=$isLive title='$title' url=${AppLog.safeUrl(url)} emulator=$isEmulator")
         watchKey = intent.getStringExtra(EXTRA_KEY)?.takeIf { !isLive }
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         b.txtTitle.text = title
-        b.playerView.setShowNextButton(false)
-        b.playerView.setShowPreviousButton(false)
-        b.playerView.setShowRewindButton(false)
-        b.playerView.setShowFastForwardButton(false)
-        b.playerView.setShowSubtitleButton(true)
-        b.playerView.controllerShowTimeoutMs = 4000
-        b.playerView.setControllerVisibilityListener(
+        pv = if (isEmulator) b.playerViewTexture else b.playerView
+        if (isEmulator) {
+            b.playerView.visibility = View.GONE
+            b.playerViewTexture.visibility = View.VISIBLE
+            preferSoftware = true   // emulated hardware decoders tend to never output a frame
+        }
+        pv.setShowNextButton(false)
+        pv.setShowPreviousButton(false)
+        pv.setShowRewindButton(false)
+        pv.setShowFastForwardButton(false)
+        pv.setShowSubtitleButton(true)
+        pv.controllerShowTimeoutMs = 4000
+        pv.setControllerVisibilityListener(
             androidx.media3.ui.PlayerView.ControllerVisibilityListener { visibility ->
                 b.txtTitle.visibility = visibility
                 b.txtLiveStatus.visibility = if (isLive) visibility else View.GONE
@@ -172,8 +182,8 @@ class PlayerActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_MEDIA_REWIND -> { seekBy(-SEEK_STEP_MS); return true }
                 KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> { seekBy(SEEK_STEP_MS); return true }
                 // With the controls hidden, left/right on the remote skip; with them shown they move focus.
-                KeyEvent.KEYCODE_DPAD_LEFT -> if (!b.playerView.isControllerFullyVisible) { seekBy(-SEEK_STEP_MS); return true }
-                KeyEvent.KEYCODE_DPAD_RIGHT -> if (!b.playerView.isControllerFullyVisible) { seekBy(SEEK_STEP_MS); return true }
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (!pv.isControllerFullyVisible) { seekBy(-SEEK_STEP_MS); return true }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> if (!pv.isControllerFullyVisible) { seekBy(SEEK_STEP_MS); return true }
             }
         }
         return super.dispatchKeyEvent(event)
@@ -195,6 +205,7 @@ class PlayerActivity : AppCompatActivity() {
         // in-memory buffer instead, since they can already be scrubbed freely.
         val chosen = BufferLevel.from(prefs.bufferLevel)
         val level = if (chosen.onDisk && !isLive) BufferLevel.MAX else chosen
+        AppLog.i(TAG, "initPlayer level=${level.key} preferSoftware=$preferSoftware start=${startPositionMs}ms heap=${Runtime.getRuntime().maxMemory() shr 20}MB")
 
         // Any idle keep-alive connection to the provider (a paused download, say) still counts as
         // a stream on most panels; drop them so this stream gets the slot.
@@ -240,24 +251,52 @@ class PlayerActivity : AppCompatActivity() {
             .setMediaSourceFactory(mediaSources)
             .setLoadControl(loadControl)
             .setWakeMode(C.WAKE_MODE_NETWORK)
-            .setHandleAudioBecomingNoisy(true)
             .build()
         player = p
-        b.playerView.player = p
+        pv.player = p
         bytesLoaded = 0L; loadsStarted = 0; lastLoadError = null; bufferingSince = SystemClock.elapsedRealtime()
         videoInfo = null; decoderName = null; firstFrame = false
         p.addAnalyticsListener(object : AnalyticsListener {
+            override fun onLoadStarted(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData) {
+                AppLog.i(TAG, "load start ${AppLog.safeUrl(loadEventInfo.uri.toString())} range=${loadEventInfo.dataSpec.position}")
+            }
             override fun onLoadError(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData, error: IOException, wasCanceled: Boolean) {
                 lastLoadError = describeIo(error)
+                AppLog.e(TAG, "load error bytes=${loadEventInfo.bytesLoaded} cancelled=$wasCanceled", error)
             }
             override fun onVideoInputFormatChanged(eventTime: AnalyticsListener.EventTime, format: Format, decoderReuseEvaluation: DecoderReuseEvaluation?) {
                 videoInfo = "${format.sampleMimeType ?: "?"} ${format.width}x${format.height}"
+                AppLog.i(TAG, "video format $videoInfo codecs=${format.codecs} fps=${format.frameRate} bitrate=${format.bitrate}")
+            }
+            override fun onAudioInputFormatChanged(eventTime: AnalyticsListener.EventTime, format: Format, decoderReuseEvaluation: DecoderReuseEvaluation?) {
+                AppLog.i(TAG, "audio format ${format.sampleMimeType} ch=${format.channelCount} rate=${format.sampleRate}")
             }
             override fun onVideoDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
                 this@PlayerActivity.decoderName = decoderName
+                AppLog.i(TAG, "video decoder $decoderName (${initializationDurationMs}ms)")
+            }
+            override fun onAudioDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+                AppLog.i(TAG, "audio decoder $decoderName")
             }
             override fun onRenderedFirstFrame(eventTime: AnalyticsListener.EventTime, output: Any, renderTimeMs: Long) {
                 firstFrame = true
+                AppLog.i(TAG, "first frame rendered")
+            }
+            override fun onDroppedVideoFrames(eventTime: AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) {
+                AppLog.w(TAG, "dropped $droppedFrames frames in ${elapsedMs}ms")
+            }
+            override fun onVideoCodecError(eventTime: AnalyticsListener.EventTime, videoCodecError: Exception) {
+                AppLog.e(TAG, "video codec error", videoCodecError)
+            }
+            override fun onAudioCodecError(eventTime: AnalyticsListener.EventTime, audioCodecError: Exception) {
+                AppLog.e(TAG, "audio codec error", audioCodecError)
+            }
+            override fun onTracksChanged(eventTime: AnalyticsListener.EventTime, tracks: androidx.media3.common.Tracks) {
+                val desc = tracks.groups.joinToString(" | ") { g ->
+                    val f = g.getTrackFormat(0)
+                    "${f.sampleMimeType} sel=${g.isSelected} sup=${g.isSupported}"
+                }
+                AppLog.i(TAG, "tracks: $desc")
             }
         })
         // Subtitles follow the saved preference; the CC button in the controls changes and remembers it.
@@ -266,13 +305,17 @@ class PlayerActivity : AppCompatActivity() {
             .build()
 
         p.addListener(object : Player.Listener {
-            override fun onPlayerError(error: PlaybackException) = handleError(error)
+            override fun onPlayerError(error: PlaybackException) {
+                AppLog.e(TAG, "player error ${error.errorCodeName}", error)
+                handleError(error)
+            }
 
             override fun onTrackSelectionParametersChanged(parameters: TrackSelectionParameters) {
                 prefs.subtitles = !parameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
+                AppLog.i(TAG, "state=${stateName(playbackState)} playWhenReady=${p.playWhenReady} pos=${p.currentPosition} buffered=${p.totalBufferedDuration}ms")
                 b.bufferBox.visibility =
                     if (playbackState == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
                 if (playbackState == Player.STATE_BUFFERING) bufferingSince = SystemClock.elapsedRealtime()
@@ -295,8 +338,13 @@ class PlayerActivity : AppCompatActivity() {
             }
 
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                AppLog.i(TAG, "playWhenReady=$playWhenReady reason=$reason (1 user, 2 focus loss, 3 becoming noisy, 4 remote, 5 end of item, 6 suppressed)")
                 if (!playWhenReady && pausedSince == 0L) pausedSince = SystemClock.elapsedRealtime()
                 updateStatus()
+            }
+
+            override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+                AppLog.i(TAG, "suppression=$playbackSuppressionReason")
             }
         })
 
@@ -334,6 +382,7 @@ class PlayerActivity : AppCompatActivity() {
         val waited = SystemClock.elapsedRealtime() - bufferingSince
         val buffered = p.totalBufferedDuration
         if (buffered < 4_000 || waited < 8_000) return
+        AppLog.w(TAG, "watchdog stage=$nudges buffered=${buffered}ms waited=${waited}ms firstFrame=$firstFrame playWhenReady=${p.playWhenReady} decoder=$decoderName")
         if (!p.playWhenReady) p.playWhenReady = true
         when (nudges) {
             0 -> { nudges = 1; bufferingSince = SystemClock.elapsedRealtime(); p.seekTo(p.currentPosition) }
@@ -382,9 +431,10 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun releasePlayer() {
+        player?.let { AppLog.i(TAG, "release pos=${it.currentPosition} state=${stateName(it.playbackState)}") }
         player?.release()
         player = null
-        b.playerView.player = null
+        pv.player = null
         timeshift?.close()
         timeshift = null
         // Sever every connection to the provider now, not when the pool feels like it.
@@ -395,7 +445,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun seekBy(deltaMs: Long) {
         val p = player ?: return
-        b.playerView.showController()
+        pv.showController()
         val ts = timeshift
         when {
             ts != null -> {
@@ -505,6 +555,10 @@ class PlayerActivity : AppCompatActivity() {
         return null
     }
 
+    private fun stateName(s: Int) = when (s) {
+        Player.STATE_IDLE -> "IDLE"; Player.STATE_BUFFERING -> "BUFFERING"; Player.STATE_READY -> "READY"; Player.STATE_ENDED -> "ENDED"; else -> "$s"
+    }
+
     private fun cancelRetry() {
         pendingRetry?.let { handler.removeCallbacks(it) }
         pendingRetry = null
@@ -576,6 +630,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     companion object {
+        private const val TAG = "Player"
         private const val EXTRA_URL = "url"
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_LIVE = "live"
@@ -583,6 +638,13 @@ class PlayerActivity : AppCompatActivity() {
         private const val MAX_RETRIES = 4
         private const val BEHIND_THRESHOLD_MS = 2_000L
         private const val SEEK_STEP_MS = 10_000L
+        /** BlueStacks, Genymotion, the Android emulator: x86 builds or telltale fingerprints. */
+        val isEmulator: Boolean by lazy {
+            val abis = android.os.Build.SUPPORTED_ABIS.joinToString().lowercase()
+            val fp = (android.os.Build.FINGERPRINT + android.os.Build.MANUFACTURER + android.os.Build.MODEL + android.os.Build.PRODUCT + android.os.Build.HARDWARE).lowercase()
+            abis.contains("x86") || listOf("generic", "vbox", "bluestacks", "genymotion", "goldfish", "ranchu", "emulator", "sdk_gphone", "nox", "ldplayer", "memu")
+                .any { fp.contains(it) }
+        }
         /** Same pool as the API client, with streaming timeouts. */
         private val playerClient by lazy {
             XtreamApi.client.newBuilder()

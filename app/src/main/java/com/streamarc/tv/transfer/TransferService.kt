@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import com.streamarc.tv.R
 import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.ui.MainActivity
+import com.streamarc.tv.util.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -111,6 +112,7 @@ class TransferService : Service() {
             val wait = job.startAt - System.currentTimeMillis()
             if (wait > 0) delay(wait)
         }
+        AppLog.i("Transfer", "start ${job.type} '${job.title}' ${AppLog.safeUrl(job.url)}")
         store.update(id) { it.state = TransferState.RUNNING; it.error = null }
         val mime = if (job.fileName.endsWith(".ts", true)) "video/mp2t" else "video/mp4"
         var target: Folders.Target? = null
@@ -121,6 +123,7 @@ class TransferService : Service() {
                 // Playback has priority: most providers allow one stream per account, so a
                 // download would stop the video from loading. Wait here until the player closes.
                 if (job.type == TransferType.DOWNLOAD && playbackActive) {
+                    AppLog.i("Transfer", "'${job.title}' paused for playback at $done bytes")
                     store.update(id) { it.error = getString(R.string.paused_for_playback) }
                     while (playbackActive && scope.isActive && running.containsKey(id)) delay(1000)
                     store.update(id) { it.error = null }
@@ -193,6 +196,7 @@ class TransferService : Service() {
                             throw IllegalStateException("Connection closed early")
                     }
                     XtreamApi.client.connectionPool.evictAll()   // the provider's slot is free the moment we finish
+                    AppLog.i("Transfer", "'${job.title}' done, $done bytes")
                     if (!running.containsKey(id)) return   // cancelled
                     store.update(id) { it.state = TransferState.DONE; it.error = null }
                     notifyDone(job, true, null)
@@ -206,6 +210,7 @@ class TransferService : Service() {
                     if (attempt >= MAX_ATTEMPTS) throw e
                     val wait = RETRY_DELAYS_MS[minOf(attempt - 1, RETRY_DELAYS_MS.size - 1)]
                     val why = describe(e)
+                    AppLog.w("Transfer", "'${job.title}' attempt $attempt failed at $done bytes: $why (${e.javaClass.simpleName}: ${e.message}); retry in ${wait / 1000}s")
                     store.update(id) { it.error = getString(R.string.retrying_fmt, attempt, MAX_ATTEMPTS, wait / 1000, why) }
                     delay(wait)
                 }
@@ -213,6 +218,7 @@ class TransferService : Service() {
         } catch (e: Exception) {
             if (!running.containsKey(id)) return
             val why = describe(e)
+            AppLog.e("Transfer", "'${job.title}' gave up: $why", e)
             if (job.type == TransferType.DOWNLOAD) {
                 // A download that gave up leaves nothing behind: drop the partial file and the
                 // list entry; the notification carries the reason.

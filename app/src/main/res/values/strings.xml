@@ -73,6 +73,12 @@
     <string name="open_hero">Open</string>
     <string name="movie">Movie</string>
     <string name="vod_home_loading">Loading your library…</string>
+    <string name="export_logs">Export logs</string>
+    <string name="export_logs_msg">The app keeps a log of playback, downloads and errors (no passwords). Share it as a text file, or copy it to the clipboard.</string>
+    <string name="share">Share…</string>
+    <string name="copy">Copy</string>
+    <string name="clear_log">Clear</string>
+    <string name="log_cleared">Log cleared.</string>
     <string name="subtitles">Subtitles</string>
     <string name="subtitles_on">On when available</string>
     <string name="subtitles_off">Off</string>
