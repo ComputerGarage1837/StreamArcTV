@@ -105,7 +105,7 @@ class SettingsActivity : AppCompatActivity() {
             for (kind in listOf(ContentKind.MOVIE, ContentKind.SERIES)) {
                 try {
                     val cats = XtreamApi.categories(Service.VOD, account, kind)
-                    val items = com.streamarc.tv.data.CatalogCache.get(Service.VOD, account, kind)
+                    val items = com.streamarc.tv.data.CatalogCache.get(this@SettingsActivity, Service.VOD, account, kind)
                     val listed = cats.mapNotNull { it.id }.toSet()
                     val used = items.flatMap { it.allCategoryIds }.toSet()
                     val missing = used - listed

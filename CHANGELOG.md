@@ -6,6 +6,9 @@ version is shown to users inside the app when an update is available.
 ## v1.0.28 — 2026-09-12
 
 ### Changed
+- Movies and Series open faster: the category list appears at once, genre groups are added as
+  soon as the catalogue arrives, and the catalogue is kept on the device so later visits are
+  instant (refreshed quietly in the background when it is more than 30 minutes old).
 - The guide download shows real progress: megabytes received, a percentage when the provider
   reports the file size, and a clearly visible bar. Filling in channels afterwards runs several
   at a time, so that stage is much quicker.

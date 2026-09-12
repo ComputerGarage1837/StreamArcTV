@@ -33,6 +33,8 @@ import com.streamarc.tv.databinding.ItemCategoryChipBinding
 import com.streamarc.tv.databinding.ItemStreamBinding
 import com.streamarc.tv.update.UpdateChecker
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 
 /**
@@ -279,6 +281,7 @@ class BrowseActivity : AppCompatActivity() {
     private fun switchKind(newKind: ContentKind) {
         if (newKind == kind) return
         kind = newKind
+        augmented = false
         renderTabs()
         loadJob?.cancel()
         streamCache.clear()
@@ -295,24 +298,13 @@ class BrowseActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val fetched = XtreamApi.categories(service, account, kind)
-                var cats = if (isLive) fetched.filter { it.id !in prefs.hiddenLiveCategories } else fetched
+                val cats = if (isLive) fetched.filter { it.id !in prefs.hiddenLiveCategories } else fetched
+                providerCategories = cats
                 if (!isLive) {
-                    // Some panels file items under category ids the category list never mentions.
-                    // Add those so their content is reachable.
-                    val catalogue = CatalogCache.get(service, account, kind)
-                    val known = cats.mapNotNull { it.id }.toSet()
-                    val extra = catalogue.flatMap { it.allCategoryIds }.filter { it !in known }.distinct()
-                    if (extra.isNotEmpty()) cats = cats + extra.map { Category(it, getString(R.string.category_num_fmt, it)) }
-                    // Genre categories built from each item's genre field, ahead of the provider's own
-                    // (often just A–Z) groups. Only genres with a few titles, and not duplicating a
-                    // provider category of the same name.
-                    val providerNames = cats.mapNotNull { it.name?.trim()?.lowercase() }.toSet()
-                    val counts = HashMap<String, Int>()
-                    for (item in catalogue) for (g in item.genres) counts[g] = (counts[g] ?: 0) + 1
-                    val genres = counts.filter { it.value >= 3 && it.key.lowercase() !in providerNames }
-                        .keys.sortedBy { it.lowercase() }
-                        .map { Category(GENRE_PREFIX + it, it) }
-                    cats = genres + cats
+                    // Show the provider's list right away; genre and extra groups are added
+                    // as soon as the catalogue is in (see augmentCategories).
+                    val cached = CatalogCache.peek(service, kind)
+                    if (cached != null) { categoryAdapter.submit(buildVodCategories(cats, cached)); augmented = true }
                 }
                 val all = if (isLive) {
                     listOf(
@@ -355,6 +347,38 @@ class BrowseActivity : AppCompatActivity() {
             ?: all[1]
     }
 
+    private var providerCategories: List<Category> = emptyList()
+    private var augmented = false
+
+    /** Favorites / Recently added / All, then genre groups from the catalogue, then the provider's list. */
+    private fun buildVodCategories(provider: List<Category>, catalogue: List<Stream>): List<Category> {
+        var cats = provider
+        val known = cats.mapNotNull { it.id }.toSet()
+        val extra = catalogue.flatMap { it.allCategoryIds }.filter { it !in known }.distinct()
+        if (extra.isNotEmpty()) cats = cats + extra.map { Category(it, getString(R.string.category_num_fmt, it)) }
+        val providerNames = cats.mapNotNull { it.name?.trim()?.lowercase() }.toSet()
+        val counts = HashMap<String, Int>()
+        for (item in catalogue) for (g in item.genres) counts[g] = (counts[g] ?: 0) + 1
+        val genres = counts.filter { it.value >= 3 && it.key.lowercase() !in providerNames }
+            .keys.sortedBy { it.lowercase() }
+            .map { Category(GENRE_PREFIX + it, it) }
+        return listOf(
+            Category(FAV_ID, "★ " + getString(R.string.favorites)),
+            Category(RECENT_ID, getString(R.string.recently_added)),
+            Category(null, getString(R.string.all_categories))
+        ) + genres + cats
+    }
+
+    /** Called once the catalogue is available: adds genre / extra groups without losing the selection. */
+    private fun augmentCategories(catalogue: List<Stream>) {
+        if (isLive || augmented) return
+        augmented = true
+        val list = buildVodCategories(providerCategories, catalogue)
+        val selected = categoryAdapter.selectedId
+        categoryAdapter.submit(list)
+        categoryAdapter.selectedId = selected
+    }
+
     private fun selectCategory(cat: Category) {
         favoritesMode = cat.id == FAV_ID
         val recentMode = cat.id == RECENT_ID
@@ -369,8 +393,9 @@ class BrowseActivity : AppCompatActivity() {
                 allStreams = if (isLive) {
                     streamCache[key] ?: XtreamApi.streams(service, account, key, kind).also { streamCache[key] = it }
                 } else {
-                    // Movies/series: the whole catalogue is fetched once and filtered here.
-                    val all = CatalogCache.get(service, account, kind)
+                    // Movies/series: the whole catalogue is fetched once (kept on disk) and filtered here.
+                    val all = CatalogCache.get(this@BrowseActivity, service, account, kind)
+                    augmentCategories(all)
                     when {
                         recentMode -> CatalogCache.recentlyAdded(all)
                         key == null -> all
@@ -512,17 +537,16 @@ class BrowseActivity : AppCompatActivity() {
             var lastShown = 0L
             showGuideProgress(getString(R.string.guide_filling_fmt, 0, total), 0)
             // Several channels at a time (EpgCache limits real network calls to 6 at once).
-            channels.chunked(12).forEach { chunk ->
-                val results = chunk.map { ch ->
-                    kotlinx.coroutines.async {
+            for (chunk in channels.chunked(12)) {
+                val results: List<Pair<String, List<EpgProgramme>>?> = chunk.map { ch ->
+                    async {
                         val id = ch.streamId ?: return@async null
                         if (EpgCache.peek(service, id) != null) return@async null
                         val fromGuide = EpgCache.guideFor(service, ch.epgChannelId, ch.name)
                         id to (fromGuide ?: EpgCache.get(service, account, id))
                     }
-                }
-                for (r in results) {
-                    val pair = r.await()
+                }.awaitAll()
+                for (pair in results) {
                     if (pair != null) b.epgGrid.setEpg(pair.first, pair.second)
                     done++
                 }
