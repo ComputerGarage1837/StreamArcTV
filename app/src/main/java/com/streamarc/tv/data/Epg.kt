@@ -172,7 +172,7 @@ object XmltvParser {
  * without hammering the panel. Entries expire after a few minutes.
  */
 object EpgCache {
-    private const val TTL_MS = 5 * 60 * 1000L
+    private const val TTL_MS = 6 * 60 * 60 * 1000L   // per-channel data is refreshed after this
     private val cache = HashMap<String, Pair<Long, List<EpgProgramme>>>()
     private val gate = Semaphore(6)
 
@@ -263,6 +263,10 @@ object EpgCache {
             synchronized(guides) { guides[service] = at to guide; guideFailedAt.remove(service) }
             appContext?.let { ctx -> withContext(Dispatchers.IO) { writeDisk(ctx, service, at, guide) } }
             true
+        } catch (e: XtreamApi.GuideTooLarge) {
+            // Caller decided the file is too big; don't retry the full download for a while.
+            synchronized(guides) { guideFailedAt[service] = System.currentTimeMillis() + 6 * 60 * 60 * 1000L }
+            guideLoaded(service)
         } catch (_: Exception) {
             synchronized(guides) { guideFailedAt[service] = System.currentTimeMillis() }
             guideLoaded(service)

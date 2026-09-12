@@ -3,6 +3,15 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.31 — 2026-09-12
+
+### Changed
+- The guide download asks the provider for compressed data and reports the real amount sent
+  over the network.
+- When the provider's whole-guide file is oversized (over 60 MB), the app stops downloading it
+  and fills the guide channel by channel instead, fetching only the channels you actually list.
+  Settings → Live TV → TV guide source lets you force either method.
+
 ## v1.0.30 — 2026-09-12
 
 ### Changed
