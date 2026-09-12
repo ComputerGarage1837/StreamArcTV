@@ -43,10 +43,14 @@ object UpdateChecker {
 
     private val repo: String get() = BuildConfig.GITHUB_REPO
 
-    // The timestamp query string is ignored by GitHub but defeats the raw-file
-    // CDN cache (5 minutes), so a check right after a release sees the new feed.
-    private val feedUrl: String
-        get() = "https://raw.githubusercontent.com/$repo/main/release/update.json?t=${System.currentTimeMillis()}"
+    // The Contents API is not behind GitHub's 5-minute raw-file CDN cache, so a
+    // check right after a release sees the new feed. raw.githubusercontent.com
+    // is the fallback if the API is unavailable or rate-limited.
+    private val feedApiUrl: String
+        get() = "https://api.github.com/repos/$repo/contents/release/update.json?ref=main"
+
+    private val feedRawUrl: String
+        get() = "https://raw.githubusercontent.com/$repo/main/release/update.json"
 
     /**
      * @param manual true when the user pressed the Update button: always
@@ -74,7 +78,11 @@ object UpdateChecker {
 
     /** Reads and validates the update feed. Throws with a user-readable message on failure. */
     fun fetchLatest(): Release {
-        val feed = getJson(feedUrl, accept = "application/json")
+        val feed = try {
+            getJson(feedApiUrl, accept = "application/vnd.github.raw")
+        } catch (_: Exception) {
+            null
+        } ?: getJson(feedRawUrl, accept = "application/json")
             ?: throw IllegalStateException("Update feed not found")
 
         val schema = feed.get("schemaVersion")?.asInt ?: 0
