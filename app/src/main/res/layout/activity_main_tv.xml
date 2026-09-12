@@ -15,7 +15,7 @@
             android:contentDescription="@null"
             android:scaleType="centerCrop"
             android:src="@drawable/bg_hero"
-            app:layout_constraintHeight_percent="0.66"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <View
@@ -23,7 +23,7 @@
             android:layout_height="0dp"
             android:background="@drawable/bg_hero_scrim"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintHeight_percent="0.70"
+            app:layout_constraintHeight_percent="0.55"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="1" />
     </androidx.constraintlayout.widget.ConstraintLayout>

@@ -3,6 +3,14 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.13 — 2026-09-12
+
+### Changed
+- Home backdrops are the full-size scenery images: the portrait version on phones held upright, the
+  wide version on TV and phones in landscape.
+- Phone cards use the supplied card artwork: tall cards side by side in portrait, wide cards side by
+  side in landscape, at the artwork's own proportions.
+
 ## v1.0.12 — 2026-09-12
 
 ### Changed

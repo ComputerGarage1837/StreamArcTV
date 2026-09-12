@@ -30,7 +30,7 @@ This repository holds the application source, the GitHub Actions release pipelin
 The version, update repository and the two Xtream Codes server addresses live in `gradle.properties`:
 
 ```
-VERSION_NAME=1.0.12
+VERSION_NAME=1.0.13
 GITHUB_REPO=ComputerGarage1837/StreamArcTV
 LIVE_URL=https://mediahere.ca/
 VOD_URL=https://onlypuds.fans:2083/
