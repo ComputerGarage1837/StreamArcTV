@@ -37,10 +37,10 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:orientation="vertical"
-        android:paddingStart="22dp"
-        android:paddingTop="12dp"
+        android:paddingStart="18dp"
+        android:paddingTop="8dp"
         android:paddingEnd="@dimen/vod_hero_text_end"
-        android:paddingBottom="18dp">
+        android:paddingBottom="12dp">
 
         <TextView
             android:id="@+id/txtLabel"
@@ -80,14 +80,15 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:ellipsize="end"
-            android:maxLines="3"
+            android:maxLines="2"
             android:textColor="#D0D8E4"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <Button
@@ -95,29 +96,30 @@
                 style="@style/PrimaryButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:minHeight="44dp"
-                android:paddingStart="26dp"
-                android:paddingEnd="26dp"
-                android:text="@string/play_hero" />
+                android:minHeight="38dp"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:text="@string/play_hero"
+                android:textSize="15sp" />
 
             <Button
                 android:id="@+id/btnHeroList"
                 style="@style/SmallButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:minHeight="44dp"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp"
+                android:layout_marginStart="8dp"
+                android:minHeight="38dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
                 android:text="@string/add_my_list"
-                android:textSize="15sp" />
-        </LinearLayout>
+                android:textSize="14sp" />
 
-        <LinearLayout
-            android:id="@+id/dots"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:orientation="horizontal" />
+            <LinearLayout
+                android:id="@+id/dots"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:orientation="horizontal" />
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>

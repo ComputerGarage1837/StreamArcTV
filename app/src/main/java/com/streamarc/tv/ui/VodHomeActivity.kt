@@ -457,6 +457,11 @@ class VodHomeActivity : AppCompatActivity() {
 
     private fun bindHero(vb: ItemVodHeroBinding) {
         val s = featured.getOrNull(heroIndex) ?: return
+        // Never let the banner take more than ~40% of the rows area: the first row of posters
+        // must be visible underneath without scrolling.
+        val cap = (b.listRows.height * 0.40f).toInt()
+        val wanted = resources.getDimensionPixelSize(R.dimen.vod_hero_height)
+        if (cap > 0) vb.root.layoutParams = vb.root.layoutParams.apply { height = minOf(wanted, cap) }
         val isSeries = s.seriesId != null && s.streamId == null || series.any { it === s }
         val kind = if (isSeries) ContentKind.SERIES else ContentKind.MOVIE
         Glide.with(vb.imgBackdrop).load(s.image).centerCrop().into(vb.imgBackdrop)
@@ -503,6 +508,8 @@ class VodHomeActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: VH, position: Int) {
             val c = items[position]
             val vb = holder.vb
+            vb.txtTitle.textSize = 12f
+            vb.txtSub.textSize = 10.5f
             vb.txtTitle.text = c.title
             vb.txtSub.text = c.subtitle ?: ""
             vb.txtSub.visibility = if (c.subtitle.isNullOrBlank()) View.INVISIBLE else View.VISIBLE

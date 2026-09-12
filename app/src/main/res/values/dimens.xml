@@ -21,10 +21,10 @@
     <dimen name="category_width_live">140dp</dimen>
     <dimen name="preview_w">144dp</dimen>
     <dimen name="preview_h">81dp</dimen>
-    <dimen name="vod_hero_height">300dp</dimen>
+    <dimen name="vod_hero_height">230dp</dimen>
     <dimen name="vod_hero_poster_w">0dp</dimen>
     <dimen name="vod_hero_text_end">22dp</dimen>
-    <dimen name="vod_hero_title">26sp</dimen>
-    <dimen name="vod_card_w">126dp</dimen>
-    <dimen name="vod_card_h">180dp</dimen>
+    <dimen name="vod_hero_title">22sp</dimen>
+    <dimen name="vod_card_w">104dp</dimen>
+    <dimen name="vod_card_h">150dp</dimen>
 </resources>
