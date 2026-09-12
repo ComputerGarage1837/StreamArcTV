@@ -32,6 +32,8 @@ class SettingsActivity : AppCompatActivity() {
 
         b.rowLiveFormat.setOnClickListener { pickLiveFormat() }
         renderLiveFormat()
+        b.rowLayout.setOnClickListener { pickLayout() }
+        renderLayout()
 
         b.btnCheckUpdates.setOnClickListener { UpdateChecker.check(this, manual = true) }
         b.btnClearSkipped.setOnClickListener {
@@ -69,6 +71,23 @@ class SettingsActivity : AppCompatActivity() {
             .setSingleChoiceItems(options, current) { d, which ->
                 prefs.liveFormat = if (which == 1) "ts" else "m3u8"
                 renderLiveFormat()
+                d.dismiss()
+            }
+            .show()
+    }
+
+    private fun renderLayout() {
+        b.txtLayoutValue.text = getString(if (prefs.layoutMode == "phone") R.string.layout_phone else R.string.layout_tv)
+    }
+
+    private fun pickLayout() {
+        val options = arrayOf(getString(R.string.layout_phone), getString(R.string.layout_tv))
+        val current = if (prefs.layoutMode == "phone") 0 else 1
+        AlertDialog.Builder(this)
+            .setTitle(R.string.display_layout)
+            .setSingleChoiceItems(options, current) { d, which ->
+                prefs.layoutMode = if (which == 0) "phone" else "tv"
+                renderLayout()
                 d.dismiss()
             }
             .show()

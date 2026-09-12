@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
@@ -17,16 +19,26 @@ import com.streamarc.tv.R
 import com.streamarc.tv.data.Account
 import com.streamarc.tv.data.Category
 import com.streamarc.tv.data.ContentKind
+import com.streamarc.tv.data.EpgCache
+import com.streamarc.tv.data.EpgProgramme
+import com.streamarc.tv.data.Format
 import com.streamarc.tv.data.Prefs
 import com.streamarc.tv.data.Service
 import com.streamarc.tv.data.Stream
 import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.databinding.ActivityBrowseBinding
 import com.streamarc.tv.databinding.ItemCategoryBinding
+import com.streamarc.tv.databinding.ItemChannelBinding
 import com.streamarc.tv.databinding.ItemStreamBinding
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+/**
+ * Category + content browser. For Live TV this is the TV guide: each channel
+ * row shows what's on now (with progress) and next, and the panel above the
+ * list details the focused channel. Holding OK on any item opens a context
+ * menu with Play and Add/Remove favorites.
+ */
 class BrowseActivity : AppCompatActivity() {
 
     private lateinit var b: ActivityBrowseBinding
@@ -34,12 +46,19 @@ class BrowseActivity : AppCompatActivity() {
     private lateinit var prefs: Prefs
     private lateinit var account: Account
 
+    /** What is being browsed: LIVE for the guide, MOVIE or SERIES for the VOD tabs. */
+    private var kind: ContentKind = ContentKind.LIVE
+    private val isLive: Boolean get() = kind == ContentKind.LIVE
+
     private val categoryAdapter = CategoryAdapter { cat -> selectCategory(cat) }
-    private val streamAdapter = StreamAdapter { s -> play(s) }
+    private val channelAdapter by lazy { ChannelAdapter() }
+    private val streamAdapter = StreamAdapter({ s -> play(s) }, { s -> showItemMenu(s) })
 
     private var allStreams: List<Stream> = emptyList()
+    private val streamCache = HashMap<String?, List<Stream>>()
     private var loadJob: Job? = null
     private var selectedCategoryId: String? = null
+    private var favoritesMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,22 +74,36 @@ class BrowseActivity : AppCompatActivity() {
             return
         }
         account = acct
+        kind = service.kind
 
-        b.txtTitle.text = service.title
+        b.txtTitle.text = if (isLive) getString(R.string.tv_guide) else service.title
         b.btnBack.setOnClickListener { finish() }
         b.btnProfile.setOnClickListener { startActivity(ProfileActivity.intent(this, service)) }
 
         b.listCategories.layoutManager = LinearLayoutManager(this)
         b.listCategories.adapter = categoryAdapter
 
-        val isGrid = service.kind == ContentKind.MOVIE
-        streamAdapter.grid = isGrid
-        b.listStreams.layoutManager = if (isGrid) {
-            GridLayoutManager(this, resources.getInteger(R.integer.poster_columns))
-        } else {
-            LinearLayoutManager(this)
+        if (service.kind != ContentKind.LIVE) {
+            b.tabs.visibility = View.VISIBLE
+            b.btnTabMovies.setOnClickListener { switchKind(ContentKind.MOVIE) }
+            b.btnTabSeries.setOnClickListener { switchKind(ContentKind.SERIES) }
+            renderTabs()
         }
-        b.listStreams.adapter = streamAdapter
+
+        if (isLive) {
+            b.panelEpg.visibility = View.VISIBLE
+            b.txtPanelChannel.text = getString(R.string.loading_guide)
+            b.txtPanelNow.text = ""
+            b.txtPanelDesc.text = getString(R.string.hold_ok_hint)
+            b.txtPanelUpcoming.text = ""
+            b.listStreams.layoutManager = LinearLayoutManager(this)
+            b.listStreams.adapter = channelAdapter
+        } else {
+            b.panelEpg.visibility = View.GONE
+            streamAdapter.grid = true
+            b.listStreams.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.poster_columns))
+            b.listStreams.adapter = streamAdapter
+        }
 
         b.inputSearch.doAfterTextChanged { applyFilter() }
 
@@ -83,14 +116,38 @@ class BrowseActivity : AppCompatActivity() {
         if (!prefs.isSignedIn(service)) finish()
     }
 
+    private fun renderTabs() {
+        b.btnTabMovies.isSelected = kind == ContentKind.MOVIE
+        b.btnTabSeries.isSelected = kind == ContentKind.SERIES
+    }
+
+    private fun switchKind(newKind: ContentKind) {
+        if (newKind == kind) return
+        kind = newKind
+        renderTabs()
+        loadJob?.cancel()
+        streamCache.clear()
+        allStreams = emptyList()
+        b.inputSearch.setText("")
+        streamAdapter.submit(emptyList(), emptySet())
+        loadCategories()
+    }
+
+    // ---- Loading -------------------------------------------------------
+
     private fun loadCategories() {
         setLoading(true)
         lifecycleScope.launch {
             try {
-                val cats = XtreamApi.categories(service, account)
-                val all = listOf(Category(null, getString(R.string.all_categories))) + cats
+                val cats = XtreamApi.categories(service, account, kind)
+                val all = listOf(
+                    Category(FAV_ID, "★ " + getString(R.string.favorites)),
+                    Category(null, getString(R.string.all_categories))
+                ) + cats
                 categoryAdapter.submit(all)
-                selectCategory(all.first())
+                // Open on Favorites when the user has some, otherwise on All.
+                val start = if (prefs.favorites(service, kind).isNotEmpty()) all[0] else all[1]
+                selectCategory(start)
             } catch (e: Exception) {
                 showError(e.message ?: getString(R.string.load_failed))
             }
@@ -98,17 +155,18 @@ class BrowseActivity : AppCompatActivity() {
     }
 
     private fun selectCategory(cat: Category) {
-        selectedCategoryId = cat.id
+        favoritesMode = cat.id == FAV_ID
+        selectedCategoryId = if (favoritesMode) null else cat.id
         categoryAdapter.selectedId = cat.id
         b.txtCategory.text = cat.name
         loadJob?.cancel()
         setLoading(true)
         loadJob = lifecycleScope.launch {
             try {
-                allStreams = XtreamApi.streams(service, account, cat.id)
+                val key = selectedCategoryId
+                allStreams = streamCache[key] ?: XtreamApi.streams(service, account, key, kind).also { streamCache[key] = it }
                 applyFilter()
                 setLoading(false)
-                if (allStreams.isEmpty()) b.txtEmpty.visibility = View.VISIBLE
             } catch (e: Exception) {
                 showError(e.message ?: getString(R.string.load_failed))
             }
@@ -117,19 +175,71 @@ class BrowseActivity : AppCompatActivity() {
 
     private fun applyFilter() {
         val q = b.inputSearch.text?.toString()?.trim().orEmpty()
-        val list = if (q.isEmpty()) allStreams
-        else allStreams.filter { it.name?.contains(q, ignoreCase = true) == true }
-        streamAdapter.submit(list)
-        b.txtEmpty.visibility = if (list.isEmpty() && allStreams.isNotEmpty()) View.VISIBLE else View.GONE
+        val favs = prefs.favorites(service, kind)
+        var list = if (favoritesMode) allStreams.filter { favs.contains(it.id) } else allStreams
+        if (q.isNotEmpty()) list = list.filter { it.name?.contains(q, ignoreCase = true) == true }
+
+        if (isLive) channelAdapter.submit(list, favs) else streamAdapter.submit(list, favs)
+
+        b.txtEmpty.text = if (favoritesMode && favs.isEmpty()) getString(R.string.no_favorites_yet) else getString(R.string.nothing_here)
+        b.txtEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
     }
 
+    // ---- Actions -------------------------------------------------------
+
     private fun play(stream: Stream) {
+        if (kind == ContentKind.SERIES) {
+            val id = stream.seriesId ?: stream.streamId ?: return
+            startActivity(SeriesActivity.intent(this, service, id, stream.name ?: "", stream.image, stream.plot))
+            return
+        }
         val url = try {
             XtreamApi.streamUrl(service, account, stream, prefs.liveFormat)
         } catch (e: Exception) {
             showError(e.message ?: getString(R.string.load_failed)); return
         }
-        startActivity(PlayerActivity.intent(this, url, stream.name ?: "", service.kind == ContentKind.LIVE))
+        startActivity(PlayerActivity.intent(this, url, stream.name ?: "", isLive))
+    }
+
+    /** Context menu opened by holding OK / long-pressing an item. */
+    private fun showItemMenu(stream: Stream) {
+        val id = stream.id ?: return
+        val isFav = prefs.isFavorite(service, kind, id)
+        val favLabel = getString(if (isFav) R.string.remove_from_favorites else R.string.add_to_favorites)
+        val first = getString(if (kind == ContentKind.SERIES) R.string.open else R.string.play)
+        AlertDialog.Builder(this)
+            .setTitle(stream.name ?: "")
+            .setItems(arrayOf(first, favLabel)) { _, which ->
+                when (which) {
+                    0 -> play(stream)
+                    1 -> {
+                        val nowFav = prefs.toggleFavorite(service, kind, id)
+                        val msg = if (nowFav) R.string.added_to_favorites_fmt else R.string.removed_from_favorites_fmt
+                        Toast.makeText(this, getString(msg, stream.name ?: ""), Toast.LENGTH_SHORT).show()
+                        applyFilter()
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showChannelDetails(stream: Stream, programmes: List<EpgProgramme>?) {
+        if (!isLive) return
+        b.txtPanelChannel.text = stream.name ?: ""
+        val now = System.currentTimeMillis() / 1000
+        val list = programmes.orEmpty()
+        val current = list.firstOrNull { it.isOnNow(now) } ?: list.firstOrNull { it.end > now }
+        if (current == null) {
+            b.txtPanelNow.text = if (programmes == null) getString(R.string.loading_guide) else getString(R.string.no_programme_info)
+            b.txtPanelDesc.text = getString(R.string.hold_ok_hint)
+            b.txtPanelUpcoming.text = ""
+            return
+        }
+        b.txtPanelNow.text = "${Format.timeRange(current.start, current.end)}   ${current.title}"
+        b.txtPanelDesc.text = current.description.ifBlank { getString(R.string.hold_ok_hint) }
+        b.txtPanelUpcoming.text = list.filter { it.start >= current.end }.take(3)
+            .joinToString("\n") { "${Format.time(it.start)}  ${it.title}" }
     }
 
     private fun setLoading(loading: Boolean) {
@@ -170,15 +280,92 @@ class BrowseActivity : AppCompatActivity() {
         }
     }
 
-    private class StreamAdapter(val onClick: (Stream) -> Unit) :
+    /** Live TV guide rows with now/next programme information. */
+    private inner class ChannelAdapter : RecyclerView.Adapter<ChannelVH>() {
+
+        private var items: List<Stream> = emptyList()
+        private var favs: Set<String> = emptySet()
+
+        fun submit(list: List<Stream>, favorites: Set<String>) { items = list; favs = favorites; notifyDataSetChanged() }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChannelVH =
+            ChannelVH(ItemChannelBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+
+        override fun getItemCount() = items.size
+
+        override fun onBindViewHolder(holder: ChannelVH, position: Int) {
+            val s = items[position]
+            val id = s.streamId
+            holder.streamId = id
+            holder.vb.txtName.text = (if (favs.contains(id)) "★ " else "") + (s.name ?: "—")
+            Glide.with(holder.vb.imgIcon)
+                .load(s.icon?.takeIf { it.isNotBlank() })
+                .placeholder(R.drawable.ic_placeholder)
+                .error(R.drawable.ic_placeholder)
+                .fitCenter()
+                .into(holder.vb.imgIcon)
+            holder.vb.root.setOnClickListener { play(s) }
+            holder.vb.root.setOnLongClickListener { showItemMenu(s); true }
+            holder.vb.root.setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus) showChannelDetails(s, id?.let { EpgCache.peek(service, it) })
+            }
+
+            holder.epgJob?.cancel()
+            holder.epgJob = null
+            val cached = id?.let { EpgCache.peek(service, it) }
+            if (cached != null) {
+                bindEpg(holder, cached)
+            } else {
+                bindEpg(holder, null)
+                if (id != null) {
+                    holder.epgJob = lifecycleScope.launch {
+                        val list = EpgCache.get(service, account, id)
+                        if (holder.streamId == id) {
+                            bindEpg(holder, list)
+                            if (holder.vb.root.hasFocus()) showChannelDetails(s, list)
+                        }
+                    }
+                }
+            }
+        }
+
+        override fun onViewRecycled(holder: ChannelVH) {
+            holder.epgJob?.cancel()
+            holder.epgJob = null
+        }
+
+        private fun bindEpg(holder: ChannelVH, programmes: List<EpgProgramme>?) {
+            val now = System.currentTimeMillis() / 1000
+            val list = programmes.orEmpty()
+            val current = list.firstOrNull { it.isOnNow(now) } ?: list.firstOrNull { it.end > now }
+            if (current == null) {
+                holder.vb.txtNow.text = if (programmes == null) getString(R.string.loading_guide) else getString(R.string.no_programme_info)
+                holder.vb.progressNow.progress = 0
+                holder.vb.txtNext.text = ""
+                holder.vb.txtNext.visibility = View.GONE
+                return
+            }
+            holder.vb.txtNow.text = "${Format.time(current.start)}  ${current.title}"
+            holder.vb.progressNow.progress = current.progress(now)
+            val next = list.firstOrNull { it.start >= current.end }
+            holder.vb.txtNext.visibility = View.VISIBLE
+            holder.vb.txtNext.text = if (next != null) {
+                getString(R.string.next_fmt, "${Format.time(next.start)}  ${next.title}")
+            } else ""
+        }
+    }
+
+    /** Movie posters (grid) and plain lists. */
+    private class StreamAdapter(val onClick: (Stream) -> Unit, val onLongClick: (Stream) -> Unit) :
         RecyclerView.Adapter<StreamAdapter.VH>() {
 
         private var items: List<Stream> = emptyList()
+        private var favs: Set<String> = emptySet()
         var grid: Boolean = false
 
         class VH(val vb: ItemStreamBinding) : RecyclerView.ViewHolder(vb.root)
 
-        fun submit(list: List<Stream>) { items = list; notifyDataSetChanged() }
+        fun submit(list: List<Stream>, favorites: Set<String>) { items = list; favs = favorites; notifyDataSetChanged() }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
             val vb = ItemStreamBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -198,20 +385,29 @@ class BrowseActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val s = items[position]
-            holder.vb.txtName.text = s.name ?: "—"
+            holder.vb.txtName.text = (if (favs.contains(s.id)) "★ " else "") + (s.name ?: "—")
             Glide.with(holder.vb.imgIcon)
-                .load(s.icon?.takeIf { it.isNotBlank() })
+                .load(s.image)
                 .placeholder(R.drawable.ic_placeholder)
                 .error(R.drawable.ic_placeholder)
                 .centerCrop()
                 .into(holder.vb.imgIcon)
             holder.vb.root.setOnClickListener { onClick(s) }
+            holder.vb.root.setOnLongClickListener { onLongClick(s); true }
         }
     }
 
     companion object {
         private const val EXTRA_SERVICE = "service"
+        private const val FAV_ID = "__favorites__"
         fun intent(ctx: Context, service: Service): Intent =
             Intent(ctx, BrowseActivity::class.java).putExtra(EXTRA_SERVICE, service.name)
     }
 }
+
+/** View holder for a guide row; kept at file level because inner classes cannot nest plain classes. */
+private class ChannelVH(val vb: ItemChannelBinding) : RecyclerView.ViewHolder(vb.root) {
+    var epgJob: Job? = null
+    var streamId: String? = null
+}
+

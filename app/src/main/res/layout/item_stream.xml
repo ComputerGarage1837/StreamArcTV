@@ -6,6 +6,7 @@
     android:background="@drawable/bg_stream_item"
     android:clickable="true"
     android:focusable="true"
+    android:longClickable="true"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:padding="8dp">

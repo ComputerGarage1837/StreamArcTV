@@ -38,6 +38,7 @@
 
         <activity android:name=".ui.LoginActivity" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ui.BrowseActivity" />
+        <activity android:name=".ui.SeriesActivity" />
         <activity android:name=".ui.ProfileActivity" />
         <activity android:name=".ui.SettingsActivity" />
         <activity

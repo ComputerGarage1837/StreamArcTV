@@ -14,4 +14,4 @@ enum class Service(val title: String, val baseUrl: String, val kind: ContentKind
     val isConfigured: Boolean get() = baseUrl.isNotBlank()
 }
 
-enum class ContentKind { LIVE, MOVIE }
+enum class ContentKind { LIVE, MOVIE, SERIES }
