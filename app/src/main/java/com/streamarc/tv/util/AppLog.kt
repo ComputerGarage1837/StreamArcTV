@@ -74,7 +74,7 @@ object AppLog {
         val f = file ?: return
         try {
             val export = File(activity.cacheDir, "streamarc-log.txt").apply { writeText(text()) }
-            val uri = FileProvider.getUriForFile(activity, activity.packageName + ".files", export)
+            val uri = FileProvider.getUriForFile(activity, activity.packageName + ".fileprovider", export)
             val send = Intent(Intent.ACTION_SEND)
                 .setType("text/plain")
                 .putExtra(Intent.EXTRA_SUBJECT, "Stream Arc TV log ${BuildConfig.VERSION_NAME}")
