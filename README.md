@@ -1,26 +1,84 @@
 # Stream Arc TV
 
-Stream Arc TV is a branded Android TV client for authorized Xtream Codes services.
+Stream Arc TV is a branded Android TV / Fire TV client (also usable on phones and tablets) for authorized Xtream Codes services.
 
-This repository is the public release feed for the Android TV application. It contains the signed `update.json` metadata used by the in-app updater and the APKs attached to GitHub Releases. Application source and service connection details are intentionally not published here.
+This repository holds the application source, the GitHub Actions release pipeline, and the public release feed (`release/update.json`) used by the in-app updater.
 
-## Release assets
+<p align="center"><img src="app/src/main/res/drawable-xhdpi/tv_banner.png" width="320" alt="Stream Arc TV"></p>
 
-Each stable GitHub release should contain:
+## Features
 
-- `Stream-Arc-TV-<version>.apk` — the installable Android TV application.
-- The matching `release/update.json` update feed is committed on `main` before publishing the release.
+- Two-button home screen: **Live TV** and **Video on Demand**, each with its own server and sign-in.
+- Sign in once with username and password; the app remembers you until you log out.
+- Expiry date for each account shown right on the home screen.
+- Categories, search, poster grid for movies, ExoPlayer playback (HLS or MPEG-TS for live).
+- **Self-updating**: the Update button (and an optional check on launch) reads this repository's
+  release feed, shows the changelog, downloads the APK with a progress dialog, verifies its
+  SHA-256, and hands it to Android to install. You can skip any version.
+- Remote/D-pad friendly UI with clear focus states; touch-friendly on phones.
 
-The updater checks the feed automatically when Stream Arc TV opens, compares the Android version code, and only shows the update screen when a newer build is available. The download screen reports progress before handing the APK to Android for installation. Android will only accept a later APK when it is signed with the same release key.
+## Install
 
-## Installation
+1. Download the latest `Stream-Arc-TV-<version>.apk` from the [Releases](../../releases) page.
+2. Sideload it on your device (on Android TV / Fire TV use an app like Downloader, or `adb install`).
+   Allow installs from unknown sources when asked.
+3. Future updates install from inside the app. Android only accepts a later APK when it is signed
+   with the same release key, so every release must be signed with the original Stream Arc TV key.
 
-The first updater-enabled version must be installed manually. Later versions can be discovered from inside Stream Arc TV. Android TV devices may require the one-time **Allow from this source** permission for the app before an update can be installed.
+## Configuration
+
+The version, update repository and the two Xtream Codes server addresses live in `gradle.properties`:
+
+```
+VERSION_NAME=1.0.7
+GITHUB_REPO=ComputerGarage1837/StreamArcTV
+LIVE_URL=https://mediahere.ca/
+VOD_URL=https://onlypuds.fans:2083/
+```
+
+Users only ever enter a username and password; the server is chosen by the button they press.
+
+Build locally with:
+
+```
+./gradlew assembleDebug
+```
+
+## Releasing
+
+Releases are built, signed and published by GitHub Actions (`.github/workflows/build.yml`).
+
+Repository secrets required (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+| --- | --- |
+| `KEYSTORE_BASE64` | `base64 -w0 streamarctv-release.jks` of the **original** release keystore |
+| `KEYSTORE_PASSWORD`, `KEY_PASSWORD` | the keystore / key password |
+| `KEY_ALIAS` | the key alias |
+
+To ship a version:
+
+1. Bump `VERSION_NAME` in `gradle.properties` (the version code is `major*10000 + minor*100 + patch`
+   and must exceed the `versionCode` in `release/update.json`).
+2. Add a `## vX.Y.Z — date` section to `CHANGELOG.md`; it becomes the release notes shown in the app.
+3. Commit, push to `main`, then push the tag `vX.Y.Z`.
+
+The workflow builds the signed APK, publishes the GitHub release with `Stream-Arc-TV-X.Y.Z.apk`
+attached, and then commits the matching `release/update.json` (with SHA-256 and size) to `main`.
+Pushes to `main` and pull requests build an unsigned APK as a check only.
+
+## Update format
+
+See [`UPDATE_FORMAT.md`](UPDATE_FORMAT.md) for the release metadata contract.
 
 ## Branding
 
 The working brand assets are in [`branding/`](branding/). The launcher icon and in-app logo are kept separate so the icon can be adapted for Android TV launcher sizing without changing the wordmark.
 
-## Update format
+## Disclaimer
 
-See [`UPDATE_FORMAT.md`](UPDATE_FORMAT.md) for the release metadata contract.
+Stream Arc TV is a media player. It does not provide, host or distribute any content; users are responsible for the services they connect to.
+
+## License
+
+MIT

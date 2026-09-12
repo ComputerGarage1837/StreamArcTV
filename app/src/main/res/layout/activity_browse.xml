@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg">
+
+    <!-- Top bar -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="10dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_icon_button"
+            android:contentDescription="@string/back"
+            android:src="@drawable/ic_back" />
+
+        <TextView
+            android:id="@+id/txtTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/text"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/txtCategory"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/text_muted"
+            android:textSize="15sp" />
+
+        <EditText
+            android:id="@+id/inputSearch"
+            style="@style/Input"
+            android:layout_width="200dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="10dp"
+            android:hint="@string/search"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:singleLine="true"
+            android:textSize="14sp" />
+
+        <ImageButton
+            android:id="@+id/btnProfile"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_icon_button"
+            android:contentDescription="@string/profile"
+            android:src="@drawable/ic_profile" />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/listCategories"
+        android:layout_width="220dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingStart="8dp"
+        android:paddingEnd="4dp"
+        android:paddingBottom="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/topBar" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/listStreams"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingStart="8dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/listCategories"
+        app:layout_constraintTop_toBottomOf="@id/topBar" />
+
+    <ProgressBar
+        android:id="@+id/progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/listStreams"
+        app:layout_constraintEnd_toEndOf="@id/listStreams"
+        app:layout_constraintStart_toStartOf="@id/listStreams"
+        app:layout_constraintTop_toTopOf="@id/listStreams" />
+
+    <TextView
+        android:id="@+id/txtEmpty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/nothing_here"
+        android:textColor="@color/text_muted"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/listStreams"
+        app:layout_constraintEnd_toEndOf="@id/listStreams"
+        app:layout_constraintStart_toStartOf="@id/listStreams"
+        app:layout_constraintTop_toTopOf="@id/listStreams" />
+
+    <TextView
+        android:id="@+id/txtError"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="24dp"
+        android:textColor="@color/danger"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/listStreams"
+        app:layout_constraintEnd_toEndOf="@id/listStreams"
+        app:layout_constraintStart_toStartOf="@id/listStreams"
+        app:layout_constraintTop_toTopOf="@id/listStreams" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

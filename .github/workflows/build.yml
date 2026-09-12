@@ -1,0 +1,151 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "name=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=$(grep '^VERSION_NAME=' gradle.properties | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check release inputs
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          HAS_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        run: |
+          ok=1
+          [[ "$HAS_KEYSTORE" == "true" ]] || { echo "::error::KEYSTORE_BASE64 secret is missing; a release must be signed with the Stream Arc TV release key."; ok=0; }
+          [[ "$ok" == "1" ]]
+
+      - name: Decode signing keystore
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Build release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          GITHUB_REPO: ${{ github.repository }}
+        run: |
+          ./gradlew --no-daemon assembleRelease \
+            -PVERSION_NAME="${{ steps.ver.outputs.name }}" \
+            -PGITHUB_REPO="${GITHUB_REPO}"
+
+      - name: Collect APK
+        id: apk
+        run: |
+          APK=$(ls app/build/outputs/apk/release/*.apk | head -n1)
+          OUT="Stream-Arc-TV-${{ steps.ver.outputs.name }}.apk"
+          cp "$APK" "$OUT"
+          echo "path=$OUT" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$OUT" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "size=$(stat -c%s "$OUT")" >> "$GITHUB_OUTPUT"
+          echo "Built $OUT ($(stat -c%s "$OUT") bytes)"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.path }}
+          path: ${{ steps.apk.outputs.path }}
+
+      - name: Extract changelog for this version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          V="${{ steps.ver.outputs.name }}"
+          awk -v v="$V" '
+            /^## / { if (found) exit; if (index($0, "v" v) > 0) { found=1; next } }
+            found { print }
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then echo "Release v$V" > RELEASE_NOTES.md; fi
+          echo "---- release notes ----"; cat RELEASE_NOTES.md
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Stream Arc TV ${{ steps.ver.outputs.name }}
+          body_path: RELEASE_NOTES.md
+          files: ${{ steps.apk.outputs.path }}
+          fail_on_unmatched_files: true
+
+      # The in-app updater reads release/update.json from main, so publish the
+      # feed only after the release and its APK asset exist.
+      - name: Update release feed on main
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          VERSION_NAME: ${{ steps.ver.outputs.name }}
+          ASSET: ${{ steps.apk.outputs.path }}
+          SHA256: ${{ steps.apk.outputs.sha256 }}
+          SIZE: ${{ steps.apk.outputs.size }}
+        run: |
+          set -euo pipefail
+          IFS=. read -r MAJ MIN PAT <<< "$VERSION_NAME"
+          CODE=$(( ${MAJ%%[^0-9]*} * 10000 + ${MIN%%[^0-9]*} * 100 + ${PAT%%[^0-9]*} ))
+          git fetch origin main
+          git checkout -B main origin/main
+          CURRENT=$(python3 -c "import json;print(json.load(open('release/update.json'))['versionCode'])")
+          if [ "$CODE" -le "$CURRENT" ]; then
+            echo "::error::versionCode $CODE is not newer than the feed's $CURRENT; not updating release/update.json."
+            exit 1
+          fi
+          cat > release/update.json <<JSON
+          {
+            "schemaVersion": 1,
+            "packageName": "com.computergarage.streamarctv",
+            "versionName": "$VERSION_NAME",
+            "versionCode": $CODE,
+            "apk": {
+              "assetName": "$ASSET",
+              "sha256": "$SHA256",
+              "sizeBytes": $SIZE
+            }
+          }
+          JSON
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release/update.json
+          git commit -m "Publish Stream Arc TV $VERSION_NAME update feed"
+          git push origin main
