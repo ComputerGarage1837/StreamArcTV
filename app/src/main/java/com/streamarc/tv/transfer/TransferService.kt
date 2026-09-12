@@ -118,6 +118,14 @@ class TransferService : Service() {
         var attempt = 0
         try {
             while (scope.isActive && running.containsKey(id)) {
+                // Playback has priority: most providers allow one stream per account, so a
+                // download would stop the video from loading. Wait here until the player closes.
+                if (job.type == TransferType.DOWNLOAD && playbackActive) {
+                    store.update(id) { it.error = getString(R.string.paused_for_playback) }
+                    while (playbackActive && scope.isActive && running.containsKey(id)) delay(1000)
+                    store.update(id) { it.error = null }
+                    continue
+                }
                 try {
                     val client = XtreamApi.client.newBuilder()
                         .readTimeout(60, TimeUnit.SECONDS)
@@ -156,6 +164,7 @@ class TransferService : Service() {
                         var lastFlushBytes = done
                         while (scope.isActive && running.containsKey(id)) {
                             if (job.type == TransferType.RECORDING && System.currentTimeMillis() >= job.endAt) break
+                            if (job.type == TransferType.DOWNLOAD && playbackActive) throw PausedForPlayback()
                             val n = input.read(buf)
                             if (n < 0) break
                             out.stream.write(buf, 0, n)
@@ -180,6 +189,8 @@ class TransferService : Service() {
                     store.update(id) { it.state = TransferState.DONE; it.error = null }
                     notifyDone(job, true, null)
                     return
+                } catch (e: PausedForPlayback) {
+                    continue   // back to the top of the loop, which waits and then resumes with a Range request
                 } catch (e: Exception) {
                     if (!running.containsKey(id) || !scope.isActive) return
                     attempt++
@@ -215,6 +226,7 @@ class TransferService : Service() {
     }
 
     private class HttpException(val code: Int) : Exception("HTTP $code")
+    private class PausedForPlayback : Exception("Paused for playback")
 
     private fun describe(e: Exception): String = when {
         e is HttpException && e.code in setOf(403, 429, 458, 509) -> getString(R.string.err_provider_limit_fmt, e.code)
@@ -303,6 +315,9 @@ class TransferService : Service() {
         const val EXTRA_ID = "id"
 
         /** Adds a job and makes sure the service is running (or the alarm is set). */
+        /** True while the player is open; downloads hold off so the stream gets the connection. */
+        @Volatile var playbackActive: Boolean = false
+
         /** Live progress by job id; only present while the transfer is actually moving bytes. */
         val live = java.util.concurrent.ConcurrentHashMap<String, Progress>()
 

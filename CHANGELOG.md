@@ -9,6 +9,13 @@ version is shown to users inside the app when an update is available.
 - Playback starts, and resumes after a stall, as soon as one second of video is ready on every
   buffer level. The buffer keeps filling ahead while you watch.
 
+### Fixed
+- Pressing play while a download was running could spin for minutes: most providers allow one
+  stream per account and the download was holding it. Downloads now pause the moment you open
+  the player ("Paused while you watch") and carry on from where they stopped when you leave.
+  If the provider still refuses a stream, the player says so within seconds instead of
+  buffering, with the reason (for example HTTP 458, too many streams).
+
 ## v1.0.39 — 2026-09-12
 
 ### Fixed
