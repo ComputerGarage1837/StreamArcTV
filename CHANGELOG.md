@@ -3,6 +3,12 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.14 — 2026-09-12
+
+### Fixed
+- Phone portrait home: the card icon and chevron were drawn far too large and pushed the text out of
+  the cards. They are now fixed-size and sit inside the card like the design.
+
 ## v1.0.13 — 2026-09-12
 
 ### Changed
