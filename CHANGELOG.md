@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.44 — 2026-09-12
+
+### Fixed
+- Playback on emulators such as BlueStacks: the player now detects an emulated device and uses a
+  texture-backed video view with the software decoder from the start, instead of a hardware
+  decoder and surface that produce no picture there.
+
 ## v1.0.43 — 2026-09-12
 
 ### Fixed

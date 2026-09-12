@@ -13,6 +13,17 @@
         app:show_buffering="never"
         app:use_controller="true" />
 
+    <!-- Emulators (BlueStacks and friends) often draw nothing on a SurfaceView; this one is used there. -->
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/playerViewTexture"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        app:resize_mode="fit"
+        app:show_buffering="never"
+        app:surface_type="texture_view"
+        app:use_controller="true" />
+
     <TextView
         android:id="@+id/txtTitle"
         android:layout_width="match_parent"

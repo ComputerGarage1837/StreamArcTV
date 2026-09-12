@@ -53,6 +53,8 @@ import com.streamarc.tv.update.UpdateChecker
 class PlayerActivity : AppCompatActivity() {
 
     private lateinit var b: ActivityPlayerBinding
+    /** The PlayerView in use: a TextureView-backed one on emulators, SurfaceView elsewhere. */
+    private lateinit var pv: androidx.media3.ui.PlayerView
     private lateinit var prefs: Prefs
     private var player: ExoPlayer? = null
     private var timeshift: TimeshiftServer? = null
@@ -111,6 +113,12 @@ class PlayerActivity : AppCompatActivity() {
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         b.txtTitle.text = title
+        pv = if (isEmulator) b.playerViewTexture else b.playerView
+        if (isEmulator) {
+            b.playerView.visibility = View.GONE
+            b.playerViewTexture.visibility = View.VISIBLE
+            preferSoftware = true   // emulated hardware decoders tend to never output a frame
+        }
         b.playerView.setShowNextButton(false)
         b.playerView.setShowPreviousButton(false)
         b.playerView.setShowRewindButton(false)
@@ -583,6 +591,13 @@ class PlayerActivity : AppCompatActivity() {
         private const val MAX_RETRIES = 4
         private const val BEHIND_THRESHOLD_MS = 2_000L
         private const val SEEK_STEP_MS = 10_000L
+        /** BlueStacks, Genymotion, the Android emulator: x86 builds or telltale fingerprints. */
+        val isEmulator: Boolean by lazy {
+            val abis = android.os.Build.SUPPORTED_ABIS.joinToString().lowercase()
+            val fp = (android.os.Build.FINGERPRINT + android.os.Build.MANUFACTURER + android.os.Build.MODEL + android.os.Build.PRODUCT + android.os.Build.HARDWARE).lowercase()
+            abis.contains("x86") || listOf("generic", "vbox", "bluestacks", "genymotion", "goldfish", "ranchu", "emulator", "sdk_gphone", "nox", "ldplayer", "memu")
+                .any { fp.contains(it) }
+        }
         /** Same pool as the API client, with streaming timeouts. */
         private val playerClient by lazy {
             XtreamApi.client.newBuilder()
