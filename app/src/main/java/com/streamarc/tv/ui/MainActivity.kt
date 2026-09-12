@@ -22,6 +22,7 @@ import com.streamarc.tv.data.Prefs
 import com.streamarc.tv.data.Service
 import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.data.toAccount
+import com.streamarc.tv.transfer.TransferType
 import com.streamarc.tv.update.UpdateChecker
 import kotlinx.coroutines.launch
 
@@ -79,7 +80,8 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.navHome).isSelected = true
         findViewById<View>(R.id.navHome).setOnClickListener { live.requestFocus() }
         findViewById<View>(R.id.navSearch).setOnClickListener { pickSearch() }
-        findViewById<View>(R.id.navDownloads).setOnClickListener { startActivity(Intent(this, DownloadsActivity::class.java)) }
+        findViewById<View>(R.id.navDownloads).setOnClickListener { startActivity(TransfersActivity.intent(this, TransferType.DOWNLOAD)) }
+        findViewById<View>(R.id.navRecordings).setOnClickListener { startActivity(TransfersActivity.intent(this, TransferType.RECORDING)) }
         findViewById<View>(R.id.navProfile).setOnClickListener { pickProfile() }
     }
 

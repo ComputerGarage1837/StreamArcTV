@@ -3,6 +3,24 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.18 — 2026-09-12
+
+### Added
+- Live TV recording: hold OK on a channel in the guide and choose Record. Pick a start time (now
+  or later, in 5-minute steps), a duration (5-minute steps), and the folder. Scheduled recordings
+  start on their own, even if the app is closed. A Recordings section on the home bar lists them
+  with progress, Play and Delete.
+- Download whole series or seasons: hold OK on a series poster for "Download entire series", or
+  use the Download all / per-season buttons inside a series.
+- Downloads tab next to Movies and Series.
+- Real folder choice: downloads and recordings save to a folder you pick from the device's
+  storage (the picker remembers your choice; change it any time under Settings → Storage or from
+  the Downloads / Recordings screens).
+
+### Changed
+- Downloads now run inside Stream Arc TV with a progress notification, so they can be cancelled
+  and saved anywhere.
+
 ## v1.0.17 — 2026-09-12
 
 ### Added

@@ -12,12 +12,15 @@ import com.streamarc.tv.R
 import com.streamarc.tv.data.Prefs
 import com.streamarc.tv.data.Service
 import com.streamarc.tv.databinding.ActivitySettingsBinding
+import com.streamarc.tv.transfer.Folders
+import com.streamarc.tv.transfer.TransferType
 import com.streamarc.tv.update.UpdateChecker
 
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var b: ActivitySettingsBinding
     private lateinit var prefs: Prefs
+    private val picker = FolderPicker(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +38,9 @@ class SettingsActivity : AppCompatActivity() {
         renderLiveFormat()
         b.rowLayout.setOnClickListener { pickLayout() }
         renderLayout()
+        b.rowDownloadFolder.setOnClickListener { TransferDialogs.pickFolder(this, picker, TransferType.DOWNLOAD) { renderFolders() } }
+        b.rowRecordingFolder.setOnClickListener { TransferDialogs.pickFolder(this, picker, TransferType.RECORDING) { renderFolders() } }
+        renderFolders()
 
         b.btnCheckUpdates.setOnClickListener { UpdateChecker.check(this, manual = true) }
         b.btnClearSkipped.setOnClickListener {
@@ -75,6 +81,11 @@ class SettingsActivity : AppCompatActivity() {
                 d.dismiss()
             }
             .show()
+    }
+
+    private fun renderFolders() {
+        b.txtDownloadFolderValue.text = Folders.describe(this, prefs.downloadFolder?.takeIf { Folders.usable(this, it) }, TransferType.DOWNLOAD)
+        b.txtRecordingFolderValue.text = Folders.describe(this, prefs.recordingFolder?.takeIf { Folders.usable(this, it) }, TransferType.RECORDING)
     }
 
     private fun renderLayout() {

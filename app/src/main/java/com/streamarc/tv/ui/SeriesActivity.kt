@@ -25,7 +25,9 @@ class SeriesActivity : AppCompatActivity() {
 
     private lateinit var b: ActivitySeriesBinding
     private lateinit var service: Service
-    private val adapter = EpisodeAdapter({ ep -> play(ep) }, { ep -> askDownload(ep) })
+    private val picker = FolderPicker(this)
+    private var episodes: List<Episode> = emptyList()
+    private val adapter = EpisodeAdapter({ ep -> play(ep) }, { ep -> askDownload(ep) }, { season -> downloadSeason(season) })
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +47,7 @@ class SeriesActivity : AppCompatActivity() {
             .centerCrop()
             .into(b.imgCover)
         b.btnBack.setOnClickListener { finish() }
+        b.btnDownloadAll.setOnClickListener { downloadAll() }
 
         b.listEpisodes.layoutManager = LinearLayoutManager(this)
         b.listEpisodes.adapter = adapter
@@ -58,7 +61,9 @@ class SeriesActivity : AppCompatActivity() {
                     b.txtError.text = getString(R.string.no_episodes)
                     b.txtError.visibility = View.VISIBLE
                 } else {
+                    this@SeriesActivity.episodes = episodes
                     adapter.submit(episodes)
+                    b.btnDownloadAll.visibility = View.VISIBLE
                     b.listEpisodes.post { b.listEpisodes.getChildAt(0)?.findViewById<View>(R.id.row)?.requestFocus() }
                 }
             } catch (e: Exception) {
@@ -69,15 +74,43 @@ class SeriesActivity : AppCompatActivity() {
         }
     }
 
+    private fun item(ep: Episode): DownloadItem? {
+        val account = Prefs(this).account(service) ?: return null
+        val url = try { XtreamApi.episodeUrl(service, account, ep) } catch (_: Exception) { return null }
+        return DownloadItem("${b.txtTitle.text} S${ep.season}E${ep.number} ${ep.title}", b.txtTitle.text.toString(), url, ep.containerExtension)
+    }
+
     private fun askDownload(ep: Episode) {
-        val account = Prefs(this).account(service) ?: return
-        val url = try { XtreamApi.episodeUrl(service, account, ep) } catch (e: Exception) { return }
-        val title = "${b.txtTitle.text} S${ep.season}E${ep.number} ${ep.title}"
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle(ep.title)
-            .setItems(arrayOf(getString(R.string.play), getString(R.string.download))) { _, which ->
-                if (which == 0) play(ep) else DownloadDialogs.askAndStart(this, title, getString(R.string.series), url, ep.containerExtension)
+            .setItems(arrayOf(getString(R.string.play), getString(R.string.download), getString(R.string.download_season_fmt, ep.season))) { _, which ->
+                when (which) {
+                    0 -> play(ep)
+                    1 -> item(ep)?.let { TransferDialogs.download(this, picker, listOf(it)) }
+                    2 -> downloadSeason(ep.season)
+                }
             }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun downloadSeason(season: Int) {
+        val eps = episodes.filter { it.season == season }
+        if (eps.isEmpty()) return
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(getString(R.string.download_season_fmt, season))
+            .setMessage(getString(R.string.download_season_confirm_fmt, eps.size, season))
+            .setPositiveButton(R.string.download_here) { _, _ -> TransferDialogs.download(this, picker, eps.mapNotNull { item(it) }) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun downloadAll() {
+        if (episodes.isEmpty()) return
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(b.txtTitle.text)
+            .setMessage(getString(R.string.download_series_confirm_fmt, episodes.size))
+            .setPositiveButton(R.string.download_all) { _, _ -> TransferDialogs.download(this, picker, episodes.mapNotNull { item(it) }) }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
@@ -93,7 +126,7 @@ class SeriesActivity : AppCompatActivity() {
         startActivity(PlayerActivity.intent(this, url, title, false))
     }
 
-    private class EpisodeAdapter(val onClick: (Episode) -> Unit, val onLongClick: (Episode) -> Unit) : RecyclerView.Adapter<EpisodeAdapter.VH>() {
+    private class EpisodeAdapter(val onClick: (Episode) -> Unit, val onLongClick: (Episode) -> Unit, val onSeason: (Int) -> Unit) : RecyclerView.Adapter<EpisodeAdapter.VH>() {
         private var items: List<Episode> = emptyList()
 
         class VH(val vb: ItemEpisodeBinding) : RecyclerView.ViewHolder(vb.root)
@@ -111,6 +144,8 @@ class SeriesActivity : AppCompatActivity() {
             val firstOfSeason = position == 0 || items[position - 1].season != ep.season
             holder.vb.txtSeason.visibility = if (firstOfSeason) View.VISIBLE else View.GONE
             holder.vb.txtSeason.text = ctx.getString(R.string.season_fmt, ep.season)
+            holder.vb.btnSeasonDownload.visibility = if (firstOfSeason) View.VISIBLE else View.GONE
+            holder.vb.btnSeasonDownload.setOnClickListener { onSeason(ep.season) }
             holder.vb.txtTitle.text = ctx.getString(R.string.episode_fmt, ep.number, ep.title)
             val info = listOfNotNull(ep.duration?.takeIf { it.isNotBlank() }, ep.plot?.takeIf { it.isNotBlank() }).joinToString("  ·  ")
             holder.vb.txtInfo.text = info

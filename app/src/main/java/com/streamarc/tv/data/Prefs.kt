@@ -82,6 +82,16 @@ class Prefs(context: Context) {
         get() = sp.getString("layout_mode", null)
         set(value) { sp.edit().putString("layout_mode", value).apply() }
 
+    // ---- Folders (SAF tree URIs; null = inside the app) ------------------
+
+    var downloadFolder: String?
+        get() = sp.getString("download_folder", null)
+        set(value) { sp.edit().putString("download_folder", value).apply() }
+
+    var recordingFolder: String?
+        get() = sp.getString("recording_folder", null)
+        set(value) { sp.edit().putString("recording_folder", value).apply() }
+
     // ---- Playback ------------------------------------------------------
 
     /** "m3u8" (HLS) or "ts" (MPEG-TS) for live streams. */
