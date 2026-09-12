@@ -237,5 +237,17 @@ class MainActivity : AppCompatActivity() {
         }
         view.setTextColor(ContextCompat.getColor(this, if (expired) R.color.danger else R.color.accent))
     }
-}
 
+    companion object {
+        /** Opens Android's "Install unknown apps" page for this app (or general security settings). */
+        fun openInstallPermissionSetting(activity: android.app.Activity) {
+            val i = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                .setData(android.net.Uri.parse("package:${activity.packageName}"))
+            try {
+                activity.startActivity(i)
+            } catch (_: Exception) {
+                try { activity.startActivity(Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS)) } catch (_: Exception) {}
+            }
+        }
+    }
+}
