@@ -23,6 +23,7 @@ import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -35,6 +36,7 @@ import com.streamarc.tv.data.WatchProgress
 import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.databinding.ActivityPlayerBinding
 import com.streamarc.tv.player.TimeshiftServer
+import com.streamarc.tv.transfer.TransferService
 
 @UnstableApi
 class PlayerActivity : AppCompatActivity() {
@@ -110,12 +112,14 @@ class PlayerActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         hideSystemUi()
+        TransferService.playbackActive = true
         initPlayer()
         handler.post(ticker)
     }
 
     override fun onStop() {
         super.onStop()
+        TransferService.playbackActive = false
         saveProgress(force = true)
         handler.removeCallbacks(ticker)
         cancelRetry()
@@ -160,7 +164,7 @@ class PlayerActivity : AppCompatActivity() {
 
         val mediaSources = DefaultMediaSourceFactory(this)
             .setDataSourceFactory(DefaultDataSource.Factory(this, httpFactory))
-            .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
+            .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(2))
 
         val renderers = DefaultRenderersFactory(this)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
@@ -367,10 +371,26 @@ class PlayerActivity : AppCompatActivity() {
             return
         }
         b.bufferBox.visibility = View.GONE
-        b.txtError.text = getString(R.string.playback_failed_fmt, error.errorCodeName)
+        b.txtError.text = describeError(error)
         b.txtError.visibility = View.VISIBLE
         b.btnRetry.visibility = View.VISIBLE
         b.btnRetry.requestFocus()
+    }
+
+    private fun describeError(error: PlaybackException): String {
+        var cause: Throwable? = error
+        while (cause != null) {
+            if (cause is HttpDataSource.InvalidResponseCodeException) {
+                val code = cause.responseCode
+                return when (code) {
+                    403, 429, 458, 509 -> getString(R.string.err_stream_limit_fmt, code)
+                    404 -> getString(R.string.err_not_found_fmt, code)
+                    else -> getString(R.string.err_http_fmt, code)
+                }
+            }
+            cause = cause.cause
+        }
+        return getString(R.string.playback_failed_fmt, error.errorCodeName)
     }
 
     private fun cancelRetry() {
