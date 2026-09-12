@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.15 — 2026-09-12
+
+### Changed
+- The TV guide now downloads the whole programme listing in one go when it opens and keeps it for
+  30 minutes, so scrolling through channels is seamless instead of loading each row on the way.
+  Channels missing from the listing still fall back to a per-channel lookup.
+
 ## v1.0.14 — 2026-09-12
 
 ### Fixed

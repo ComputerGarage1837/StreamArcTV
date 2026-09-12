@@ -42,6 +42,9 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     }
 
     var listener: Listener? = null
+
+    /** Returns the channel's programmes from a preloaded guide, or null to fall back to a fetch. */
+    var guideLookup: ((Stream) -> List<EpgProgramme>?)? = null
     var favorites: Set<String> = emptySet()
         set(value) { field = value; invalidate() }
 
@@ -130,8 +133,24 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
     private fun programmesFor(ch: Stream): List<EpgProgramme> {
         val id = ch.streamId ?: return emptyList()
-        if (!epg.containsKey(id)) { epg[id] = null; listener?.onNeedEpg(ch) }
+        if (!epg.containsKey(id)) {
+            val bulk = guideLookup?.invoke(ch)
+            if (bulk != null) {
+                epg[id] = bulk
+            } else {
+                epg[id] = null
+                listener?.onNeedEpg(ch)
+            }
+        }
         return epg[id] ?: emptyList()
+    }
+
+    /** Call after the full guide arrives: rows that were still loading resolve from it. */
+    fun guideLoaded() {
+        val pending = epg.filterValues { it == null || it.isEmpty() }.keys.toList()
+        for (id in pending) epg.remove(id)
+        invalidate()
+        notifyFocus()
     }
 
     private fun visiblePlaceholder(ch: Stream): EpgProgramme {
