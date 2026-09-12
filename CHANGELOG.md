@@ -3,6 +3,15 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.30 — 2026-09-12
+
+### Changed
+- The TV guide no longer gets lost: the last good guide is kept on the device and shown
+  immediately (even after a restart or with no network), it is refreshed quietly in the
+  background after three hours while the old one stays on screen, a download that comes back
+  empty or half-built (as panels do while regenerating their EPG) is ignored and retried later,
+  and a channel's programmes are never wiped by a failed lookup. The saved guide covers two days.
+
 ## v1.0.29 — 2026-09-12
 
 ### Fixed
