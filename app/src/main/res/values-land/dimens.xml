@@ -4,4 +4,5 @@
     <dimen name="home_hero_title">26sp</dimen>
     <dimen name="home_hero_subtitle">14sp</dimen>
     <dimen name="home_hero_top">10dp</dimen>
+    <dimen name="home_cards_top">14dp</dimen>
 </resources>

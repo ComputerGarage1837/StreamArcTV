@@ -114,8 +114,8 @@
                             android:layout_height="0dp"
                             android:contentDescription="@null"
                             android:scaleType="fitXY"
-                            android:src="@drawable/card_tall_live"
-                            app:layout_constraintDimensionRatio="800:1128"
+                            android:src="@drawable/card_wide_live"
+                            app:layout_constraintDimensionRatio="900:310"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent" />
@@ -124,68 +124,64 @@
                             android:id="@+id/imgLiveIcon"
                             android:layout_width="0dp"
                             android:layout_height="0dp"
+                            android:layout_marginStart="16dp"
                             android:contentDescription="@null"
                             android:scaleType="fitCenter"
                             android:src="@drawable/img_live_tv"
+                            app:layout_constraintBottom_toBottomOf="@id/imgLiveCard"
                             app:layout_constraintDimensionRatio="1:1"
-                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintHeight_percent="0.52"
                             app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="@id/imgLiveCard"
-                            app:layout_constraintVertical_bias="0"
-                            app:layout_constraintBottom_toTopOf="@id/txtLiveTitle"
-                            app:layout_constraintHeight_percent="0.34"
-                            app:layout_constraintVertical_chainStyle="packed" />
-
-                        <TextView
-                            android:id="@+id/txtLiveTitle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:fontFamily="sans-serif-medium"
-                            android:gravity="center"
-                            android:text="@string/live_tv"
-                            android:textColor="@color/text"
-                            android:textSize="18sp"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@id/imgLiveIcon" />
-
-                        <TextView
-                            android:id="@+id/txtLiveSub"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:text="@string/live_tv_subtitle"
-                            android:textColor="#BFDBFE"
-                            android:textSize="12sp"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@id/txtLiveTitle" />
-
-                        <TextView
-                            android:id="@+id/txtLiveStatus"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:gravity="center"
-                            android:text="@string/not_signed_in"
-                            android:textColor="@color/text_muted"
-                            android:textSize="11sp"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@id/txtLiveSub" />
+                            app:layout_constraintTop_toTopOf="@id/imgLiveCard" />
 
                         <ImageView
+                            android:id="@+id/imgLiveChevron"
                             android:layout_width="0dp"
                             android:layout_height="0dp"
-                            android:layout_marginBottom="12dp"
+                            android:layout_marginEnd="14dp"
                             android:contentDescription="@null"
                             android:src="@drawable/img_btn_next_live"
                             app:layout_constraintBottom_toBottomOf="@id/imgLiveCard"
                             app:layout_constraintDimensionRatio="1:1"
                             app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintHeight_percent="0.16"
-                            app:layout_constraintStart_toStartOf="parent" />
+                            app:layout_constraintHeight_percent="0.42"
+                            app:layout_constraintTop_toTopOf="@id/imgLiveCard" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_marginEnd="6dp"
+                            android:orientation="vertical"
+                            app:layout_constraintBottom_toBottomOf="@id/imgLiveCard"
+                            app:layout_constraintEnd_toStartOf="@id/imgLiveChevron"
+                            app:layout_constraintStart_toEndOf="@id/imgLiveIcon"
+                            app:layout_constraintTop_toTopOf="@id/imgLiveCard">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="@string/live_tv"
+                                android:textColor="@color/text"
+                                android:textSize="18sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/live_tv_subtitle"
+                                android:textColor="#BFDBFE"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/txtLiveStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:text="@string/not_signed_in"
+                                android:textColor="@color/text_muted"
+                                android:textSize="11sp" />
+                        </LinearLayout>
                     </androidx.constraintlayout.widget.ConstraintLayout>
 
                     <androidx.constraintlayout.widget.ConstraintLayout
@@ -204,8 +200,8 @@
                             android:layout_height="0dp"
                             android:contentDescription="@null"
                             android:scaleType="fitXY"
-                            android:src="@drawable/card_tall_vod"
-                            app:layout_constraintDimensionRatio="800:1128"
+                            android:src="@drawable/card_wide_vod"
+                            app:layout_constraintDimensionRatio="900:329"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent" />
@@ -214,68 +210,64 @@
                             android:id="@+id/imgVodIcon"
                             android:layout_width="0dp"
                             android:layout_height="0dp"
+                            android:layout_marginStart="16dp"
                             android:contentDescription="@null"
                             android:scaleType="fitCenter"
                             android:src="@drawable/img_vod"
+                            app:layout_constraintBottom_toBottomOf="@id/imgVodCard"
                             app:layout_constraintDimensionRatio="1:1"
-                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintHeight_percent="0.52"
                             app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="@id/imgVodCard"
-                            app:layout_constraintVertical_bias="0"
-                            app:layout_constraintBottom_toTopOf="@id/txtVodTitle"
-                            app:layout_constraintHeight_percent="0.34"
-                            app:layout_constraintVertical_chainStyle="packed" />
-
-                        <TextView
-                            android:id="@+id/txtVodTitle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:fontFamily="sans-serif-medium"
-                            android:gravity="center"
-                            android:text="@string/video_on_demand"
-                            android:textColor="@color/text"
-                            android:textSize="18sp"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@id/imgVodIcon" />
-
-                        <TextView
-                            android:id="@+id/txtVodSub"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:gravity="center"
-                            android:text="@string/vod_subtitle"
-                            android:textColor="#DDD6FE"
-                            android:textSize="12sp"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@id/txtVodTitle" />
-
-                        <TextView
-                            android:id="@+id/txtVodStatus"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:gravity="center"
-                            android:text="@string/not_signed_in"
-                            android:textColor="@color/text_muted"
-                            android:textSize="11sp"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@id/txtVodSub" />
+                            app:layout_constraintTop_toTopOf="@id/imgVodCard" />
 
                         <ImageView
+                            android:id="@+id/imgVodChevron"
                             android:layout_width="0dp"
                             android:layout_height="0dp"
-                            android:layout_marginBottom="12dp"
+                            android:layout_marginEnd="14dp"
                             android:contentDescription="@null"
                             android:src="@drawable/img_btn_next_vod"
                             app:layout_constraintBottom_toBottomOf="@id/imgVodCard"
                             app:layout_constraintDimensionRatio="1:1"
                             app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintHeight_percent="0.16"
-                            app:layout_constraintStart_toStartOf="parent" />
+                            app:layout_constraintHeight_percent="0.42"
+                            app:layout_constraintTop_toTopOf="@id/imgVodCard" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_marginEnd="6dp"
+                            android:orientation="vertical"
+                            app:layout_constraintBottom_toBottomOf="@id/imgVodCard"
+                            app:layout_constraintEnd_toStartOf="@id/imgVodChevron"
+                            app:layout_constraintStart_toEndOf="@id/imgVodIcon"
+                            app:layout_constraintTop_toTopOf="@id/imgVodCard">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="@string/video_on_demand"
+                                android:textColor="@color/text"
+                                android:textSize="18sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/vod_subtitle"
+                                android:textColor="#DDD6FE"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/txtVodStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:text="@string/not_signed_in"
+                                android:textColor="@color/text_muted"
+                                android:textSize="11sp" />
+                        </LinearLayout>
                     </androidx.constraintlayout.widget.ConstraintLayout>
                 </LinearLayout>
             </LinearLayout>
