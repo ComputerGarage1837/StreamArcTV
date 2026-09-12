@@ -288,7 +288,15 @@ class BrowseActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val fetched = XtreamApi.categories(service, account, kind)
-                val cats = if (isLive) fetched.filter { it.id !in prefs.hiddenLiveCategories } else fetched
+                var cats = if (isLive) fetched.filter { it.id !in prefs.hiddenLiveCategories } else fetched
+                if (!isLive) {
+                    // Some panels file items under category ids the category list never mentions.
+                    // Add those so their content is reachable.
+                    val catalogue = CatalogCache.get(service, account, kind)
+                    val known = cats.mapNotNull { it.id }.toSet()
+                    val extra = catalogue.flatMap { it.allCategoryIds }.filter { it !in known }.distinct()
+                    if (extra.isNotEmpty()) cats = cats + extra.map { Category(it, getString(R.string.category_num_fmt, it)) }
+                }
                 val all = if (isLive) {
                     listOf(
                         Category(FAV_ID, "★ " + getString(R.string.favorites)),
@@ -349,7 +357,7 @@ class BrowseActivity : AppCompatActivity() {
                     when {
                         recentMode -> CatalogCache.recentlyAdded(all)
                         key == null -> all
-                        else -> all.filter { it.categoryId == key }
+                        else -> all.filter { key in it.allCategoryIds }
                     }
                 }
                 applyFilter()
