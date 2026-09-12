@@ -51,6 +51,7 @@ class SettingsActivity : AppCompatActivity() {
         b.rowLayout.setOnClickListener { pickLayout() }
         renderLayout()
         b.rowDiagnostics.setOnClickListener { runDiagnostics() }
+        b.rowLogs.setOnClickListener { exportLogs() }
         b.rowLiveCategories.setOnClickListener { pickLiveCategories() }
         b.rowDefaultCategory.setOnClickListener { pickDefaultCategory() }
         b.rowGuideMode.setOnClickListener { pickGuideMode() }
@@ -155,6 +156,16 @@ class SettingsActivity : AppCompatActivity() {
                 AlertDialog.Builder(this).setTitle(R.string.buffer_help_title)
                     .setMessage(R.string.buffer_help).setPositiveButton(android.R.string.ok, null).show()
             }
+            .show()
+    }
+
+    private fun exportLogs() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.export_logs)
+            .setMessage(R.string.export_logs_msg)
+            .setPositiveButton(R.string.share) { _, _ -> com.streamarc.tv.util.AppLog.share(this) }
+            .setNeutralButton(R.string.copy) { _, _ -> com.streamarc.tv.util.AppLog.copy(this) }
+            .setNegativeButton(R.string.clear_log) { _, _ -> com.streamarc.tv.util.AppLog.clear(); Toast.makeText(this, R.string.log_cleared, Toast.LENGTH_SHORT).show() }
             .show()
     }
 

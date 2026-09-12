@@ -303,6 +303,22 @@
                     android:textSize="16sp" />
             </LinearLayout>
 
+            <LinearLayout
+                android:id="@+id/rowLogs"
+                style="@style/SettingsRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/export_logs"
+                    android:textColor="@color/text"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
             <!-- Storage -->
             <TextView
                 style="@style/SectionHeader"

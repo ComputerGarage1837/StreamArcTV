@@ -5,7 +5,15 @@ version is shown to users inside the app when an update is available.
 
 ## v1.0.44 — 2026-09-12
 
+### Added
+- Settings → Export logs: the app now keeps a log of playback (states, pause reasons, formats,
+  decoders, loads, errors), downloads and recordings, with passwords stripped. Share it as a
+  text file or copy it to the clipboard.
+
 ### Fixed
+- Since 1.0.33 the player paused itself whenever Android reported audio "becoming noisy"; some
+  emulators (BlueStacks) report that at stream start, which left the player paused while it
+  buffered. That behaviour is removed.
 - Playback on emulators such as BlueStacks: the player now detects an emulated device and uses a
   texture-backed video view with the software decoder from the start, instead of a hardware
   decoder and surface that produce no picture there.
