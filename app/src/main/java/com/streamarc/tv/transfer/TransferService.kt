@@ -122,10 +122,10 @@ class TransferService : Service() {
             while (scope.isActive && running.containsKey(id)) {
                 // Playback has priority: most providers allow one stream per account, so a
                 // download would stop the video from loading. Wait here until the player closes.
-                if (job.type == TransferType.DOWNLOAD && playbackActive) {
-                    AppLog.i("Transfer", "'${job.title}' paused for playback at $done bytes")
-                    store.update(id) { it.error = getString(R.string.paused_for_playback) }
-                    while (playbackActive && scope.isActive && running.containsKey(id)) delay(1000)
+                if (job.type == TransferType.DOWNLOAD && holdReason() != null) {
+                    AppLog.i("Transfer", "'${job.title}' held (${holdReason()}) at $done bytes")
+                    store.update(id) { it.error = getString(if (holdReason() == "wifi") R.string.waiting_for_wifi else R.string.paused_for_playback) }
+                    while (holdReason() != null && scope.isActive && running.containsKey(id)) delay(1000)
                     store.update(id) { it.error = null }
                     continue
                 }
@@ -168,7 +168,7 @@ class TransferService : Service() {
                         var lastFlushBytes = done
                         while (scope.isActive && running.containsKey(id)) {
                             if (job.type == TransferType.RECORDING && System.currentTimeMillis() >= job.endAt) break
-                            if (job.type == TransferType.DOWNLOAD && playbackActive) {
+                            if (job.type == TransferType.DOWNLOAD && holdReason() != null) {
                                 // Close the socket for real (not back into the keep-alive pool), so the
                                 // provider frees this account's stream slot for the player.
                                 call.cancel()
@@ -204,7 +204,7 @@ class TransferService : Service() {
                 } catch (e: PausedForPlayback) {
                     continue   // back to the top of the loop, which waits and then resumes with a Range request
                 } catch (e: Exception) {
-                    if (playbackActive && job.type == TransferType.DOWNLOAD) continue   // the cancel above surfaces as an IOException
+                    if (holdReason() != null && job.type == TransferType.DOWNLOAD) continue   // the cancel above surfaces as an IOException
                     if (!running.containsKey(id) || !scope.isActive) return
                     attempt++
                     if (attempt >= MAX_ATTEMPTS) throw e
@@ -234,6 +234,21 @@ class TransferService : Service() {
             try { target?.stream?.close() } catch (_: Exception) {}
             try { XtreamApi.client.connectionPool.evictAll() } catch (_: Exception) {}
         }
+    }
+
+    /** Why a download must wait right now: "playback", "wifi", or null to go ahead. */
+    private fun holdReason(): String? {
+        if (playbackActive) return "playback"
+        if (com.streamarc.tv.data.Prefs(this).downloadsWifiOnly && onMobileData()) return "wifi"
+        return null
+    }
+
+    private fun onMobileData(): Boolean {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork ?: return false) ?: return false
+        return caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) &&
+            !caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) &&
+            !caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
     }
 
     /** Up-to-the-chunk progress of a running transfer, read directly by the lists. */

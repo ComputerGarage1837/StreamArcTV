@@ -135,6 +135,34 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("subtitles", false)
         set(value) { sp.edit().putBoolean("subtitles", value).apply() }
 
+    /** Start the next episode automatically when one ends. */
+    var autoPlayNext: Boolean
+        get() = sp.getBoolean("auto_play_next", true)
+        set(value) { sp.edit().putBoolean("auto_play_next", value).apply() }
+
+    /** Downloads wait for Wi-Fi / Ethernet instead of using mobile data. */
+    var downloadsWifiOnly: Boolean
+        get() = sp.getBoolean("downloads_wifi_only", false)
+        set(value) { sp.edit().putBoolean("downloads_wifi_only", value).apply() }
+
+    /** Delete a downloaded file once it has been watched to the end. */
+    var deleteAfterWatched: Boolean
+        get() = sp.getBoolean("delete_after_watched", false)
+        set(value) { sp.edit().putBoolean("delete_after_watched", value).apply() }
+
+    /** Set synchronously by the crash handler; the home screen offers the log on the next start. */
+    var crashed: Boolean
+        get() = sp.getBoolean("crashed", false)
+        set(value) { sp.edit().putBoolean("crashed", value).commit() }
+
+    /** Multi-view: number of tiles (2 or 4) and the channel id in each slot ("" = empty). */
+    var multiviewTiles: Int
+        get() = sp.getInt("multiview_tiles", 4)
+        set(value) { sp.edit().putInt("multiview_tiles", value).apply() }
+    var multiviewSlots: List<String>
+        get() = sp.getString("multiview_slots", "")!!.split('|').let { l -> List(4) { l.getOrNull(it) ?: "" } }
+        set(value) { sp.edit().putString("multiview_slots", value.take(4).joinToString("|")).apply() }
+
     /** One of [BufferLevel.key]; how much live video the player keeps buffered. */
     var bufferLevel: String
         get() = sp.getString("buffer_level", BufferLevel.MAX.key) ?: BufferLevel.MAX.key

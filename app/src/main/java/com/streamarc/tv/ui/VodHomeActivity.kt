@@ -24,6 +24,7 @@ import com.streamarc.tv.data.ContentKind
 import com.streamarc.tv.data.Episode
 import com.streamarc.tv.data.Prefs
 import com.streamarc.tv.data.Service
+import com.streamarc.tv.data.SeriesCache
 import com.streamarc.tv.data.Stream
 import com.streamarc.tv.data.WatchProgress
 import com.streamarc.tv.data.XtreamApi
@@ -195,8 +196,8 @@ class VodHomeActivity : AppCompatActivity() {
             val cards = started.map { entry ->
                 async(Dispatchers.IO) {
                     val sid = entry.seriesId ?: return@async null
-                    val eps = try { episodesFor(sid) } catch (_: Exception) { return@async null }
-                    val sorted = eps.sortedWith(compareBy({ it.season }, { it.number }))
+                    val eps = try { SeriesCache.episodes(service, account, sid) } catch (_: Exception) { return@async null }
+                    val sorted = SeriesCache.ordered(eps)
                     val idx = sorted.indexOfFirst { it.season == entry.season && it.number == entry.episode }
                     // Still mid-way through this one: it belongs in Continue watching instead.
                     if (idx >= 0 && !entry.watched) return@async null
@@ -217,14 +218,6 @@ class VodHomeActivity : AppCompatActivity() {
             nextEpisodes = cards
             render()
         }
-    }
-
-    private suspend fun episodesFor(seriesId: String): List<Episode> {
-        val now = System.currentTimeMillis()
-        synchronized(seriesCache) { seriesCache[seriesId]?.let { if (now - it.first < SERIES_TTL_MS) return it.second } }
-        val eps = XtreamApi.seriesInfo(service, account, seriesId)
-        synchronized(seriesCache) { seriesCache[seriesId] = now to eps }
-        return eps
     }
 
     // ---- Rows -------------------------------------------------------------------
@@ -527,8 +520,6 @@ class VodHomeActivity : AppCompatActivity() {
     companion object {
         private const val EXTRA_SERVICE = "service"
         private const val HERO_INTERVAL_MS = 8_000L
-        private const val SERIES_TTL_MS = 30 * 60 * 1000L
-        private val seriesCache = HashMap<String, Pair<Long, List<Episode>>>()
         fun intent(ctx: Context, service: Service): Intent =
             Intent(ctx, VodHomeActivity::class.java).putExtra(EXTRA_SERVICE, service.name)
     }

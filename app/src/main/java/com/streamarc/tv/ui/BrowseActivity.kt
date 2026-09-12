@@ -94,6 +94,8 @@ class BrowseActivity : AppCompatActivity() {
         b.txtTitle.text = if (isLive) getString(R.string.tv_guide) else service.title
         b.btnBack.setOnClickListener { finish() }
         b.btnProfile.setOnClickListener { startActivity(ProfileActivity.intent(this, service)) }
+        b.btnMulti.visibility = if (isLive) View.VISIBLE else View.GONE
+        b.btnMulti.setOnClickListener { startActivity(MultiViewActivity.intent(this, service)) }
 
         applyCategoryLayout()
 

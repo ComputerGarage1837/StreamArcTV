@@ -41,7 +41,14 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import com.streamarc.tv.R
 import com.streamarc.tv.data.BufferLevel
+import com.streamarc.tv.data.Episode
 import com.streamarc.tv.data.Prefs
+import com.streamarc.tv.data.SeriesCache
+import com.streamarc.tv.data.Service
+import com.streamarc.tv.transfer.Folders
+import com.streamarc.tv.transfer.TransferStore
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import com.streamarc.tv.data.WatchProgress
 import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.databinding.ActivityPlayerBinding
@@ -93,6 +100,10 @@ class PlayerActivity : AppCompatActivity() {
     private var preferSoftware = false
     /** The user chose "Try anyway" after an unsupported-format warning. */
     private var forceTry = false
+    /** Episodes started automatically in a row; after a few we ask "Still watching?". */
+    private var autoPlays = 0
+    private var nextCountdown: Runnable? = null
+    private var nextOffered = false
     private var formatChecked = false
     /** Position to start from once the stream is ready (set by the resume prompt). */
     private var startPositionMs = 0L
@@ -145,6 +156,7 @@ class PlayerActivity : AppCompatActivity() {
         b.btnSeekBack.setOnClickListener { seekBy(-SEEK_STEP_MS) }
         b.btnSeekFwd.setOnClickListener { seekBy(SEEK_STEP_MS) }
         b.btnRetry.setOnClickListener { retries = 0; nudges = 0; releasePlayer(); initPlayer() }
+        b.btnNextCancel.setOnClickListener { hideNext() }
     }
 
     override fun onStart() {
@@ -175,12 +187,98 @@ class PlayerActivity : AppCompatActivity() {
         TransferService.playbackActive = false
         saveProgress(force = true)
         handler.removeCallbacks(ticker)
+        hideNext()
         cancelRetry()
         releasePlayer()
+        deleteIfWatchedDownload()
     }
+
+    /** Settings → "Delete downloads after watching": a finished download goes once the player closes. */
+    private fun deleteIfWatchedDownload() {
+        val key = watchKey ?: return
+        if (!key.startsWith("dl:") || !prefs.deleteAfterWatched || !WatchProgress.isWatched(key)) return
+        val store = TransferStore.get(this)
+        val job = store.get(key.removePrefix("dl:")) ?: return
+        Folders.delete(this, job.fileUri)
+        store.remove(job.id)
+        WatchProgress.remove(key)
+        Toast.makeText(this, getString(R.string.deleted_after_watching_fmt, job.title), Toast.LENGTH_SHORT).show()
+    }
+
+    // ---- Auto-play next episode ----------------------------------------------------
+
+    private fun offerNext() {
+        val key = watchKey ?: return
+        if (nextOffered || !prefs.autoPlayNext || !key.startsWith("ep:")) return
+        val entry = WatchProgress.get(key) ?: return
+        val seriesId = entry.seriesId ?: return
+        val account = prefs.account(Service.VOD) ?: return
+        nextOffered = true
+        lifecycleScope.launch {
+            val eps = try { SeriesCache.ordered(SeriesCache.episodes(Service.VOD, account, seriesId)) } catch (_: Exception) { return@launch }
+            val idx = eps.indexOfFirst { it.season == entry.season && it.number == entry.episode }
+            val after = eps.drop(idx + 1)
+            val next = after.firstOrNull { !WatchProgress.isWatched(WatchProgress.episodeKey(it.id)) } ?: after.firstOrNull() ?: return@launch
+            if (player == null) return@launch
+            showNext(next, entry.title ?: "", entry.image, seriesId, account)
+        }
+    }
+
+    private fun showNext(next: Episode, seriesTitle: String, image: String?, seriesId: String, account: com.streamarc.tv.data.Account) {
+        b.txtNextTitle.text = getString(R.string.up_next_fmt, next.season, next.number, next.title)
+        b.nextBox.visibility = View.VISIBLE
+        b.btnNextPlay.setOnClickListener { hideNext(); playNext(next, seriesTitle, image, seriesId, account) }
+        b.btnNextPlay.requestFocus()
+        if (autoPlays >= MAX_AUTO_PLAYS) {
+            // Three in a row without a hand on the remote: wait for a press.
+            b.txtNextCount.text = getString(R.string.still_watching)
+            return
+        }
+        var left = NEXT_COUNTDOWN_S
+        val tick = object : Runnable {
+            override fun run() {
+                b.txtNextCount.text = getString(R.string.playing_in_fmt, left)
+                if (left <= 0) { hideNext(); playNext(next, seriesTitle, image, seriesId, account); return }
+                left--
+                handler.postDelayed(this, 1000)
+            }
+        }
+        nextCountdown = tick
+        handler.post(tick)
+    }
+
+    private fun hideNext() {
+        nextCountdown?.let { handler.removeCallbacks(it) }
+        nextCountdown = null
+        b.nextBox.visibility = View.GONE
+    }
+
+    private fun playNext(next: Episode, seriesTitle: String, image: String?, seriesId: String, account: com.streamarc.tv.data.Account) {
+        val nextUrl = try { XtreamApi.episodeUrl(Service.VOD, account, next) } catch (e: Exception) {
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show(); return
+        }
+        autoPlays++
+        val key = WatchProgress.episodeKey(next.id)
+        WatchProgress.describe(key, WatchProgress.KIND_EPISODE, seriesTitle, image, next.containerExtension, next.id,
+            subtitle = next.title, seriesId = seriesId, season = next.season, episode = next.number)
+        AppLog.i(TAG, "auto-play next S${next.season}E${next.number} (${autoPlays} in a row)")
+        saveProgress(force = true)
+        url = nextUrl
+        title = "$seriesTitle · S${next.season}E${next.number} ${next.title}"
+        b.txtTitle.text = title
+        watchKey = key
+        nextOffered = false
+        resumeAsked = true
+        startPositionMs = WatchProgress.resumePosition(key)
+        retries = 0; nudges = 0
+        releasePlayer()
+        initPlayer()
+    }
+
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
+            autoPlays = 0   // someone is definitely watching
             when (event.keyCode) {
                 KeyEvent.KEYCODE_MEDIA_REWIND -> { seekBy(-SEEK_STEP_MS); return true }
                 KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> { seekBy(SEEK_STEP_MS); return true }
@@ -323,7 +421,10 @@ class PlayerActivity : AppCompatActivity() {
                 b.bufferBox.visibility =
                     if (playbackState == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
                 if (playbackState == Player.STATE_BUFFERING) bufferingSince = SystemClock.elapsedRealtime()
-                if (playbackState == Player.STATE_ENDED) watchKey?.let { WatchProgress.ended(it) }
+                if (playbackState == Player.STATE_ENDED) {
+                    watchKey?.let { WatchProgress.ended(it) }
+                    if (!isLive) offerNext()
+                }
                 if (playbackState == Player.STATE_READY) {
                     retries = 0
                     if (liveBaselineMs == C.TIME_UNSET && p.isCurrentMediaItemLive && p.currentLiveOffset != C.TIME_UNSET)
@@ -698,6 +799,8 @@ class PlayerActivity : AppCompatActivity() {
         private const val MAX_RETRIES = 4
         private const val BEHIND_THRESHOLD_MS = 2_000L
         private const val SEEK_STEP_MS = 10_000L
+        private const val NEXT_COUNTDOWN_S = 10
+        private const val MAX_AUTO_PLAYS = 3
         /** BlueStacks, Genymotion, the Android emulator: x86 builds or telltale fingerprints. */
         val isEmulator: Boolean by lazy {
             val abis = android.os.Build.SUPPORTED_ABIS.joinToString().lowercase()
