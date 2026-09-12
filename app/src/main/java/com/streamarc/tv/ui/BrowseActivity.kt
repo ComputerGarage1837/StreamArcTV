@@ -58,6 +58,8 @@ class BrowseActivity : AppCompatActivity() {
     private var loadJob: Job? = null
     private var selectedCategoryId: String? = null
     private var favoritesMode = false
+    private var guideReady = false
+    private var prefetchJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,10 +100,12 @@ class BrowseActivity : AppCompatActivity() {
             b.txtPanelUpcoming.text = ""
             b.listStreams.visibility = View.GONE
             b.epgGrid.visibility = View.VISIBLE
-            b.epgGrid.guideLookup = { ch -> EpgCache.guideFor(service, ch.epgChannelId) }
+            b.epgGrid.guideLookup = { ch -> EpgCache.guideFor(service, ch.epgChannelId, ch.name) }
             lifecycleScope.launch {
                 val ok = EpgCache.loadGuide(service, account)
                 if (ok) b.epgGrid.guideLoaded()
+                guideReady = true
+                prefetchEpg()
             }
             b.epgGrid.listener = object : EpgGridView.Listener {
                 override fun onFocusChanged(channel: Stream, programme: EpgProgramme?) {
@@ -115,7 +119,7 @@ class BrowseActivity : AppCompatActivity() {
                         // Prefer the whole-guide download; fall back to the per-channel call
                         // for channels the guide doesn't cover.
                         EpgCache.loadGuide(service, account)
-                        val fromGuide = EpgCache.guideFor(service, channel.epgChannelId)
+                        val fromGuide = EpgCache.guideFor(service, channel.epgChannelId, channel.name)
                         val list = fromGuide ?: EpgCache.get(service, account, id)
                         b.epgGrid.setEpg(id, list)
                     }
@@ -240,6 +244,7 @@ class BrowseActivity : AppCompatActivity() {
             b.epgGrid.favorites = favs
             b.epgGrid.setChannels(list)
             if (list.isNotEmpty() && currentFocus == null) b.epgGrid.requestFocus()
+            if (guideReady) prefetchEpg()
         } else {
             streamAdapter.submit(list, favs)
         }
@@ -285,6 +290,24 @@ class BrowseActivity : AppCompatActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    /**
+     * Fill the guide for every channel in the current list ahead of scrolling: from the
+     * downloaded listing when it covers the channel, otherwise one short-EPG call per channel.
+     */
+    private fun prefetchEpg() {
+        prefetchJob?.cancel()
+        val channels = allStreams
+        prefetchJob = lifecycleScope.launch {
+            for (ch in channels) {
+                val id = ch.streamId ?: continue
+                if (EpgCache.peek(service, id) != null) continue
+                val fromGuide = EpgCache.guideFor(service, ch.epgChannelId, ch.name)
+                val list = fromGuide ?: EpgCache.get(service, account, id)
+                b.epgGrid.setEpg(id, list)
+            }
+        }
     }
 
     private fun showChannelDetails(stream: Stream, programmes: List<EpgProgramme>?, focused: EpgProgramme? = null) {

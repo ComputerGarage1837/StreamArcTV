@@ -122,7 +122,7 @@ object XtreamApi {
      * large files stay cheap. Returns programmes keyed by XMLTV channel id, limited
      * to [fromEpoch, toEpoch) so a week-long file doesn't fill memory.
      */
-    suspend fun fullGuide(service: Service, account: Account, fromEpoch: Long, toEpoch: Long): Map<String, List<EpgProgramme>> =
+    suspend fun fullGuide(service: Service, account: Account, fromEpoch: Long, toEpoch: Long): XmltvParser.Guide =
         withContext(Dispatchers.IO) {
             val base = serverUrl(service)
             val url = base.newBuilder()

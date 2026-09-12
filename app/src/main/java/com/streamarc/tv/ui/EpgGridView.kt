@@ -110,9 +110,14 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         if (list.isNotEmpty()) post { notifyFocus() }
     }
 
+    private var invalidatePending = false
+
     fun setEpg(streamId: String, programmes: List<EpgProgramme>) {
         epg[streamId] = programmes
-        invalidate()
+        if (!invalidatePending) {
+            invalidatePending = true
+            postDelayed({ invalidatePending = false; invalidate() }, 80)
+        }
         if (channels.getOrNull(focusRow)?.streamId == streamId) notifyFocus()
     }
 

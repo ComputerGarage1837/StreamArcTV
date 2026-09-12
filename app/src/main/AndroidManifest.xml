@@ -24,6 +24,7 @@
 
         <activity
             android:name=".ui.MainActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden"
             android:exported="true"
             android:launchMode="singleTop">
             <intent-filter>
@@ -36,13 +37,13 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".ui.LoginActivity" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".ui.LoginActivity" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden" android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".ui.BrowseActivity"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden" />
-        <activity android:name=".ui.SeriesActivity" />
-        <activity android:name=".ui.ProfileActivity" />
-        <activity android:name=".ui.SettingsActivity" />
+        <activity android:name=".ui.SeriesActivity" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden" />
+        <activity android:name=".ui.ProfileActivity" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden" />
+        <activity android:name=".ui.SettingsActivity" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden" />
         <activity
             android:name=".ui.PlayerActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"

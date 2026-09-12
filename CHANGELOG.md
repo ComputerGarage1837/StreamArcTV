@@ -11,7 +11,10 @@ version is shown to users inside the app when an update is available.
 - Movies and Series open on a new "Recently added" section showing the newest titles first; "All"
   and the provider's categories follow it.
 - Posters are shown whole at their 2:3 shape instead of being cropped or stretched.
-- Rotating the phone no longer resets the selected category or the guide position.
+- Rotating the phone no longer resets anything: every screen keeps its state.
+- The TV guide fills in for every channel in the list right after opening, matching channels to
+  the downloaded listing by id or by name and fetching the rest in the background, so scrolling
+  never waits.
 
 ## v1.0.15 — 2026-09-12
 
