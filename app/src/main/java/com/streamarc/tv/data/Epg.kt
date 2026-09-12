@@ -321,5 +321,33 @@ object EpgCache {
         }
     }
 
+    // ---- Per-channel short EPG (fallback for channels the guide doesn't cover) ----
+
+    private fun key(service: Service, streamId: String) = "${service.name}/$streamId"
+
+    /** Cached programmes if fresh, else null (no network). */
+    fun peek(service: Service, streamId: String): List<EpgProgramme>? {
+        val e = synchronized(cache) { cache[key(service, streamId)] } ?: return null
+        return if (System.currentTimeMillis() - e.first < TTL_MS) e.second else null
+    }
+
+    /** Programmes for the channel, fetching (at most 6 at a time) when not cached. */
+    suspend fun get(service: Service, account: Account, streamId: String): List<EpgProgramme> {
+        peek(service, streamId)?.let { return it }
+        return gate.withPermit {
+            peek(service, streamId)?.let { return@withPermit it }
+            val list = try {
+                XtreamApi.shortEpg(service, account, streamId)
+            } catch (_: Exception) {
+                emptyList()
+            }
+            // A panel hiccup that returns nothing must not wipe programmes we already had.
+            val previous = synchronized(cache) { cache[key(service, streamId)] }?.second
+            val kept = if (list.isEmpty() && !previous.isNullOrEmpty()) previous else list
+            synchronized(cache) { cache[key(service, streamId)] = System.currentTimeMillis() to kept }
+            kept
+        }
+    }
+
     fun clear() = synchronized(cache) { cache.clear() }
 }
