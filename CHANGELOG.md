@@ -3,6 +3,12 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.20 — 2026-09-12
+
+### Fixed
+- The recording time wheels could not be turned by touch. Start and End are now plain hour,
+  minute and AM/PM wheels that work by finger and with the remote.
+
 ## v1.0.19 — 2026-09-12
 
 ### Changed
