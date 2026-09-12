@@ -21,10 +21,9 @@
         android:gravity="center"
         android:orientation="horizontal">
 
-        <NumberPicker android:id="@+id/startHour" android:layout_width="0dp" android:layout_height="120dp" android:layout_weight="1" android:theme="@style/PickerTheme" />
+        <NumberPicker android:id="@+id/startHour" android:layout_width="0dp" android:layout_height="120dp" android:layout_weight="1.4" android:theme="@style/PickerTheme" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=":" android:textColor="@color/text" android:textSize="22sp" />
         <NumberPicker android:id="@+id/startMinute" android:layout_width="0dp" android:layout_height="120dp" android:layout_weight="1" android:theme="@style/PickerTheme" />
-        <NumberPicker android:id="@+id/startAmPm" android:layout_width="0dp" android:layout_height="120dp" android:layout_weight="1" android:theme="@style/PickerTheme" />
     </LinearLayout>
 
     <TextView
@@ -41,10 +40,9 @@
         android:gravity="center"
         android:orientation="horizontal">
 
-        <NumberPicker android:id="@+id/endHour" android:layout_width="0dp" android:layout_height="120dp" android:layout_weight="1" android:theme="@style/PickerTheme" />
+        <NumberPicker android:id="@+id/endHour" android:layout_width="0dp" android:layout_height="120dp" android:layout_weight="1.4" android:theme="@style/PickerTheme" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=":" android:textColor="@color/text" android:textSize="22sp" />
         <NumberPicker android:id="@+id/endMinute" android:layout_width="0dp" android:layout_height="120dp" android:layout_weight="1" android:theme="@style/PickerTheme" />
-        <NumberPicker android:id="@+id/endAmPm" android:layout_width="0dp" android:layout_height="120dp" android:layout_weight="1" android:theme="@style/PickerTheme" />
     </LinearLayout>
 
     <TextView

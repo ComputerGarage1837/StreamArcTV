@@ -225,7 +225,8 @@ class BrowseActivity : AppCompatActivity() {
         setLoading(true)
         lifecycleScope.launch {
             try {
-                val cats = XtreamApi.categories(service, account, kind)
+                val fetched = XtreamApi.categories(service, account, kind)
+                val cats = if (isLive) fetched.filter { it.id !in prefs.hiddenLiveCategories } else fetched
                 val all = if (isLive) {
                     listOf(
                         Category(FAV_ID, "★ " + getString(R.string.favorites)),
@@ -240,8 +241,7 @@ class BrowseActivity : AppCompatActivity() {
                 }
                 categoryAdapter.submit(all)
                 if (isLive) {
-                    // Open on Favorites when the user has some, otherwise on All.
-                    selectCategory(if (prefs.favorites(service, kind).isNotEmpty()) all[0] else all[1])
+                    selectCategory(defaultLiveCategory(all))
                 } else {
                     // Movies and series open on Recently added.
                     selectCategory(all[1])
@@ -250,6 +250,18 @@ class BrowseActivity : AppCompatActivity() {
                 showError(e.message ?: getString(R.string.load_failed))
             }
         }
+    }
+
+    /** The category the guide opens on: the user's setting, else "General …" if the provider has one, else All. */
+    private fun defaultLiveCategory(all: List<Category>): Category {
+        val wanted = prefs.defaultLiveCategory
+        when (wanted) {
+            Prefs.CATEGORY_FAVORITES -> return all[0]
+            Prefs.CATEGORY_ALL -> return all[1]
+            null -> {}
+            else -> all.firstOrNull { it.id == wanted }?.let { return it }
+        }
+        return all.firstOrNull { it.id != null && it.id != FAV_ID && it.name?.contains("general", ignoreCase = true) == true } ?: all[1]
     }
 
     private fun selectCategory(cat: Category) {
@@ -286,6 +298,10 @@ class BrowseActivity : AppCompatActivity() {
         val q = b.inputSearch.text?.toString()?.trim().orEmpty()
         val favs = prefs.favorites(service, kind)
         var list = if (favoritesMode) allStreams.filter { favs.contains(it.id) } else allStreams
+        if (isLive) {
+            val hidden = prefs.hiddenLiveCategories
+            if (hidden.isNotEmpty()) list = list.filter { it.categoryId !in hidden }
+        }
         if (q.isNotEmpty()) list = list.filter { it.name?.contains(q, ignoreCase = true) == true }
 
         if (isLive) {
@@ -543,7 +559,7 @@ class BrowseActivity : AppCompatActivity() {
 
     companion object {
         private const val EXTRA_SERVICE = "service"
-        private const val FAV_ID = "__favorites__"
+        private const val FAV_ID = Prefs.CATEGORY_FAVORITES
         private const val RECENT_ID = "__recent__"
         fun intent(ctx: Context, service: Service): Intent =
             Intent(ctx, BrowseActivity::class.java).putExtra(EXTRA_SERVICE, service.name)

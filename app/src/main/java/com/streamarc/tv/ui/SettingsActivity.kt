@@ -9,7 +9,12 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.streamarc.tv.BuildConfig
 import com.streamarc.tv.R
+import androidx.lifecycle.lifecycleScope
+import com.streamarc.tv.data.Category
+import com.streamarc.tv.data.ContentKind
 import com.streamarc.tv.data.Prefs
+import com.streamarc.tv.data.XtreamApi
+import kotlinx.coroutines.launch
 import com.streamarc.tv.data.Service
 import com.streamarc.tv.databinding.ActivitySettingsBinding
 import com.streamarc.tv.transfer.Folders
@@ -38,6 +43,9 @@ class SettingsActivity : AppCompatActivity() {
         renderLiveFormat()
         b.rowLayout.setOnClickListener { pickLayout() }
         renderLayout()
+        b.rowLiveCategories.setOnClickListener { pickLiveCategories() }
+        b.rowDefaultCategory.setOnClickListener { pickDefaultCategory() }
+        renderLiveCategories()
         b.rowDownloadFolder.setOnClickListener { TransferDialogs.pickFolder(this, picker, TransferType.DOWNLOAD) { renderFolders() } }
         b.rowRecordingFolder.setOnClickListener { TransferDialogs.pickFolder(this, picker, TransferType.RECORDING) { renderFolders() } }
         renderFolders()
@@ -80,6 +88,73 @@ class SettingsActivity : AppCompatActivity() {
                 renderLiveFormat()
                 d.dismiss()
             }
+            .show()
+    }
+
+    // ---- Live TV categories ---------------------------------------------
+
+    private var liveCategories: List<Category>? = null
+
+    private fun renderLiveCategories() {
+        val hidden = prefs.hiddenLiveCategories.size
+        b.txtLiveCategoriesValue.text = if (hidden == 0) getString(R.string.all_shown) else getString(R.string.hidden_count_fmt, hidden)
+        b.txtDefaultCategoryValue.text = when (val d = prefs.defaultLiveCategory) {
+            null -> getString(R.string.default_auto)
+            Prefs.CATEGORY_FAVORITES -> getString(R.string.favorites)
+            Prefs.CATEGORY_ALL -> getString(R.string.all_categories)
+            else -> liveCategories?.firstOrNull { it.id == d }?.name ?: getString(R.string.chosen_category)
+        }
+    }
+
+    /** Loads the provider's live categories once (needs a Live TV sign-in). */
+    private fun withLiveCategories(then: (List<Category>) -> Unit) {
+        liveCategories?.let { then(it); return }
+        val account = prefs.account(Service.LIVE)
+        if (account == null) { Toast.makeText(this, R.string.sign_in_live_first, Toast.LENGTH_SHORT).show(); return }
+        lifecycleScope.launch {
+            try {
+                val cats = XtreamApi.categories(Service.LIVE, account, ContentKind.LIVE).filter { it.id != null }
+                liveCategories = cats
+                renderLiveCategories()
+                then(cats)
+            } catch (e: Exception) {
+                Toast.makeText(this@SettingsActivity, e.message ?: getString(R.string.load_failed), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun pickLiveCategories() = withLiveCategories { cats ->
+        val hidden = prefs.hiddenLiveCategories.toMutableSet()
+        val names = cats.map { it.name ?: "—" }.toTypedArray()
+        val checked = BooleanArray(cats.size) { i -> cats[i].id !in hidden }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.live_categories_shown)
+            .setMultiChoiceItems(names, checked) { _, which, isChecked ->
+                val id = cats[which].id ?: return@setMultiChoiceItems
+                if (isChecked) hidden.remove(id) else hidden.add(id)
+            }
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                prefs.hiddenLiveCategories = hidden
+                if (prefs.defaultLiveCategory in hidden) prefs.defaultLiveCategory = null
+                renderLiveCategories()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun pickDefaultCategory() = withLiveCategories { cats ->
+        val visible = cats.filter { it.id !in prefs.hiddenLiveCategories }
+        val labels = listOf(getString(R.string.default_auto), "★ " + getString(R.string.favorites), getString(R.string.all_categories)) + visible.map { it.name ?: "—" }
+        val values: List<String?> = listOf(null, Prefs.CATEGORY_FAVORITES, Prefs.CATEGORY_ALL) + visible.map { it.id }
+        val current = values.indexOf(prefs.defaultLiveCategory).coerceAtLeast(0)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.default_live_category)
+            .setSingleChoiceItems(labels.toTypedArray(), current) { d, which ->
+                prefs.defaultLiveCategory = values[which]
+                renderLiveCategories()
+                d.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
