@@ -112,13 +112,31 @@ class BrowseActivity : AppCompatActivity() {
             b.epgGrid.guideLookup = { ch -> EpgCache.guideFor(service, ch.epgChannelId, ch.name) }
             showGuideProgress(getString(R.string.guide_downloading), null)
             lifecycleScope.launch {
+                var lastBytes = 0L
+                val remembered = prefs.guideSize(service)
                 val ok = EpgCache.loadGuide(service, account) { bytes, total ->
+                    lastBytes = bytes
+                    // Panels rarely send a length for the guide: estimate from last time (or a
+                    // first-run guess) so the bar and percentage still move.
+                    val exact = total > 0
+                    val estimate = when {
+                        exact -> total
+                        remembered > 0 -> remembered
+                        else -> 25L * 1024 * 1024
+                    }
+                    val shown = maxOf(estimate, bytes + 1)
+                    val pct = (bytes * 100 / shown).toInt().coerceIn(0, 99)
                     runOnUiThread {
-                        val text = if (total > 0) getString(R.string.guide_downloading_pct_fmt, UpdateChecker.formatSize(bytes), UpdateChecker.formatSize(total), (bytes * 100 / total).toInt())
-                        else getString(R.string.guide_downloading_size_fmt, UpdateChecker.formatSize(bytes))
-                        showGuideProgress(text, if (total > 0) (bytes * 1000 / total).toInt() else null)
+                        val text = getString(
+                            R.string.guide_downloading_pct_fmt,
+                            UpdateChecker.formatSize(bytes),
+                            (if (exact) "" else "~") + UpdateChecker.formatSize(shown),
+                            pct
+                        )
+                        showGuideProgress(text, (bytes * 1000 / shown).toInt())
                     }
                 }
+                if (ok && lastBytes > 0) prefs.setGuideSize(service, lastBytes)
                 if (ok) b.epgGrid.guideLoaded()
                 guideReady = true
                 prefetchEpg()

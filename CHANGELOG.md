@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.29 — 2026-09-12
+
+### Fixed
+- Guide download progress now always shows a total and a percentage with a filling bar. When the
+  provider doesn't report the file size, the size from the previous download is used as the
+  estimate (shown with a ~), with a sensible guess the very first time.
+
 ## v1.0.28 — 2026-09-12
 
 ### Changed
