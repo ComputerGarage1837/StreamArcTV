@@ -46,7 +46,9 @@ class BrowseActivity : AppCompatActivity() {
     private lateinit var prefs: Prefs
     private lateinit var account: Account
 
-    private val isLive: Boolean get() = service.kind == ContentKind.LIVE
+    /** What is being browsed: LIVE for the guide, MOVIE or SERIES for the VOD tabs. */
+    private var kind: ContentKind = ContentKind.LIVE
+    private val isLive: Boolean get() = kind == ContentKind.LIVE
 
     private val categoryAdapter = CategoryAdapter { cat -> selectCategory(cat) }
     private val channelAdapter by lazy { ChannelAdapter() }
@@ -72,6 +74,7 @@ class BrowseActivity : AppCompatActivity() {
             return
         }
         account = acct
+        kind = service.kind
 
         b.txtTitle.text = if (isLive) getString(R.string.tv_guide) else service.title
         b.btnBack.setOnClickListener { finish() }
@@ -79,6 +82,13 @@ class BrowseActivity : AppCompatActivity() {
 
         b.listCategories.layoutManager = LinearLayoutManager(this)
         b.listCategories.adapter = categoryAdapter
+
+        if (service.kind != ContentKind.LIVE) {
+            b.tabs.visibility = View.VISIBLE
+            b.btnTabMovies.setOnClickListener { switchKind(ContentKind.MOVIE) }
+            b.btnTabSeries.setOnClickListener { switchKind(ContentKind.SERIES) }
+            renderTabs()
+        }
 
         if (isLive) {
             b.panelEpg.visibility = View.VISIBLE
@@ -106,20 +116,37 @@ class BrowseActivity : AppCompatActivity() {
         if (!prefs.isSignedIn(service)) finish()
     }
 
+    private fun renderTabs() {
+        b.btnTabMovies.isSelected = kind == ContentKind.MOVIE
+        b.btnTabSeries.isSelected = kind == ContentKind.SERIES
+    }
+
+    private fun switchKind(newKind: ContentKind) {
+        if (newKind == kind) return
+        kind = newKind
+        renderTabs()
+        loadJob?.cancel()
+        streamCache.clear()
+        allStreams = emptyList()
+        b.inputSearch.setText("")
+        streamAdapter.submit(emptyList(), emptySet())
+        loadCategories()
+    }
+
     // ---- Loading -------------------------------------------------------
 
     private fun loadCategories() {
         setLoading(true)
         lifecycleScope.launch {
             try {
-                val cats = XtreamApi.categories(service, account)
+                val cats = XtreamApi.categories(service, account, kind)
                 val all = listOf(
                     Category(FAV_ID, "★ " + getString(R.string.favorites)),
                     Category(null, getString(R.string.all_categories))
                 ) + cats
                 categoryAdapter.submit(all)
                 // Open on Favorites when the user has some, otherwise on All.
-                val start = if (prefs.favorites(service).isNotEmpty()) all[0] else all[1]
+                val start = if (prefs.favorites(service, kind).isNotEmpty()) all[0] else all[1]
                 selectCategory(start)
             } catch (e: Exception) {
                 showError(e.message ?: getString(R.string.load_failed))
@@ -137,7 +164,7 @@ class BrowseActivity : AppCompatActivity() {
         loadJob = lifecycleScope.launch {
             try {
                 val key = selectedCategoryId
-                allStreams = streamCache[key] ?: XtreamApi.streams(service, account, key).also { streamCache[key] = it }
+                allStreams = streamCache[key] ?: XtreamApi.streams(service, account, key, kind).also { streamCache[key] = it }
                 applyFilter()
                 setLoading(false)
             } catch (e: Exception) {
@@ -148,8 +175,8 @@ class BrowseActivity : AppCompatActivity() {
 
     private fun applyFilter() {
         val q = b.inputSearch.text?.toString()?.trim().orEmpty()
-        val favs = prefs.favorites(service)
-        var list = if (favoritesMode) allStreams.filter { favs.contains(it.streamId) } else allStreams
+        val favs = prefs.favorites(service, kind)
+        var list = if (favoritesMode) allStreams.filter { favs.contains(it.id) } else allStreams
         if (q.isNotEmpty()) list = list.filter { it.name?.contains(q, ignoreCase = true) == true }
 
         if (isLive) channelAdapter.submit(list, favs) else streamAdapter.submit(list, favs)
@@ -161,6 +188,11 @@ class BrowseActivity : AppCompatActivity() {
     // ---- Actions -------------------------------------------------------
 
     private fun play(stream: Stream) {
+        if (kind == ContentKind.SERIES) {
+            val id = stream.seriesId ?: stream.streamId ?: return
+            startActivity(SeriesActivity.intent(this, service, id, stream.name ?: "", stream.image, stream.plot))
+            return
+        }
         val url = try {
             XtreamApi.streamUrl(service, account, stream, prefs.liveFormat)
         } catch (e: Exception) {
@@ -171,16 +203,17 @@ class BrowseActivity : AppCompatActivity() {
 
     /** Context menu opened by holding OK / long-pressing an item. */
     private fun showItemMenu(stream: Stream) {
-        val id = stream.streamId ?: return
-        val isFav = prefs.isFavorite(service, id)
+        val id = stream.id ?: return
+        val isFav = prefs.isFavorite(service, kind, id)
         val favLabel = getString(if (isFav) R.string.remove_from_favorites else R.string.add_to_favorites)
+        val first = getString(if (kind == ContentKind.SERIES) R.string.open else R.string.play)
         AlertDialog.Builder(this)
             .setTitle(stream.name ?: "")
-            .setItems(arrayOf(getString(R.string.play), favLabel)) { _, which ->
+            .setItems(arrayOf(first, favLabel)) { _, which ->
                 when (which) {
                     0 -> play(stream)
                     1 -> {
-                        val nowFav = prefs.toggleFavorite(service, id)
+                        val nowFav = prefs.toggleFavorite(service, kind, id)
                         val msg = if (nowFav) R.string.added_to_favorites_fmt else R.string.removed_from_favorites_fmt
                         Toast.makeText(this, getString(msg, stream.name ?: ""), Toast.LENGTH_SHORT).show()
                         applyFilter()
@@ -248,24 +281,19 @@ class BrowseActivity : AppCompatActivity() {
     }
 
     /** Live TV guide rows with now/next programme information. */
-    private inner class ChannelAdapter : RecyclerView.Adapter<ChannelAdapter.VH>() {
+    private inner class ChannelAdapter : RecyclerView.Adapter<ChannelVH>() {
 
         private var items: List<Stream> = emptyList()
         private var favs: Set<String> = emptySet()
 
-        class VH(val vb: ItemChannelBinding) : RecyclerView.ViewHolder(vb.root) {
-            var epgJob: Job? = null
-            var streamId: String? = null
-        }
-
         fun submit(list: List<Stream>, favorites: Set<String>) { items = list; favs = favorites; notifyDataSetChanged() }
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
-            VH(ItemChannelBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChannelVH =
+            ChannelVH(ItemChannelBinding.inflate(LayoutInflater.from(parent.context), parent, false))
 
         override fun getItemCount() = items.size
 
-        override fun onBindViewHolder(holder: VH, position: Int) {
+        override fun onBindViewHolder(holder: ChannelVH, position: Int) {
             val s = items[position]
             val id = s.streamId
             holder.streamId = id
@@ -301,12 +329,12 @@ class BrowseActivity : AppCompatActivity() {
             }
         }
 
-        override fun onViewRecycled(holder: VH) {
+        override fun onViewRecycled(holder: ChannelVH) {
             holder.epgJob?.cancel()
             holder.epgJob = null
         }
 
-        private fun bindEpg(holder: VH, programmes: List<EpgProgramme>?) {
+        private fun bindEpg(holder: ChannelVH, programmes: List<EpgProgramme>?) {
             val now = System.currentTimeMillis() / 1000
             val list = programmes.orEmpty()
             val current = list.firstOrNull { it.isOnNow(now) } ?: list.firstOrNull { it.end > now }
@@ -357,9 +385,9 @@ class BrowseActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val s = items[position]
-            holder.vb.txtName.text = (if (favs.contains(s.streamId)) "★ " else "") + (s.name ?: "—")
+            holder.vb.txtName.text = (if (favs.contains(s.id)) "★ " else "") + (s.name ?: "—")
             Glide.with(holder.vb.imgIcon)
-                .load(s.icon?.takeIf { it.isNotBlank() })
+                .load(s.image)
                 .placeholder(R.drawable.ic_placeholder)
                 .error(R.drawable.ic_placeholder)
                 .centerCrop()
@@ -376,3 +404,10 @@ class BrowseActivity : AppCompatActivity() {
             Intent(ctx, BrowseActivity::class.java).putExtra(EXTRA_SERVICE, service.name)
     }
 }
+
+/** View holder for a guide row; kept at file level because inner classes cannot nest plain classes. */
+private class ChannelVH(val vb: ItemChannelBinding) : RecyclerView.ViewHolder(vb.root) {
+    var epgJob: Job? = null
+    var streamId: String? = null
+}
+

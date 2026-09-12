@@ -49,17 +49,19 @@ class Prefs(context: Context) {
 
     // ---- Favorites -----------------------------------------------------
 
-    fun favorites(service: Service): Set<String> =
-        sp.getStringSet(k(service, "favs"), emptySet())?.toSet() ?: emptySet()
+    private fun favKey(service: Service, kind: ContentKind) = k(service, "favs_${kind.name.lowercase()}")
 
-    fun isFavorite(service: Service, streamId: String?): Boolean =
-        streamId != null && favorites(service).contains(streamId)
+    fun favorites(service: Service, kind: ContentKind): Set<String> =
+        sp.getStringSet(favKey(service, kind), emptySet())?.toSet() ?: emptySet()
 
-    /** Adds or removes the stream; returns true when it is now a favorite. */
-    fun toggleFavorite(service: Service, streamId: String): Boolean {
-        val set = favorites(service).toMutableSet()
-        val nowFav = if (set.contains(streamId)) { set.remove(streamId); false } else { set.add(streamId); true }
-        sp.edit().putStringSet(k(service, "favs"), set).apply()
+    fun isFavorite(service: Service, kind: ContentKind, id: String?): Boolean =
+        id != null && favorites(service, kind).contains(id)
+
+    /** Adds or removes the item; returns true when it is now a favorite. */
+    fun toggleFavorite(service: Service, kind: ContentKind, id: String): Boolean {
+        val set = favorites(service, kind).toMutableSet()
+        val nowFav = if (set.contains(id)) { set.remove(id); false } else { set.add(id); true }
+        sp.edit().putStringSet(favKey(service, kind), set).apply()
         return nowFav
     }
 
@@ -72,6 +74,13 @@ class Prefs(context: Context) {
     var autoCheckUpdates: Boolean
         get() = sp.getBoolean("auto_check_updates", true)
         set(value) { sp.edit().putBoolean("auto_check_updates", value).apply() }
+
+    // ---- Display -------------------------------------------------------
+
+    /** "phone", "tv", or null when the user hasn't been asked yet. */
+    var layoutMode: String?
+        get() = sp.getString("layout_mode", null)
+        set(value) { sp.edit().putString("layout_mode", value).apply() }
 
     // ---- Playback ------------------------------------------------------
 

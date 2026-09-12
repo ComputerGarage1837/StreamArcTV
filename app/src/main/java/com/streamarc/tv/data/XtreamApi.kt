@@ -47,26 +47,75 @@ object XtreamApi {
             info
         }
 
-    suspend fun categories(service: Service, account: Account): List<Category> =
+    suspend fun categories(service: Service, account: Account, kind: ContentKind = service.kind): List<Category> =
         withContext(Dispatchers.IO) {
-            val action = when (service.kind) {
+            val action = when (kind) {
                 ContentKind.LIVE -> "get_live_categories"
                 ContentKind.MOVIE -> "get_vod_categories"
+                ContentKind.SERIES -> "get_series_categories"
             }
             val body = get(apiUrl(service, account.username, account.password, action))
             parseList<Category>(body)
         }
 
-    suspend fun streams(service: Service, account: Account, categoryId: String?): List<Stream> =
+    suspend fun streams(service: Service, account: Account, categoryId: String?, kind: ContentKind = service.kind): List<Stream> =
         withContext(Dispatchers.IO) {
-            val action = when (service.kind) {
+            val action = when (kind) {
                 ContentKind.LIVE -> "get_live_streams"
                 ContentKind.MOVIE -> "get_vod_streams"
+                ContentKind.SERIES -> "get_series"
             }
             val extra = if (categoryId != null) mapOf("category_id" to categoryId) else emptyMap()
             val body = get(apiUrl(service, account.username, account.password, action, extra))
             parseList<Stream>(body)
         }
+
+    /** Episodes of a series grouped by season (`get_series_info`). */
+    suspend fun seriesInfo(service: Service, account: Account, seriesId: String): List<Episode> =
+        withContext(Dispatchers.IO) {
+            val body = get(apiUrl(service, account.username, account.password, "get_series_info", mapOf("series_id" to seriesId)))
+            val root = try { com.google.gson.JsonParser.parseString(body) } catch (_: Exception) { throw ApiException("Unexpected response from server") }
+            if (!root.isJsonObject) return@withContext emptyList()
+            val episodes = root.asJsonObject.get("episodes")?.takeIf { !it.isJsonNull } ?: return@withContext emptyList()
+            val out = ArrayList<Episode>()
+            fun add(seasonKey: String, arr: com.google.gson.JsonElement) {
+                if (!arr.isJsonArray) return
+                for (e in arr.asJsonArray) {
+                    if (!e.isJsonObject) continue
+                    val o = e.asJsonObject
+                    fun str(n: String) = o.get(n)?.takeIf { !it.isJsonNull }?.let { runCatching { it.asString }.getOrNull() }
+                    val id = str("id") ?: continue
+                    val info = o.get("info")?.takeIf { it.isJsonObject }?.asJsonObject
+                    fun istr(n: String) = info?.get(n)?.takeIf { !it.isJsonNull }?.let { runCatching { it.asString }.getOrNull() }
+                    out.add(
+                        Episode(
+                            id = id,
+                            title = str("title")?.takeIf { it.isNotBlank() } ?: "Episode ${str("episode_num") ?: ""}".trim(),
+                            season = str("season")?.toIntOrNull() ?: seasonKey.toIntOrNull() ?: 0,
+                            number = str("episode_num")?.toIntOrNull() ?: 0,
+                            containerExtension = str("container_extension")?.takeIf { it.isNotBlank() } ?: "mp4",
+                            plot = istr("plot"),
+                            duration = istr("duration")
+                        )
+                    )
+                }
+            }
+            when {
+                episodes.isJsonObject -> episodes.asJsonObject.entrySet().forEach { (k, v) -> add(k, v) }
+                episodes.isJsonArray -> episodes.asJsonArray.forEachIndexed { i, v -> add((i + 1).toString(), v) }
+            }
+            out.sortedWith(compareBy({ it.season }, { it.number }))
+        }
+
+    fun episodeUrl(service: Service, account: Account, episode: Episode): String {
+        val base = serverUrl(service)
+        return base.newBuilder()
+            .addPathSegment("series")
+            .addPathSegment(account.username)
+            .addPathSegment(account.password)
+            .addPathSegment("${episode.id}.${episode.containerExtension}")
+            .build().toString()
+    }
 
     /** Now/next programmes for one live channel (`get_short_epg`). */
     suspend fun shortEpg(service: Service, account: Account, streamId: String, limit: Int = 6): List<EpgProgramme> =
@@ -84,14 +133,14 @@ object XtreamApi {
         val base = serverUrl(service)
         val id = stream.streamId ?: throw ApiException("Stream has no id")
         val b = base.newBuilder()
-        when (service.kind) {
+        when (if (service.kind == ContentKind.LIVE) ContentKind.LIVE else ContentKind.MOVIE) {
             ContentKind.LIVE -> {
                 b.addPathSegment("live")
                     .addPathSegment(account.username)
                     .addPathSegment(account.password)
                     .addPathSegment("$id.$liveFormat")
             }
-            ContentKind.MOVIE -> {
+            else -> {
                 val ext = stream.containerExtension?.takeIf { it.isNotBlank() } ?: "mp4"
                 b.addPathSegment("movie")
                     .addPathSegment(account.username)

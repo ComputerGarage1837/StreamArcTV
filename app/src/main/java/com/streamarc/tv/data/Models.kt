@@ -45,13 +45,31 @@ data class Category(
 data class Stream(
     val name: String?,
     @SerializedName("stream_id") val streamId: String?,
+    @SerializedName("series_id") val seriesId: String?,
     @SerializedName("stream_icon") val icon: String?,
+    @SerializedName("cover") val cover: String?,
+    val plot: String?,
     @SerializedName("category_id") val categoryId: String?,
     @SerializedName("container_extension") val containerExtension: String?,
     @SerializedName("epg_channel_id") val epgChannelId: String?,
     @SerializedName("num") val number: String?,
     val rating: String?,
     val added: String?
+) {
+    /** Stream id for live/movies, series id for series. */
+    val id: String? get() = streamId ?: seriesId
+    val image: String? get() = icon?.takeIf { it.isNotBlank() } ?: cover?.takeIf { it.isNotBlank() }
+}
+
+/** One episode of a series, as returned by `get_series_info`. */
+data class Episode(
+    val id: String,
+    val title: String,
+    val season: Int,
+    val number: Int,
+    val containerExtension: String,
+    val plot: String?,
+    val duration: String?
 )
 
 /** Locally stored, signed-in account for one service. */
