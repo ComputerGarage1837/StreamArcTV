@@ -62,14 +62,22 @@
         <item>Large (2 min ahead, pause up to 2 min)</item>
         <item>Very large (5 min ahead, pause up to 5 min)</item>
         <item>Huge (10 min ahead, pause up to 10 min)</item>
+        <item>20 min (written to device storage)</item>
+        <item>30 min (written to device storage)</item>
+        <item>1 hour (written to device storage)</item>
     </string-array>
+    <string name="storage_buffer_title">Uses device storage</string>
+    <string name="storage_buffer_notice">Buffers longer than 10 minutes are kept in the app\'s cache on device storage instead of memory.\n\nExpect roughly 1 GB per hour for SD channels, 2–4 GB for HD and 7–11 GB for 4K. Boxes with 16–32 GB of storage may already be tight, so check the free space below before choosing this.\n\nThe cache is deleted when you leave the channel, the app always keeps at least 1 GB free (dropping the oldest video first), and this option plays the MPEG-TS version of the channel.\n\nFree space now: %1$s</string>
+    <string name="timeshift_window_lost">Paused longer than the stored buffer holds; skipping ahead to the oldest video kept.</string>
+    <string name="buffer_free_fmt">%1$s · %2$s free</string>
     <string name="buffering">Buffering…</string>
     <string name="buffering_fmt">Buffering… %1$d s ready</string>
     <string name="reconnecting_fmt">Reconnecting… (%1$d of %2$d)</string>
     <string name="playback_failed_fmt">Playback failed: %1$s</string>
     <string name="live_window_lost">Paused longer than the provider keeps; jumping back to live.</string>
     <string name="live_now">● LIVE</string>
-    <string name="behind_live_fmt">%1$s behind · select to go live</string>
+    <string name="behind_live_fmt">%1$s behind live · select to go live</string>
+    <string name="paused_behind_fmt">❚❚ Paused · %1$s behind live</string>
     <string name="accounts">Accounts</string>
     <string name="about">About</string>
     <string name="view_releases">View releases &amp; changelog on GitHub</string>
