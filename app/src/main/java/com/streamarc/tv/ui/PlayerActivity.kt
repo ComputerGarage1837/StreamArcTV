@@ -32,6 +32,7 @@ import com.streamarc.tv.data.BufferLevel
 import com.streamarc.tv.data.Prefs
 import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.databinding.ActivityPlayerBinding
+import com.streamarc.tv.player.TimeshiftServer
 
 @UnstableApi
 class PlayerActivity : AppCompatActivity() {
@@ -39,6 +40,7 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var b: ActivityPlayerBinding
     private lateinit var prefs: Prefs
     private var player: ExoPlayer? = null
+    private var timeshift: TimeshiftServer? = null
     private lateinit var url: String
     private var title: String = ""
     private var isLive: Boolean = false
@@ -50,11 +52,14 @@ class PlayerActivity : AppCompatActivity() {
     /** Total time spent paused since the stream was (re)opened; approximates how far behind live a .ts stream is. */
     private var pausedTotalMs = 0L
     private var pausedSince = 0L
+    /** Live offset (HLS) measured when playback first became ready; growth beyond it means we're behind. */
+    private var liveBaselineMs = C.TIME_UNSET
+    private var behindNow = false
 
     private val ticker = object : Runnable {
         override fun run() {
             updateStatus()
-            handler.postDelayed(this, 500)
+            handler.postDelayed(this, 250)
         }
     }
 
@@ -76,7 +81,7 @@ class PlayerActivity : AppCompatActivity() {
         b.playerView.setControllerVisibilityListener(
             androidx.media3.ui.PlayerView.ControllerVisibilityListener { visibility ->
                 b.txtTitle.visibility = visibility
-                b.txtLiveStatus.visibility = if (isLive) visibility else View.GONE
+                b.txtLiveStatus.visibility = if (isLive && (behindNow || visibility == View.VISIBLE)) View.VISIBLE else View.GONE
             }
         )
         b.txtLiveStatus.visibility = View.GONE
@@ -106,6 +111,8 @@ class PlayerActivity : AppCompatActivity() {
         b.btnRetry.visibility = View.GONE
         pausedTotalMs = 0L
         pausedSince = 0L
+        liveBaselineMs = C.TIME_UNSET
+        behindNow = false
 
         val level = BufferLevel.from(prefs.bufferLevel)
 
@@ -154,21 +161,38 @@ class PlayerActivity : AppCompatActivity() {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 b.bufferBox.visibility =
                     if (playbackState == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
-                if (playbackState == Player.STATE_READY) retries = 0
+                if (playbackState == Player.STATE_READY) {
+                    retries = 0
+                    if (liveBaselineMs == C.TIME_UNSET && p.isCurrentMediaItemLive && p.currentLiveOffset != C.TIME_UNSET)
+                        liveBaselineMs = p.currentLiveOffset
+                }
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 val now = SystemClock.elapsedRealtime()
                 if (isPlaying) {
                     if (pausedSince != 0L) { pausedTotalMs += now - pausedSince; pausedSince = 0L }
-                } else if (p.playWhenReady.not() && p.playbackState == Player.STATE_READY) {
+                } else if (!p.playWhenReady && pausedSince == 0L) {
                     pausedSince = now
                 }
+                updateStatus()
+            }
+
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (!playWhenReady && pausedSince == 0L) pausedSince = SystemClock.elapsedRealtime()
+                updateStatus()
             }
         })
 
-        val item = MediaItem.Builder().setUri(url)
-        if (isLive) {
+        var playUrl = url
+        if (isLive && level.onDisk) {
+            // Storage timeshift works on the raw MPEG-TS stream; swap an HLS address for it.
+            val tsUrl = url.replace(Regex("\\.m3u8$"), ".ts")
+            timeshift = TimeshiftServer(this, tsUrl, level.diskMinutes * 60_000L)
+            playUrl = timeshift!!.localUrl
+        }
+        val item = MediaItem.Builder().setUri(playUrl)
+        if (isLive && !level.onDisk) {
             // Start a little behind the live edge so there is always something buffered ahead,
             // and never speed playback up to "catch up" - pausing must not creep back to live.
             item.setLiveConfiguration(
@@ -188,6 +212,8 @@ class PlayerActivity : AppCompatActivity() {
         player?.release()
         player = null
         b.playerView.player = null
+        timeshift?.close()
+        timeshift = null
     }
 
     // ---- Errors & reconnects ---------------------------------------------------
@@ -197,7 +223,7 @@ class PlayerActivity : AppCompatActivity() {
         if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW && p != null) {
             // Paused for longer than the provider keeps segments: rejoin at the live edge.
             Toast.makeText(this, R.string.live_window_lost, Toast.LENGTH_LONG).show()
-            pausedTotalMs = 0L; pausedSince = 0L
+            pausedTotalMs = 0L; pausedSince = 0L; liveBaselineMs = C.TIME_UNSET
             p.seekToDefaultPosition()
             p.prepare()
             return
@@ -236,23 +262,42 @@ class PlayerActivity : AppCompatActivity() {
             val ready = (p.totalBufferedDuration / 1000).toInt()
             b.txtBuffer.text = if (ready > 0) getString(R.string.buffering_fmt, ready) else getString(R.string.buffering)
         }
-        if (!isLive || b.txtLiveStatus.visibility != View.VISIBLE) return
+        if (!isLive) return
         val behindMs = behindLiveMs(p)
-        b.txtLiveStatus.text = if (behindMs < 15_000) getString(R.string.live_now)
-        else getString(R.string.behind_live_fmt, clock(behindMs))
-        b.txtLiveStatus.isSelected = behindMs >= 15_000
+        val paused = !p.playWhenReady
+        behindNow = paused || behindMs >= BEHIND_THRESHOLD_MS
+        b.txtLiveStatus.text = when {
+            paused -> getString(R.string.paused_behind_fmt, clock(behindMs))
+            behindNow -> getString(R.string.behind_live_fmt, clock(behindMs))
+            else -> getString(R.string.live_now)
+        }
+        b.txtLiveStatus.isSelected = behindNow
+        // Behind live: keep the badge on screen even after the controls hide.
+        if (behindNow) b.txtLiveStatus.visibility = View.VISIBLE
+        else if (!b.playerView.isControllerFullyVisible) b.txtLiveStatus.visibility = View.GONE
     }
 
     private fun behindLiveMs(p: ExoPlayer): Long {
-        if (p.isCurrentMediaItemLive && p.currentLiveOffset != C.TIME_UNSET) return p.currentLiveOffset
         val paused = if (pausedSince != 0L) SystemClock.elapsedRealtime() - pausedSince else 0L
-        return pausedTotalMs + paused
+        val pausedEstimate = pausedTotalMs + paused
+        timeshift?.let { ts ->
+            if (ts.jumped) {
+                ts.jumped = false
+                Toast.makeText(this, R.string.timeshift_window_lost, Toast.LENGTH_LONG).show()
+            }
+            return maxOf(pausedEstimate, ts.backlogMs())
+        }
+        if (p.isCurrentMediaItemLive && p.currentLiveOffset != C.TIME_UNSET) {
+            val base = if (liveBaselineMs == C.TIME_UNSET) p.currentLiveOffset else liveBaselineMs
+            return maxOf(pausedEstimate, p.currentLiveOffset - base)
+        }
+        return pausedEstimate
     }
 
     private fun goLive() {
         val p = player ?: return
-        pausedTotalMs = 0L; pausedSince = 0L
-        if (p.isCurrentMediaItemLive && p.isCurrentMediaItemSeekable) {
+        pausedTotalMs = 0L; pausedSince = 0L; liveBaselineMs = C.TIME_UNSET
+        if (timeshift == null && p.isCurrentMediaItemLive && p.isCurrentMediaItemSeekable) {
             p.seekToDefaultPosition()
             p.play()
         } else {
@@ -282,6 +327,7 @@ class PlayerActivity : AppCompatActivity() {
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_LIVE = "live"
         private const val MAX_RETRIES = 4
+        private const val BEHIND_THRESHOLD_MS = 2_000L
         fun intent(ctx: Context, url: String, title: String, live: Boolean): Intent =
             Intent(ctx, PlayerActivity::class.java)
                 .putExtra(EXTRA_URL, url)

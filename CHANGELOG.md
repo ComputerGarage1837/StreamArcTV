@@ -3,6 +3,21 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.34 — 2026-09-12
+
+### Added
+- Live TV buffer options of 20 minutes, 30 minutes and 1 hour. These keep the channel on device
+  storage (the app cache) rather than in memory, so you can pause for up to an hour and pick up
+  where you left off. Choosing one shows a notice about storage use and your current free space;
+  the app always leaves at least 1 GB free, drops the oldest video first, and deletes the cache
+  when you leave the channel.
+- While a storage buffer is in use the connection to the provider is kept alive and re-tried by
+  the app itself, so short outages no longer interrupt what you are watching.
+
+### Changed
+- The LIVE badge now switches to "Paused" or "behind live" the instant you pause or rewind, and
+  stays on screen (amber) until you are back at live, even after the player controls hide.
+
 ## v1.0.33 — 2026-09-12
 
 ### Added

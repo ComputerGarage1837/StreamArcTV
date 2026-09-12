@@ -12,12 +12,14 @@ import com.streamarc.tv.R
 import androidx.lifecycle.lifecycleScope
 import com.streamarc.tv.data.Category
 import com.streamarc.tv.data.ContentKind
+import android.text.format.Formatter
 import com.streamarc.tv.data.BufferLevel
 import com.streamarc.tv.data.Prefs
 import com.streamarc.tv.data.XtreamApi
 import kotlinx.coroutines.launch
 import com.streamarc.tv.data.Service
 import com.streamarc.tv.databinding.ActivitySettingsBinding
+import com.streamarc.tv.player.TimeshiftServer
 import com.streamarc.tv.transfer.Folders
 import com.streamarc.tv.transfer.TransferType
 import com.streamarc.tv.update.UpdateChecker
@@ -101,8 +103,11 @@ class SettingsActivity : AppCompatActivity() {
     private fun bufferLabels(): Array<String> = resources.getStringArray(R.array.buffer_levels)
 
     private fun renderBuffer() {
-        val idx = BufferLevel.entries.indexOf(BufferLevel.from(prefs.bufferLevel))
-        b.txtBufferValue.text = bufferLabels()[idx].substringBefore(" (")
+        val level = BufferLevel.from(prefs.bufferLevel)
+        val label = bufferLabels()[BufferLevel.entries.indexOf(level)].substringBefore(" (")
+        b.txtBufferValue.text = if (level.onDisk)
+            getString(R.string.buffer_free_fmt, label, Formatter.formatShortFileSize(this, TimeshiftServer.freeSpaceBytes(this)))
+        else label
     }
 
     private fun pickBuffer() {
@@ -110,9 +115,23 @@ class SettingsActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(R.string.live_buffer)
             .setSingleChoiceItems(bufferLabels(), current) { d, which ->
-                prefs.bufferLevel = BufferLevel.entries[which].key
-                renderBuffer()
+                val level = BufferLevel.entries[which]
                 d.dismiss()
+                if (!level.onDisk) {
+                    prefs.bufferLevel = level.key
+                    renderBuffer()
+                    return@setSingleChoiceItems
+                }
+                val free = Formatter.formatShortFileSize(this, TimeshiftServer.freeSpaceBytes(this))
+                AlertDialog.Builder(this)
+                    .setTitle(R.string.storage_buffer_title)
+                    .setMessage(getString(R.string.storage_buffer_notice, free))
+                    .setPositiveButton(android.R.string.ok) { _, _ ->
+                        prefs.bufferLevel = level.key
+                        renderBuffer()
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
             }
             .setNeutralButton(R.string.buffer_help_title) { _, _ ->
                 AlertDialog.Builder(this).setTitle(R.string.buffer_help_title)
