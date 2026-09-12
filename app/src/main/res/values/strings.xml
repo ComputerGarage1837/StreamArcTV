@@ -89,6 +89,7 @@
     <string name="layout_tv">TV or tablet</string>
     <string name="display_layout">Display layout</string>
     <string name="display">Display</string>
+    <string name="recently_added">Recently added</string>
     <string name="movies">Movies</string>
     <string name="series">Series</string>
     <string name="season_fmt">Season %1$d</string>

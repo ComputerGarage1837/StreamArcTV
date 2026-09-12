@@ -87,8 +87,13 @@ object XmltvParser {
     private val fmt = SimpleDateFormat("yyyyMMddHHmmss Z", Locale.US)
     private val fmtNoZone = SimpleDateFormat("yyyyMMddHHmmss", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
 
-    fun parse(input: java.io.InputStream, from: Long, to: Long): Map<String, List<EpgProgramme>> {
+    /** Result of a parse: programmes by channel id, plus display-name → id for loose matching. */
+    class Guide(val byId: Map<String, List<EpgProgramme>>, val idByName: Map<String, String>)
+
+    fun parse(input: java.io.InputStream, from: Long, to: Long): Guide {
         val out = HashMap<String, ArrayList<EpgProgramme>>()
+        val names = HashMap<String, String>()
+        var channelId: String? = null
         val parser = android.util.Xml.newPullParser()
         parser.setFeature(org.xmlpull.v1.XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
         parser.setInput(input, null)
@@ -103,6 +108,8 @@ object XmltvParser {
         while (event != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
             when (event) {
                 org.xmlpull.v1.XmlPullParser.START_TAG -> when (parser.name) {
+                    "channel" -> channelId = parser.getAttributeValue(null, "id")
+                    "display-name" -> if (channelId != null) text = ""
                     "programme" -> {
                         inProgramme = true
                         channel = parser.getAttributeValue(null, "channel")
@@ -114,6 +121,15 @@ object XmltvParser {
                 }
                 org.xmlpull.v1.XmlPullParser.TEXT -> if (text != null) text += parser.text
                 org.xmlpull.v1.XmlPullParser.END_TAG -> when (parser.name) {
+                    "display-name" -> {
+                        val id = channelId
+                        if (id != null && text != null) {
+                            val key = normalize(text!!)
+                            if (key.isNotEmpty() && !names.containsKey(key)) names[key] = id
+                            text = null
+                        }
+                    }
+                    "channel" -> channelId = null
                     "title" -> if (inProgramme && text != null) { if (title.isBlank()) title = text.trim(); text = null }
                     "desc" -> if (inProgramme && text != null) { if (desc.isBlank()) desc = text.trim(); text = null }
                     "programme" -> {
@@ -128,8 +144,12 @@ object XmltvParser {
             event = parser.next()
         }
         for (list in out.values) list.sortBy { it.start }
-        return out
+        return Guide(out, names)
     }
+
+    /** Loose key for name matching: lowercase, no punctuation/spaces, no HD/FHD/4K suffixes. */
+    fun normalize(name: String): String =
+        name.lowercase().replace(Regex("\\b(uhd|fhd|hd|sd|4k)\\b"), "").replace(Regex("[^a-z0-9]"), "")
 
     private fun time(value: String?): Long {
         if (value.isNullOrBlank()) return 0L
@@ -151,10 +171,10 @@ object XmltvParser {
 object EpgCache {
     private const val TTL_MS = 5 * 60 * 1000L
     private val cache = HashMap<String, Pair<Long, List<EpgProgramme>>>()
-    private val gate = Semaphore(4)
+    private val gate = Semaphore(6)
 
     private const val GUIDE_TTL_MS = 30 * 60 * 1000L
-    private val guides = HashMap<Service, Pair<Long, Map<String, List<EpgProgramme>>>>()
+    private val guides = HashMap<Service, Pair<Long, XmltvParser.Guide>>()
     private val guideFailedAt = HashMap<Service, Long>()
     private val guideMutex = kotlinx.coroutines.sync.Mutex()
 
@@ -164,12 +184,24 @@ object EpgCache {
         return System.currentTimeMillis() - g.first < GUIDE_TTL_MS
     }
 
-    /** Programmes for a channel from the full guide, matched by its XMLTV id; null if unknown. */
-    fun guideFor(service: Service, epgChannelId: String?): List<EpgProgramme>? {
-        val id = epgChannelId?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    /**
+     * Programmes for a channel from the full guide: by its XMLTV id first, then by a loose
+     * match on the channel name. Null when the guide has nothing for it.
+     */
+    fun guideFor(service: Service, epgChannelId: String?, channelName: String? = null): List<EpgProgramme>? {
         val g = synchronized(guides) { guides[service] }?.second ?: return null
-        return g[id] ?: g[id.lowercase()] ?: g.entries.firstOrNull { it.key.equals(id, ignoreCase = true) }?.value
+        val id = epgChannelId?.trim()?.takeIf { it.isNotEmpty() }
+        if (id != null) {
+            g.byId[id]?.let { return it }
+            g.byId.entries.firstOrNull { it.key.equals(id, ignoreCase = true) }?.value?.let { return it }
+        }
+        val name = channelName?.let { XmltvParser.normalize(it) }?.takeIf { it.isNotEmpty() } ?: return null
+        val byName = g.idByName[name] ?: return null
+        return g.byId[byName]
     }
+
+    /** How many channels the loaded guide covers (0 when not loaded). */
+    fun guideChannelCount(service: Service): Int = synchronized(guides) { guides[service] }?.second?.byId?.size ?: 0
 
     /**
      * Downloads the whole guide once (per service, refreshed every 30 minutes).
@@ -186,12 +218,12 @@ object EpgCache {
             val from = (now / 1800) * 1800 - 2 * 3600
             val to = from + 26 * 3600
             try {
-                val map = XtreamApi.fullGuide(service, account, from, to)
+                val guide = XtreamApi.fullGuide(service, account, from, to)
                 synchronized(guides) {
-                    guides[service] = System.currentTimeMillis() to map
+                    guides[service] = System.currentTimeMillis() to guide
                     guideFailedAt.remove(service)
                 }
-                map.isNotEmpty()
+                guide.byId.isNotEmpty()
             } catch (_: Exception) {
                 synchronized(guides) { guideFailedAt[service] = System.currentTimeMillis() }
                 false

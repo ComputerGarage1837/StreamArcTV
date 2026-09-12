@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.streamarc.tv.R
 import com.streamarc.tv.data.Account
+import com.streamarc.tv.data.CatalogCache
 import com.streamarc.tv.data.Category
 import com.streamarc.tv.data.ContentKind
 import com.streamarc.tv.data.EpgCache
@@ -57,6 +58,8 @@ class BrowseActivity : AppCompatActivity() {
     private var loadJob: Job? = null
     private var selectedCategoryId: String? = null
     private var favoritesMode = false
+    private var guideReady = false
+    private var prefetchJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,10 +100,12 @@ class BrowseActivity : AppCompatActivity() {
             b.txtPanelUpcoming.text = ""
             b.listStreams.visibility = View.GONE
             b.epgGrid.visibility = View.VISIBLE
-            b.epgGrid.guideLookup = { ch -> EpgCache.guideFor(service, ch.epgChannelId) }
+            b.epgGrid.guideLookup = { ch -> EpgCache.guideFor(service, ch.epgChannelId, ch.name) }
             lifecycleScope.launch {
                 val ok = EpgCache.loadGuide(service, account)
                 if (ok) b.epgGrid.guideLoaded()
+                guideReady = true
+                prefetchEpg()
             }
             b.epgGrid.listener = object : EpgGridView.Listener {
                 override fun onFocusChanged(channel: Stream, programme: EpgProgramme?) {
@@ -114,7 +119,7 @@ class BrowseActivity : AppCompatActivity() {
                         // Prefer the whole-guide download; fall back to the per-channel call
                         // for channels the guide doesn't cover.
                         EpgCache.loadGuide(service, account)
-                        val fromGuide = EpgCache.guideFor(service, channel.epgChannelId)
+                        val fromGuide = EpgCache.guideFor(service, channel.epgChannelId, channel.name)
                         val list = fromGuide ?: EpgCache.get(service, account, id)
                         b.epgGrid.setEpg(id, list)
                     }
@@ -123,7 +128,8 @@ class BrowseActivity : AppCompatActivity() {
         } else {
             b.panelEpg.visibility = View.GONE
             streamAdapter.grid = true
-            b.listStreams.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.poster_columns))
+            streamAdapter.columns = resources.getInteger(R.integer.poster_columns)
+            b.listStreams.layoutManager = GridLayoutManager(this, streamAdapter.columns)
             b.listStreams.adapter = streamAdapter
         }
 
@@ -136,6 +142,16 @@ class BrowseActivity : AppCompatActivity() {
         super.onResume()
         // If the user signed out from the profile screen, leave.
         if (!prefs.isSignedIn(service)) finish()
+    }
+
+    /** Rotation is handled in place (see the manifest) so the category and guide position survive. */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (!isLive) {
+            streamAdapter.columns = resources.getInteger(R.integer.poster_columns)
+            (b.listStreams.layoutManager as? GridLayoutManager)?.spanCount = streamAdapter.columns
+            b.listStreams.post { streamAdapter.notifyDataSetChanged() }
+        }
     }
 
     private fun renderTabs() {
@@ -162,14 +178,26 @@ class BrowseActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val cats = XtreamApi.categories(service, account, kind)
-                val all = listOf(
-                    Category(FAV_ID, "★ " + getString(R.string.favorites)),
-                    Category(null, getString(R.string.all_categories))
-                ) + cats
+                val all = if (isLive) {
+                    listOf(
+                        Category(FAV_ID, "★ " + getString(R.string.favorites)),
+                        Category(null, getString(R.string.all_categories))
+                    ) + cats
+                } else {
+                    listOf(
+                        Category(FAV_ID, "★ " + getString(R.string.favorites)),
+                        Category(RECENT_ID, getString(R.string.recently_added)),
+                        Category(null, getString(R.string.all_categories))
+                    ) + cats
+                }
                 categoryAdapter.submit(all)
-                // Open on Favorites when the user has some, otherwise on All.
-                val start = if (prefs.favorites(service, kind).isNotEmpty()) all[0] else all[1]
-                selectCategory(start)
+                if (isLive) {
+                    // Open on Favorites when the user has some, otherwise on All.
+                    selectCategory(if (prefs.favorites(service, kind).isNotEmpty()) all[0] else all[1])
+                } else {
+                    // Movies and series open on Recently added.
+                    selectCategory(all[1])
+                }
             } catch (e: Exception) {
                 showError(e.message ?: getString(R.string.load_failed))
             }
@@ -178,7 +206,8 @@ class BrowseActivity : AppCompatActivity() {
 
     private fun selectCategory(cat: Category) {
         favoritesMode = cat.id == FAV_ID
-        selectedCategoryId = if (favoritesMode) null else cat.id
+        val recentMode = cat.id == RECENT_ID
+        selectedCategoryId = if (favoritesMode || recentMode) null else cat.id
         categoryAdapter.selectedId = cat.id
         b.txtCategory.text = cat.name
         loadJob?.cancel()
@@ -186,7 +215,17 @@ class BrowseActivity : AppCompatActivity() {
         loadJob = lifecycleScope.launch {
             try {
                 val key = selectedCategoryId
-                allStreams = streamCache[key] ?: XtreamApi.streams(service, account, key, kind).also { streamCache[key] = it }
+                allStreams = if (isLive) {
+                    streamCache[key] ?: XtreamApi.streams(service, account, key, kind).also { streamCache[key] = it }
+                } else {
+                    // Movies/series: the whole catalogue is fetched once and filtered here.
+                    val all = CatalogCache.get(service, account, kind)
+                    when {
+                        recentMode -> CatalogCache.recentlyAdded(all)
+                        key == null -> all
+                        else -> all.filter { it.categoryId == key }
+                    }
+                }
                 applyFilter()
                 setLoading(false)
             } catch (e: Exception) {
@@ -205,6 +244,7 @@ class BrowseActivity : AppCompatActivity() {
             b.epgGrid.favorites = favs
             b.epgGrid.setChannels(list)
             if (list.isNotEmpty() && currentFocus == null) b.epgGrid.requestFocus()
+            if (guideReady) prefetchEpg()
         } else {
             streamAdapter.submit(list, favs)
         }
@@ -250,6 +290,24 @@ class BrowseActivity : AppCompatActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    /**
+     * Fill the guide for every channel in the current list ahead of scrolling: from the
+     * downloaded listing when it covers the channel, otherwise one short-EPG call per channel.
+     */
+    private fun prefetchEpg() {
+        prefetchJob?.cancel()
+        val channels = allStreams
+        prefetchJob = lifecycleScope.launch {
+            for (ch in channels) {
+                val id = ch.streamId ?: continue
+                if (EpgCache.peek(service, id) != null) continue
+                val fromGuide = EpgCache.guideFor(service, ch.epgChannelId, ch.name)
+                val list = fromGuide ?: EpgCache.get(service, account, id)
+                b.epgGrid.setEpg(id, list)
+            }
+        }
     }
 
     private fun showChannelDetails(stream: Stream, programmes: List<EpgProgramme>?, focused: EpgProgramme? = null) {
@@ -327,30 +385,51 @@ class BrowseActivity : AppCompatActivity() {
 
         fun submit(list: List<Stream>, favorites: Set<String>) { items = list; favs = favorites; notifyDataSetChanged() }
 
+        private var recycler: RecyclerView? = null
+        var columns: Int = 3
+
+        override fun onAttachedToRecyclerView(recyclerView: RecyclerView) { recycler = recyclerView }
+        override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) { recycler = null }
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
             val vb = ItemStreamBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             if (grid) {
                 vb.root.orientation = android.widget.LinearLayout.VERTICAL
-                vb.imgIcon.layoutParams = vb.imgIcon.layoutParams.apply {
-                    width = ViewGroup.LayoutParams.MATCH_PARENT
-                    height = parent.resources.getDimensionPixelSize(R.dimen.poster_height)
-                }
+                vb.imgIcon.scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
                 vb.txtName.maxLines = 2
                 vb.txtName.gravity = android.view.Gravity.CENTER_HORIZONTAL
             }
             return VH(vb)
         }
 
+        /** Poster box at 2:3 from the column width so the whole poster shows without stretching. */
+        private fun sizePoster(holder: VH) {
+            if (!grid) return
+            val rv = recycler ?: return
+            val d = rv.resources.displayMetrics.density
+            val usable = rv.width - rv.paddingLeft - rv.paddingRight
+            if (usable <= 0) return
+            val colW = usable / columns - (8 * d).toInt() * 2   // item margins + padding
+            val h = (colW * 3) / 2
+            val lp = holder.vb.imgIcon.layoutParams
+            if (lp.width != ViewGroup.LayoutParams.MATCH_PARENT || lp.height != h) {
+                lp.width = ViewGroup.LayoutParams.MATCH_PARENT
+                lp.height = h
+                holder.vb.imgIcon.layoutParams = lp
+            }
+        }
+
         override fun getItemCount() = items.size
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val s = items[position]
+            sizePoster(holder)
             holder.vb.txtName.text = (if (favs.contains(s.id)) "★ " else "") + (s.name ?: "—")
             Glide.with(holder.vb.imgIcon)
                 .load(s.image)
                 .placeholder(R.drawable.ic_placeholder)
                 .error(R.drawable.ic_placeholder)
-                .centerCrop()
+                .fitCenter()
                 .into(holder.vb.imgIcon)
             holder.vb.root.setOnClickListener { onClick(s) }
             holder.vb.root.setOnLongClickListener { onLongClick(s); true }
@@ -360,6 +439,7 @@ class BrowseActivity : AppCompatActivity() {
     companion object {
         private const val EXTRA_SERVICE = "service"
         private const val FAV_ID = "__favorites__"
+        private const val RECENT_ID = "__recent__"
         fun intent(ctx: Context, service: Service): Intent =
             Intent(ctx, BrowseActivity::class.java).putExtra(EXTRA_SERVICE, service.name)
     }

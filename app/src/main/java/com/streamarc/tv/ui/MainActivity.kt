@@ -131,6 +131,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Rotation is handled here (no recreate) so nothing resets; the phone layout is swapped. */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        inflateHome()
+        refreshAll()
+    }
+
     override fun onResume() {
         super.onResume()
         if (prefs.layoutMode != null && prefs.layoutMode != appliedLayout) inflateHome()
