@@ -59,16 +59,22 @@ class TransfersActivity : AppCompatActivity() {
         refresh()
         lifecycleScope.launch {
             while (isActive && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                delay(1000)
+                delay(500)
                 refresh(keepScroll = true)
             }
         }
     }
 
+    /** Folder names come from the document provider, so look each one up once, not per row per refresh. */
+    private val folderNames = HashMap<String?, String>()
+    private fun folderName(folder: String?): String =
+        folderNames.getOrPut(folder) { Folders.describe(this, folder, type) }
+
     private fun renderFolder() {
         val prefs = Prefs(this)
         val folder = if (type == TransferType.RECORDING) prefs.recordingFolder else prefs.downloadFolder
-        b.txtFolder.text = Folders.describe(this, folder?.takeIf { Folders.usable(this, it) }, type)
+        folderNames.clear()
+        b.txtFolder.text = folderName(folder?.takeIf { Folders.usable(this, it) })
     }
 
     private fun refresh(keepScroll: Boolean = false) {
@@ -132,7 +138,7 @@ class TransfersActivity : AppCompatActivity() {
         val uri = j.fileUri?.takeIf { Folders.exists(this, it) } ?: run {
             Toast.makeText(this, R.string.download_missing, Toast.LENGTH_SHORT).show(); return
         }
-        startActivity(PlayerActivity.intent(this, uri, j.title, false))
+        startActivity(PlayerActivity.intent(this, uri, j.title, false, com.streamarc.tv.data.WatchProgress.downloadKey(j.id)))
     }
 
     private fun confirmDelete(j: TransferJob) {
@@ -170,7 +176,7 @@ class TransfersActivity : AppCompatActivity() {
             val j = items[position]
             val vb = holder.vb
             vb.txtTitle.text = j.title
-            vb.txtSubtitle.text = listOf(j.subtitle, Folders.describe(this@TransfersActivity, j.folder, j.type)).filter { it.isNotBlank() }.joinToString("  ·  ")
+            vb.txtSubtitle.text = listOf(j.subtitle, folderName(j.folder)).filter { it.isNotBlank() }.joinToString("  ·  ")
             vb.progress.visibility = View.GONE
             vb.txtStatus.text = when (j.state) {
                 TransferState.SCHEDULED -> getString(R.string.scheduled_for_fmt, Format.time(j.startAt / 1000))
@@ -182,12 +188,19 @@ class TransfersActivity : AppCompatActivity() {
                         val done = (System.currentTimeMillis() - j.startAt).coerceIn(0, total)
                         vb.progress.isIndeterminate = false; vb.progress.max = 1000; vb.progress.progress = (done * 1000 / total).toInt()
                         getString(R.string.recording_until_fmt, Format.time(j.endAt / 1000), UpdateChecker.formatSize(j.bytes))
-                    } else if (j.total > 0) {
-                        vb.progress.isIndeterminate = false; vb.progress.max = 1000; vb.progress.progress = (j.bytes * 1000 / j.total).toInt()
-                        "${UpdateChecker.formatSize(j.bytes)} / ${UpdateChecker.formatSize(j.total)}"
                     } else {
-                        vb.progress.isIndeterminate = true
-                        UpdateChecker.formatSize(j.bytes)
+                        val lp = TransferService.live[j.id]
+                        val bytes = lp?.bytes ?: j.bytes
+                        val total = lp?.total ?: j.total
+                        val speed = lp?.bytesPerSec?.takeIf { it > 0 }?.let { "  ·  ${UpdateChecker.formatSize(it.toLong())}/s" } ?: ""
+                        if (total > 0) {
+                            vb.progress.isIndeterminate = false; vb.progress.max = 1000; vb.progress.progress = (bytes * 1000 / total).toInt()
+                            "${bytes * 100 / total}%  ·  ${UpdateChecker.formatSize(bytes)} / ${UpdateChecker.formatSize(total)}$speed" +
+                                (j.error?.let { "\n$it" } ?: "")
+                        } else {
+                            vb.progress.isIndeterminate = true
+                            UpdateChecker.formatSize(bytes) + speed + (j.error?.let { "\n$it" } ?: "")
+                        }
                     }
                 }
                 TransferState.DONE -> getString(R.string.download_done_fmt, UpdateChecker.formatSize(j.bytes))

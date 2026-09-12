@@ -130,6 +130,11 @@ class Prefs(context: Context) {
         get() = sp.getString("live_format", "m3u8") ?: "m3u8"
         set(value) { sp.edit().putString("live_format", value).apply() }
 
+    /** Whether subtitle tracks are shown by default (the player's CC button changes and remembers this). */
+    var subtitles: Boolean
+        get() = sp.getBoolean("subtitles", false)
+        set(value) { sp.edit().putBoolean("subtitles", value).apply() }
+
     /** One of [BufferLevel.key]; how much live video the player keeps buffered. */
     var bufferLevel: String
         get() = sp.getString("buffer_level", BufferLevel.MAX.key) ?: BufferLevel.MAX.key

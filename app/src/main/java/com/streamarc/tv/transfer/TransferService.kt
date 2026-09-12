@@ -151,16 +151,21 @@ class TransferService : Service() {
                         store.update(id) { it.fileUri = uriStr; it.total = total; it.error = null }
                         val input = body.byteStream()
                         val buf = ByteArray(256 * 1024)
+                        val prog = Progress(done, total).also { live[id] = it }
                         var lastFlush = System.currentTimeMillis()
+                        var lastFlushBytes = done
                         while (scope.isActive && running.containsKey(id)) {
                             if (job.type == TransferType.RECORDING && System.currentTimeMillis() >= job.endAt) break
                             val n = input.read(buf)
                             if (n < 0) break
                             out.stream.write(buf, 0, n)
                             done += n
+                            prog.bytes = done
                             val now = System.currentTimeMillis()
                             if (now - lastFlush > 1000) {
+                                prog.bytesPerSec = (done - lastFlushBytes) * 1000.0 / (now - lastFlush)
                                 lastFlush = now
+                                lastFlushBytes = done
                                 val d = done
                                 store.update(id) { it.bytes = d }
                             }
@@ -199,8 +204,14 @@ class TransferService : Service() {
             }
             notifyDone(job, false, why)
         } finally {
+            live.remove(id)
             try { target?.stream?.close() } catch (_: Exception) {}
         }
+    }
+
+    /** Up-to-the-chunk progress of a running transfer, read directly by the lists. */
+    class Progress(@Volatile var bytes: Long, @Volatile var total: Long) {
+        @Volatile var bytesPerSec: Double = 0.0
     }
 
     private class HttpException(val code: Int) : Exception("HTTP $code")
@@ -218,14 +229,17 @@ class TransferService : Service() {
             val text = when (active.size) {
                 0 -> getString(R.string.transfers_idle)
                 1 -> active[0].let { j ->
-                    val pct = if (j.total > 0) " ${(j.bytes * 100 / j.total)}%" else ""
+                    val lp = live[j.id]
+                    val bytes = lp?.bytes ?: j.bytes
+                    val total = lp?.total ?: j.total
+                    val pct = if (total > 0) " ${(bytes * 100 / total)}%" else ""
                     "${if (j.type == TransferType.RECORDING) getString(R.string.recording) else getString(R.string.downloading)}: ${j.title}$pct"
                 }
                 else -> getString(R.string.transfers_count_fmt, active.size)
             }
             val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.notify(NOTIF_ID, buildNotification(text, active.firstOrNull()))
-            delay(2000)
+            delay(1000)
         }
     }
 
@@ -262,7 +276,10 @@ class TransferService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(open)
-        if (job != null && job.total > 0) b.setProgress(1000, (job.bytes * 1000 / job.total).toInt(), false)
+        val lp = job?.let { live[it.id] }
+        val bytes = lp?.bytes ?: job?.bytes ?: 0L
+        val total = lp?.total ?: job?.total ?: -1L
+        if (job != null && total > 0) b.setProgress(1000, (bytes * 1000 / total).toInt(), false)
         else if (job != null) b.setProgress(0, 0, true)
         return b.build()
     }
@@ -286,6 +303,9 @@ class TransferService : Service() {
         const val EXTRA_ID = "id"
 
         /** Adds a job and makes sure the service is running (or the alarm is set). */
+        /** Live progress by job id; only present while the transfer is actually moving bytes. */
+        val live = java.util.concurrent.ConcurrentHashMap<String, Progress>()
+
         private const val MAX_ATTEMPTS = 6
         private val RETRY_DELAYS_MS = longArrayOf(5_000, 15_000, 30_000, 60_000, 120_000)
 

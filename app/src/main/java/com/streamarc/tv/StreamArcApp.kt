@@ -7,6 +7,7 @@ class StreamArcApp : Application() {
         super.onCreate()
         instance = this
         com.streamarc.tv.data.EpgCache.init(this)
+        com.streamarc.tv.data.WatchProgress.init(this)
         Thread { com.streamarc.tv.player.TimeshiftServer.cleanup(this) }.start()
     }
 

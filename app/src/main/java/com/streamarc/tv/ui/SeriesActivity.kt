@@ -15,6 +15,7 @@ import com.streamarc.tv.R
 import com.streamarc.tv.data.Episode
 import com.streamarc.tv.data.Prefs
 import com.streamarc.tv.data.Service
+import com.streamarc.tv.data.WatchProgress
 import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.databinding.ActivitySeriesBinding
 import com.streamarc.tv.databinding.ItemEpisodeBinding
@@ -80,14 +81,27 @@ class SeriesActivity : AppCompatActivity() {
         return DownloadItem("${b.txtTitle.text} S${ep.season}E${ep.number} ${ep.title}", b.txtTitle.text.toString(), url, ep.containerExtension)
     }
 
+    override fun onResume() {
+        super.onResume()
+        adapter.notifyDataSetChanged()
+    }
+
     private fun askDownload(ep: Episode) {
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle(ep.title)
-            .setItems(arrayOf(getString(R.string.play), getString(R.string.download), getString(R.string.download_season_fmt, ep.season))) { _, which ->
+            .setItems(arrayOf(
+                getString(R.string.play), getString(R.string.download), getString(R.string.download_season_fmt, ep.season),
+                getString(if (WatchProgress.isWatched(WatchProgress.episodeKey(ep.id))) R.string.mark_unwatched else R.string.mark_watched)
+            )) { _, which ->
                 when (which) {
                     0 -> play(ep)
                     1 -> item(ep)?.let { TransferDialogs.download(this, picker, listOf(it)) }
                     2 -> downloadSeason(ep.season)
+                    3 -> {
+                        val k = WatchProgress.episodeKey(ep.id)
+                        WatchProgress.setWatched(k, !WatchProgress.isWatched(k))
+                        adapter.notifyDataSetChanged()
+                    }
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -123,7 +137,7 @@ class SeriesActivity : AppCompatActivity() {
             b.txtError.text = e.message; b.txtError.visibility = View.VISIBLE; return
         }
         val title = "${b.txtTitle.text} · S${ep.season}E${ep.number} ${ep.title}"
-        startActivity(PlayerActivity.intent(this, url, title, false))
+        startActivity(PlayerActivity.intent(this, url, title, false, WatchProgress.episodeKey(ep.id)))
     }
 
     private class EpisodeAdapter(val onClick: (Episode) -> Unit, val onLongClick: (Episode) -> Unit, val onSeason: (Int) -> Unit) : RecyclerView.Adapter<EpisodeAdapter.VH>() {
@@ -146,7 +160,10 @@ class SeriesActivity : AppCompatActivity() {
             holder.vb.txtSeason.text = ctx.getString(R.string.season_fmt, ep.season)
             holder.vb.btnSeasonDownload.visibility = if (firstOfSeason) View.VISIBLE else View.GONE
             holder.vb.btnSeasonDownload.setOnClickListener { onSeason(ep.season) }
-            holder.vb.txtTitle.text = ctx.getString(R.string.episode_fmt, ep.number, ep.title)
+            val frac = WatchProgress.fraction(WatchProgress.episodeKey(ep.id))
+            holder.vb.txtTitle.text = (if (frac != null && frac >= 1f) "✓ " else "") + ctx.getString(R.string.episode_fmt, ep.number, ep.title)
+            holder.vb.progressWatch.visibility = if (frac != null) View.VISIBLE else View.GONE
+            if (frac != null) holder.vb.progressWatch.progress = (frac * 1000).toInt()
             val info = listOfNotNull(ep.duration?.takeIf { it.isNotBlank() }, ep.plot?.takeIf { it.isNotBlank() }).joinToString("  ·  ")
             holder.vb.txtInfo.text = info
             holder.vb.txtInfo.visibility = if (info.isBlank()) View.GONE else View.VISIBLE

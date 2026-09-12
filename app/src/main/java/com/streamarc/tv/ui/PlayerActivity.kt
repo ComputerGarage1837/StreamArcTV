@@ -10,6 +10,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -18,6 +19,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
@@ -29,6 +31,7 @@ import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import com.streamarc.tv.R
 import com.streamarc.tv.data.BufferLevel
 import com.streamarc.tv.data.Prefs
+import com.streamarc.tv.data.WatchProgress
 import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.databinding.ActivityPlayerBinding
 import com.streamarc.tv.player.TimeshiftServer
@@ -45,6 +48,10 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var url: String
     private var title: String = ""
     private var isLive: Boolean = false
+    /** Progress key for movies, episodes and downloads; null for live TV. */
+    private var watchKey: String? = null
+    private var resumeAsked = false
+    private var lastProgressSave = 0L
 
     private val handler = Handler(Looper.getMainLooper())
     private var retries = 0
@@ -73,6 +80,7 @@ class PlayerActivity : AppCompatActivity() {
         url = intent.getStringExtra(EXTRA_URL) ?: run { finish(); return }
         title = intent.getStringExtra(EXTRA_TITLE) ?: ""
         isLive = intent.getBooleanExtra(EXTRA_LIVE, false)
+        watchKey = intent.getStringExtra(EXTRA_KEY)?.takeIf { !isLive }
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         b.txtTitle.text = title
@@ -80,6 +88,7 @@ class PlayerActivity : AppCompatActivity() {
         b.playerView.setShowPreviousButton(false)
         b.playerView.setShowRewindButton(false)
         b.playerView.setShowFastForwardButton(false)
+        b.playerView.setShowSubtitleButton(true)
         b.playerView.controllerShowTimeoutMs = 4000
         b.playerView.setControllerVisibilityListener(
             androidx.media3.ui.PlayerView.ControllerVisibilityListener { visibility ->
@@ -107,6 +116,7 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        saveProgress(force = true)
         handler.removeCallbacks(ticker)
         cancelRetry()
         releasePlayer()
@@ -173,15 +183,25 @@ class PlayerActivity : AppCompatActivity() {
             .build()
         player = p
         b.playerView.player = p
+        // Subtitles follow the saved preference; the CC button in the controls changes and remembers it.
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !prefs.subtitles)
+            .build()
 
         p.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) = handleError(error)
 
+            override fun onTrackSelectionParametersChanged(parameters: TrackSelectionParameters) {
+                prefs.subtitles = !parameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)
+            }
+
             override fun onPlaybackStateChanged(playbackState: Int) {
                 b.bufferBox.visibility =
                     if (playbackState == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
+                if (playbackState == Player.STATE_ENDED) watchKey?.let { WatchProgress.ended(it) }
                 if (playbackState == Player.STATE_READY) {
                     retries = 0
+                    maybeOfferResume(p)
                     if (liveBaselineMs == C.TIME_UNSET && p.isCurrentMediaItemLive && p.currentLiveOffset != C.TIME_UNSET)
                         liveBaselineMs = p.currentLiveOffset
                 }
@@ -221,8 +241,39 @@ class PlayerActivity : AppCompatActivity() {
             )
         }
         p.setMediaItem(item.build())
-        p.playWhenReady = true
+        // A title with a saved position waits for the resume question before playing.
+        p.playWhenReady = !(watchKey != null && !resumeAsked && WatchProgress.resumePosition(watchKey!!) > 0)
         p.prepare()
+    }
+
+    // ---- Resume & watched ------------------------------------------------------
+
+    private fun maybeOfferResume(p: ExoPlayer) {
+        val key = watchKey ?: return
+        if (resumeAsked) return
+        resumeAsked = true
+        val pos = WatchProgress.resumePosition(key)
+        if (pos <= 0) { p.play(); return }
+        AlertDialog.Builder(this)
+            .setTitle(title.ifBlank { getString(R.string.resume_title) })
+            .setMessage(getString(R.string.resume_msg_fmt, clock(pos)))
+            .setPositiveButton(getString(R.string.resume_from_fmt, clock(pos))) { _, _ -> p.seekTo(pos); p.play() }
+            .setNegativeButton(R.string.start_over) { _, _ -> p.seekTo(0); p.play() }
+            .setOnCancelListener { p.seekTo(pos); p.play() }
+            .show()
+    }
+
+    private fun saveProgress(force: Boolean = false) {
+        val key = watchKey ?: return
+        val p = player ?: return
+        val now = SystemClock.elapsedRealtime()
+        if (!force && now - lastProgressSave < 5_000) return
+        lastProgressSave = now
+        val duration = p.duration
+        val pos = p.currentPosition
+        if (duration == C.TIME_UNSET || duration <= 0 || pos <= 0) return
+        if (p.playbackState == Player.STATE_IDLE) return
+        WatchProgress.save(key, pos, duration)
     }
 
     private fun releasePlayer() {
@@ -331,6 +382,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun updateStatus() {
         val p = player ?: return
+        if (!isLive) saveProgress()
         if (p.playbackState == Player.STATE_BUFFERING && pendingRetry == null) {
             val ready = (p.totalBufferedDuration / 1000).toInt()
             b.txtBuffer.text = if (ready > 0) getString(R.string.buffering_fmt, ready) else getString(R.string.buffering)
@@ -385,13 +437,15 @@ class PlayerActivity : AppCompatActivity() {
         private const val EXTRA_URL = "url"
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_LIVE = "live"
+        private const val EXTRA_KEY = "key"
         private const val MAX_RETRIES = 4
         private const val BEHIND_THRESHOLD_MS = 2_000L
         private const val SEEK_STEP_MS = 10_000L
-        fun intent(ctx: Context, url: String, title: String, live: Boolean): Intent =
+        fun intent(ctx: Context, url: String, title: String, live: Boolean, watchKey: String? = null): Intent =
             Intent(ctx, PlayerActivity::class.java)
                 .putExtra(EXTRA_URL, url)
                 .putExtra(EXTRA_TITLE, title)
                 .putExtra(EXTRA_LIVE, live)
+                .putExtra(EXTRA_KEY, watchKey)
     }
 }
