@@ -124,7 +124,8 @@ class BrowseActivity : AppCompatActivity() {
         } else {
             b.panelEpg.visibility = View.GONE
             streamAdapter.grid = true
-            b.listStreams.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.poster_columns))
+            streamAdapter.columns = resources.getInteger(R.integer.poster_columns)
+            b.listStreams.layoutManager = GridLayoutManager(this, streamAdapter.columns)
             b.listStreams.adapter = streamAdapter
         }
 
@@ -137,6 +138,16 @@ class BrowseActivity : AppCompatActivity() {
         super.onResume()
         // If the user signed out from the profile screen, leave.
         if (!prefs.isSignedIn(service)) finish()
+    }
+
+    /** Rotation is handled in place (see the manifest) so the category and guide position survive. */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (!isLive) {
+            streamAdapter.columns = resources.getInteger(R.integer.poster_columns)
+            (b.listStreams.layoutManager as? GridLayoutManager)?.spanCount = streamAdapter.columns
+            b.listStreams.post { streamAdapter.notifyDataSetChanged() }
+        }
     }
 
     private fun renderTabs() {
@@ -351,30 +362,51 @@ class BrowseActivity : AppCompatActivity() {
 
         fun submit(list: List<Stream>, favorites: Set<String>) { items = list; favs = favorites; notifyDataSetChanged() }
 
+        private var recycler: RecyclerView? = null
+        var columns: Int = 3
+
+        override fun onAttachedToRecyclerView(recyclerView: RecyclerView) { recycler = recyclerView }
+        override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) { recycler = null }
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
             val vb = ItemStreamBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             if (grid) {
                 vb.root.orientation = android.widget.LinearLayout.VERTICAL
-                vb.imgIcon.layoutParams = vb.imgIcon.layoutParams.apply {
-                    width = ViewGroup.LayoutParams.MATCH_PARENT
-                    height = parent.resources.getDimensionPixelSize(R.dimen.poster_height)
-                }
+                vb.imgIcon.scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
                 vb.txtName.maxLines = 2
                 vb.txtName.gravity = android.view.Gravity.CENTER_HORIZONTAL
             }
             return VH(vb)
         }
 
+        /** Poster box at 2:3 from the column width so the whole poster shows without stretching. */
+        private fun sizePoster(holder: VH) {
+            if (!grid) return
+            val rv = recycler ?: return
+            val d = rv.resources.displayMetrics.density
+            val usable = rv.width - rv.paddingLeft - rv.paddingRight
+            if (usable <= 0) return
+            val colW = usable / columns - (8 * d).toInt() * 2   // item margins + padding
+            val h = (colW * 3) / 2
+            val lp = holder.vb.imgIcon.layoutParams
+            if (lp.width != ViewGroup.LayoutParams.MATCH_PARENT || lp.height != h) {
+                lp.width = ViewGroup.LayoutParams.MATCH_PARENT
+                lp.height = h
+                holder.vb.imgIcon.layoutParams = lp
+            }
+        }
+
         override fun getItemCount() = items.size
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val s = items[position]
+            sizePoster(holder)
             holder.vb.txtName.text = (if (favs.contains(s.id)) "★ " else "") + (s.name ?: "—")
             Glide.with(holder.vb.imgIcon)
                 .load(s.image)
                 .placeholder(R.drawable.ic_placeholder)
                 .error(R.drawable.ic_placeholder)
-                .centerCrop()
+                .fitCenter()
                 .into(holder.vb.imgIcon)
             holder.vb.root.setOnClickListener { onClick(s) }
             holder.vb.root.setOnLongClickListener { onLongClick(s); true }
