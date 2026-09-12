@@ -91,6 +91,9 @@ class PlayerActivity : AppCompatActivity() {
     private var nudges = 0
     /** Set when the hardware decoder produced nothing: the player is rebuilt preferring software decoders. */
     private var preferSoftware = false
+    /** The user chose "Try anyway" after an unsupported-format warning. */
+    private var forceTry = false
+    private var formatChecked = false
     /** Position to start from once the stream is ready (set by the resume prompt). */
     private var startPositionMs = 0L
 
@@ -255,7 +258,7 @@ class PlayerActivity : AppCompatActivity() {
         player = p
         pv.player = p
         bytesLoaded = 0L; loadsStarted = 0; lastLoadError = null; bufferingSince = SystemClock.elapsedRealtime()
-        videoInfo = null; decoderName = null; firstFrame = false
+        videoInfo = null; decoderName = null; firstFrame = false; formatChecked = false
         p.addAnalyticsListener(object : AnalyticsListener {
             override fun onLoadStarted(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData) {
                 AppLog.i(TAG, "load start ${AppLog.safeUrl(loadEventInfo.uri.toString())} range=${loadEventInfo.dataSpec.position}")
@@ -297,6 +300,7 @@ class PlayerActivity : AppCompatActivity() {
                     "${f.sampleMimeType} sel=${g.isSelected} sup=${g.isSupported}"
                 }
                 AppLog.i(TAG, "tracks: $desc")
+                checkFormatSupport(p, tracks)
             }
         })
         // Subtitles follow the saved preference; the CC button in the controls changes and remembers it.
@@ -553,6 +557,62 @@ class PlayerActivity : AppCompatActivity() {
             cause = cause.cause
         }
         return null
+    }
+
+    /**
+     * If no decoder on this device can handle the video (or the audio), say so straight away
+     * with the format names rather than buffering forever. Video: stop and offer "Try anyway";
+     * audio only: keep playing silently and say why.
+     */
+    private fun checkFormatSupport(p: ExoPlayer, tracks: androidx.media3.common.Tracks) {
+        if (formatChecked) return
+        val video = tracks.groups.filter { it.type == C.TRACK_TYPE_VIDEO }
+        val audio = tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
+        if (video.isEmpty() && audio.isEmpty()) return
+        formatChecked = true
+        fun handled(g: androidx.media3.common.Tracks.Group) = (0 until g.length).any { g.getTrackSupport(it) == C.FORMAT_HANDLED }
+        val badVideo = video.isNotEmpty() && video.none { handled(it) }
+        val badAudio = audio.isNotEmpty() && audio.none { handled(it) }
+        if (!badVideo && !badAudio) return
+        val names = listOfNotNull(
+            video.firstOrNull()?.getTrackFormat(0)?.let { codecName(it) }?.let { if (badVideo) "$it (video)" else null },
+            audio.firstOrNull()?.getTrackFormat(0)?.let { codecName(it) }?.let { if (badAudio) "$it (audio)" else null },
+        ).joinToString(", ")
+        AppLog.w(TAG, "unsupported on this device: $names (forceTry=$forceTry)")
+        if (badVideo && !forceTry) {
+            p.pause()
+            b.bufferBox.visibility = View.GONE
+            b.txtError.text = getString(R.string.err_unsupported_fmt, names)
+            b.txtError.visibility = View.VISIBLE
+            b.btnRetry.text = getString(R.string.try_anyway)
+            b.btnRetry.visibility = View.VISIBLE
+            b.btnRetry.setOnClickListener {
+                forceTry = true; retries = 0; nudges = 0
+                b.btnRetry.text = getString(R.string.retry)
+                releasePlayer(); initPlayer()
+            }
+            b.btnRetry.requestFocus()
+        } else if (badAudio) {
+            Toast.makeText(this, getString(R.string.no_audio_fmt, names), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun codecName(f: Format): String {
+        val mime = f.sampleMimeType ?: return "?"
+        val codecs = f.codecs.orEmpty()
+        return when {
+            mime == "video/hevc" && (codecs.startsWith("hvc1.2") || codecs.startsWith("hev1.2")) -> "HEVC 10-bit (H.265 Main 10)"
+            mime == "video/hevc" -> "HEVC (H.265)"
+            mime == "video/avc" -> "H.264"
+            mime == "video/av01" -> "AV1"
+            mime == "video/x-vnd.on2.vp9" -> "VP9"
+            mime == "audio/eac3" || mime == "audio/eac3-joc" -> "Dolby Digital Plus (E-AC3)"
+            mime == "audio/ac3" -> "Dolby Digital (AC3)"
+            mime == "audio/true-hd" -> "Dolby TrueHD"
+            mime.startsWith("audio/vnd.dts") -> "DTS"
+            mime == "audio/mp4a-latm" -> "AAC"
+            else -> mime
+        } + if (codecs.isNotBlank()) " · $codecs" else ""
     }
 
     private fun stateName(s: Int) = when (s) {
