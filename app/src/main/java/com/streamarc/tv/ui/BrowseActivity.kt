@@ -110,30 +110,40 @@ class BrowseActivity : AppCompatActivity() {
             b.listStreams.visibility = View.GONE
             b.epgGrid.visibility = View.VISIBLE
             b.epgGrid.guideLookup = { ch -> EpgCache.guideFor(service, ch.epgChannelId, ch.name) }
-            showGuideProgress(getString(R.string.guide_downloading), null)
             lifecycleScope.launch {
-                var lastBytes = 0L
+                val mode = prefs.guideMode
                 val remembered = prefs.guideSize(service)
-                val ok = EpgCache.loadGuide(service, account) { bytes, total ->
-                    lastBytes = bytes
-                    // Panels rarely send a length for the guide: estimate from last time (or a
-                    // first-run guess) so the bar and percentage still move.
-                    val exact = total > 0
-                    val estimate = when {
-                        exact -> total
-                        remembered > 0 -> remembered
-                        else -> 25L * 1024 * 1024
-                    }
-                    val shown = maxOf(estimate, bytes + 1)
-                    val pct = (bytes * 100 / shown).toInt().coerceIn(0, 99)
-                    runOnUiThread {
-                        val text = getString(
-                            R.string.guide_downloading_pct_fmt,
-                            UpdateChecker.formatSize(bytes),
-                            (if (exact) "" else "~") + UpdateChecker.formatSize(shown),
-                            pct
-                        )
-                        showGuideProgress(text, (bytes * 1000 / shown).toInt())
+                val usePerChannel = mode == "channel" || (mode == "auto" && remembered > FULL_GUIDE_LIMIT)
+                var lastBytes = 0L
+                val ok = if (usePerChannel) {
+                    false   // rows are filled channel by channel below
+                } else {
+                    showGuideProgress(getString(R.string.guide_downloading), null)
+                    EpgCache.loadGuide(service, account) { bytes, total ->
+                        lastBytes = bytes
+                        if (mode == "auto" && bytes > FULL_GUIDE_LIMIT) {
+                            // Far too big to pull on every refresh: remember that and switch to
+                            // per-channel lookups, which only fetch the channels you actually list.
+                            prefs.setGuideSize(service, bytes)
+                            throw XtreamApi.GuideTooLarge(bytes)
+                        }
+                        val exact = total > 0
+                        val estimate = when {
+                            exact -> total
+                            remembered > 0 -> remembered
+                            else -> 25L * 1024 * 1024
+                        }
+                        val shown = maxOf(estimate, bytes + 1)
+                        val pct = (bytes * 100 / shown).toInt().coerceIn(0, 99)
+                        runOnUiThread {
+                            val text = getString(
+                                R.string.guide_downloading_pct_fmt,
+                                UpdateChecker.formatSize(bytes),
+                                (if (exact) "" else "~") + UpdateChecker.formatSize(shown),
+                                pct
+                            )
+                            showGuideProgress(text, (bytes * 1000 / shown).toInt())
+                        }
                     }
                 }
                 if (ok && lastBytes > 0) prefs.setGuideSize(service, lastBytes)
@@ -153,9 +163,11 @@ class BrowseActivity : AppCompatActivity() {
                 override fun onNeedEpg(channel: Stream) {
                     val id = channel.streamId ?: return
                     lifecycleScope.launch {
-                        // Prefer the whole-guide download; fall back to the per-channel call
-                        // for channels the guide doesn't cover.
-                        EpgCache.loadGuide(service, account)
+                        // Prefer the whole-guide download when it is in use; fall back to the
+                        // per-channel call for channels it doesn't cover.
+                        if (prefs.guideMode != "channel" && !(prefs.guideMode == "auto" && prefs.guideSize(service) > FULL_GUIDE_LIMIT)) {
+                            EpgCache.loadGuide(service, account)
+                        }
                         val fromGuide = EpgCache.guideFor(service, channel.epgChannelId, channel.name)
                         val list = fromGuide ?: EpgCache.get(service, account, id)
                         b.epgGrid.setEpg(id, list)
@@ -735,6 +747,8 @@ class BrowseActivity : AppCompatActivity() {
         private const val FAV_ID = Prefs.CATEGORY_FAVORITES
         private const val RECENT_ID = "__recent__"
         private const val GENRE_PREFIX = "__genre__:"
+        /** Above this, the whole-guide file is not worth downloading; channels are fetched individually. */
+        private const val FULL_GUIDE_LIMIT = 60L * 1024 * 1024
         fun intent(ctx: Context, service: Service): Intent =
             Intent(ctx, BrowseActivity::class.java).putExtra(EXTRA_SERVICE, service.name)
     }

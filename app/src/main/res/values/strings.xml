@@ -131,6 +131,10 @@
     <string name="recording_folder">Recordings folder</string>
     <string name="tab_downloads">Downloads</string>
     <string name="storage">Storage</string>
+    <string name="guide_source">TV guide source</string>
+    <string name="guide_mode_auto">Automatic</string>
+    <string name="guide_mode_full">Whole guide download</string>
+    <string name="guide_mode_channel">Per channel (lighter)</string>
     <string name="live_categories_shown">Categories shown</string>
     <string name="default_live_category">Default category</string>
     <string name="all_shown">All</string>

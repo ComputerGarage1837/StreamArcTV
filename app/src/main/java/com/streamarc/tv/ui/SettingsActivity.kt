@@ -46,6 +46,8 @@ class SettingsActivity : AppCompatActivity() {
         b.rowDiagnostics.setOnClickListener { runDiagnostics() }
         b.rowLiveCategories.setOnClickListener { pickLiveCategories() }
         b.rowDefaultCategory.setOnClickListener { pickDefaultCategory() }
+        b.rowGuideMode.setOnClickListener { pickGuideMode() }
+        renderGuideMode()
         renderLiveCategories()
         b.rowDownloadFolder.setOnClickListener { TransferDialogs.pickFolder(this, picker, TransferType.DOWNLOAD) { renderFolders() } }
         b.rowRecordingFolder.setOnClickListener { TransferDialogs.pickFolder(this, picker, TransferType.RECORDING) { renderFolders() } }
@@ -136,6 +138,28 @@ class SettingsActivity : AppCompatActivity() {
     // ---- Live TV categories ---------------------------------------------
 
     private var liveCategories: List<Category>? = null
+
+    private fun renderGuideMode() {
+        b.txtGuideModeValue.text = when (prefs.guideMode) {
+            "full" -> getString(R.string.guide_mode_full)
+            "channel" -> getString(R.string.guide_mode_channel)
+            else -> getString(R.string.guide_mode_auto)
+        }
+    }
+
+    private fun pickGuideMode() {
+        val labels = arrayOf(getString(R.string.guide_mode_auto), getString(R.string.guide_mode_full), getString(R.string.guide_mode_channel))
+        val values = arrayOf("auto", "full", "channel")
+        AlertDialog.Builder(this)
+            .setTitle(R.string.guide_source)
+            .setSingleChoiceItems(labels, values.indexOf(prefs.guideMode).coerceAtLeast(0)) { d, which ->
+                prefs.guideMode = values[which]
+                renderGuideMode()
+                d.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
 
     private fun renderLiveCategories() {
         val hidden = prefs.hiddenLiveCategories.size

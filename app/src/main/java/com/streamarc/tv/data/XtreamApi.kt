@@ -122,6 +122,9 @@ object XtreamApi {
      * large files stay cheap. Returns programmes keyed by XMLTV channel id, limited
      * to [fromEpoch, toEpoch) so a week-long file doesn't fill memory.
      */
+    /** Thrown from the progress callback to stop a guide download (e.g. it is too large). */
+    class GuideTooLarge(val bytes: Long) : Exception("Guide too large")
+
     suspend fun fullGuide(
         service: Service, account: Account, fromEpoch: Long, toEpoch: Long,
         onProgress: ((bytes: Long, total: Long) -> Unit)? = null
@@ -133,10 +136,14 @@ object XtreamApi {
                 .addQueryParameter("username", account.username)
                 .addQueryParameter("password", account.password)
                 .build()
-            val req = Request.Builder().url(url).header("User-Agent", USER_AGENT).build()
+            // Ask for gzip ourselves so the byte count below is what really crosses the wire.
+            val req = Request.Builder().url(url)
+                .header("User-Agent", USER_AGENT)
+                .header("Accept-Encoding", "gzip")
+                .build()
             val slowClient = client.newBuilder()
                 .readTimeout(180, TimeUnit.SECONDS)
-                .callTimeout(300, TimeUnit.SECONDS)
+                .callTimeout(0, TimeUnit.MILLISECONDS)
                 .build()
             try {
                 slowClient.newCall(req).execute().use { resp ->
@@ -157,15 +164,19 @@ object XtreamApi {
                             super.close()
                         }
                     }
-                    counting.use { input -> XmltvParser.parse(input, fromEpoch, toEpoch) }
+                    val gzip = resp.header("Content-Encoding")?.contains("gzip", ignoreCase = true) == true
+                    val input: java.io.InputStream = if (gzip) java.util.zip.GZIPInputStream(counting, 64 * 1024) else counting
+                    input.use { XmltvParser.parse(it, fromEpoch, toEpoch) }
                 }
+            } catch (e: GuideTooLarge) {
+                throw e
             } catch (e: IOException) {
                 throw ApiException("Can't download guide: ${e.message ?: "network error"}")
             }
         }
 
     /** Now/next programmes for one live channel (`get_short_epg`). */
-    suspend fun shortEpg(service: Service, account: Account, streamId: String, limit: Int = 30): List<EpgProgramme> =
+    suspend fun shortEpg(service: Service, account: Account, streamId: String, limit: Int = 48): List<EpgProgramme> =
         withContext(Dispatchers.IO) {
             val body = get(
                 apiUrl(
