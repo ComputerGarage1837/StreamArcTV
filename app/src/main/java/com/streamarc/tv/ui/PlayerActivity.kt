@@ -27,6 +27,10 @@ import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.source.LoadEventInfo
+import androidx.media3.exoplayer.source.MediaLoadData
+import java.io.IOException
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import com.streamarc.tv.R
@@ -37,6 +41,7 @@ import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.databinding.ActivityPlayerBinding
 import com.streamarc.tv.player.TimeshiftServer
 import com.streamarc.tv.transfer.TransferService
+import com.streamarc.tv.update.UpdateChecker
 
 @UnstableApi
 class PlayerActivity : AppCompatActivity() {
@@ -65,6 +70,12 @@ class PlayerActivity : AppCompatActivity() {
     /** Live offset (HLS) measured when playback first became ready; growth beyond it means we're behind. */
     private var liveBaselineMs = C.TIME_UNSET
     private var behindNow = false
+
+    // Diagnostics shown under the spinner while buffering.
+    private var bytesLoaded = 0L
+    private var loadsStarted = 0
+    private var lastLoadError: String? = null
+    private var bufferingSince = 0L
 
     private val ticker = object : Runnable {
         override fun run() {
@@ -176,7 +187,8 @@ class PlayerActivity : AppCompatActivity() {
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(level.minBufferMs, level.maxBufferMs, level.playbackMs, level.rebufferMs)
             .setTargetBufferBytes(level.bytes.coerceAtMost(heapCap))
-            .setPrioritizeTimeOverSizeThresholds(false)
+            // Time thresholds decide when playback starts; the byte figure is only a memory ceiling.
+            .setPrioritizeTimeOverSizeThresholds(true)
             .build()
 
         val p = ExoPlayer.Builder(this, renderers)
@@ -187,6 +199,25 @@ class PlayerActivity : AppCompatActivity() {
             .build()
         player = p
         b.playerView.player = p
+        bytesLoaded = 0L; loadsStarted = 0; lastLoadError = null; bufferingSince = SystemClock.elapsedRealtime()
+        p.addAnalyticsListener(object : AnalyticsListener {
+            override fun onLoadStarted(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData) {
+                loadsStarted++
+            }
+            override fun onLoadCompleted(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData) {
+                bytesLoaded += loadEventInfo.bytesLoaded
+            }
+            override fun onLoadCanceled(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData) {
+                bytesLoaded += loadEventInfo.bytesLoaded
+            }
+            override fun onLoadError(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData, error: IOException, wasCanceled: Boolean) {
+                bytesLoaded += loadEventInfo.bytesLoaded
+                lastLoadError = describeIo(error)
+            }
+            override fun onBandwidthEstimate(eventTime: AnalyticsListener.EventTime, totalLoadTimeMs: Int, totalBytesLoaded: Long, bitrateEstimate: Long) {
+                bytesLoaded += totalBytesLoaded
+            }
+        })
         // Subtitles follow the saved preference; the CC button in the controls changes and remembers it.
         p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !prefs.subtitles)
@@ -202,6 +233,7 @@ class PlayerActivity : AppCompatActivity() {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 b.bufferBox.visibility =
                     if (playbackState == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
+                if (playbackState == Player.STATE_BUFFERING) bufferingSince = SystemClock.elapsedRealtime()
                 if (playbackState == Player.STATE_ENDED) watchKey?.let { WatchProgress.ended(it) }
                 if (playbackState == Player.STATE_READY) {
                     retries = 0
@@ -377,20 +409,29 @@ class PlayerActivity : AppCompatActivity() {
         b.btnRetry.requestFocus()
     }
 
-    private fun describeError(error: PlaybackException): String {
+    private fun describeError(error: PlaybackException): String =
+        describeIo(error) ?: getString(R.string.playback_failed_fmt, error.errorCodeName)
+
+    /** Human words for the network failure inside an ExoPlayer error chain, or null if it isn't one. */
+    private fun describeIo(error: Throwable): String? {
         var cause: Throwable? = error
         while (cause != null) {
-            if (cause is HttpDataSource.InvalidResponseCodeException) {
-                val code = cause.responseCode
-                return when (code) {
-                    403, 429, 458, 509 -> getString(R.string.err_stream_limit_fmt, code)
-                    404 -> getString(R.string.err_not_found_fmt, code)
-                    else -> getString(R.string.err_http_fmt, code)
+            when (cause) {
+                is HttpDataSource.InvalidResponseCodeException -> {
+                    val code = cause.responseCode
+                    return when (code) {
+                        403, 429, 458, 509 -> getString(R.string.err_stream_limit_fmt, code)
+                        404 -> getString(R.string.err_not_found_fmt, code)
+                        else -> getString(R.string.err_http_fmt, code)
+                    }
                 }
+                is java.net.SocketTimeoutException -> return getString(R.string.err_timeout)
+                is java.net.UnknownHostException -> return getString(R.string.err_dns)
+                is java.net.ConnectException -> return getString(R.string.err_connect)
             }
             cause = cause.cause
         }
-        return getString(R.string.playback_failed_fmt, error.errorCodeName)
+        return null
     }
 
     private fun cancelRetry() {
@@ -405,7 +446,13 @@ class PlayerActivity : AppCompatActivity() {
         if (!isLive) saveProgress()
         if (p.playbackState == Player.STATE_BUFFERING && pendingRetry == null) {
             val ready = (p.totalBufferedDuration / 1000).toInt()
-            b.txtBuffer.text = if (ready > 0) getString(R.string.buffering_fmt, ready) else getString(R.string.buffering)
+            val waited = (SystemClock.elapsedRealtime() - bufferingSince) / 1000
+            val head = if (ready > 0) getString(R.string.buffering_fmt, ready) else getString(R.string.buffering)
+            val detail = if (waited >= 3) "\n" + getString(
+                R.string.buffer_detail_fmt, UpdateChecker.formatSize(bytesLoaded), waited,
+                if (loadsStarted == 0) getString(R.string.connecting) else ""
+            ).trimEnd() + (lastLoadError?.let { "\n$it" } ?: "") else ""
+            b.txtBuffer.text = head + detail
         }
         if (!isLive) return
         val behindMs = behindLiveMs(p)

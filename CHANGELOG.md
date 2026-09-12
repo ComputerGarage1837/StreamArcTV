@@ -3,6 +3,15 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.41 — 2026-09-12
+
+### Changed
+- While the spinner is up for more than a few seconds it now shows how much data has arrived,
+  how long it has been waiting and any network error (timed out, refused, can't connect), so a
+  stalled stream is understood at a glance instead of spinning silently.
+- Buffer time thresholds again take priority over the memory ceiling when deciding when to
+  start, matching the settings the app used before the buffer options were added.
+
 ## v1.0.40 — 2026-09-12
 
 ### Changed
