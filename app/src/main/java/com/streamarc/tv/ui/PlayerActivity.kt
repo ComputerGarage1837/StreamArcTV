@@ -81,7 +81,7 @@ class PlayerActivity : AppCompatActivity() {
         b.playerView.setControllerVisibilityListener(
             androidx.media3.ui.PlayerView.ControllerVisibilityListener { visibility ->
                 b.txtTitle.visibility = visibility
-                b.txtLiveStatus.visibility = if (isLive && (behindNow || visibility == View.VISIBLE)) View.VISIBLE else View.GONE
+                b.txtLiveStatus.visibility = if (isLive) visibility else View.GONE
             }
         )
         b.txtLiveStatus.visibility = View.GONE
@@ -272,9 +272,6 @@ class PlayerActivity : AppCompatActivity() {
             else -> getString(R.string.live_now)
         }
         b.txtLiveStatus.isSelected = behindNow
-        // Behind live: keep the badge on screen even after the controls hide.
-        if (behindNow) b.txtLiveStatus.visibility = View.VISIBLE
-        else if (!b.playerView.isControllerFullyVisible) b.txtLiveStatus.visibility = View.GONE
     }
 
     private fun behindLiveMs(p: ExoPlayer): Long {

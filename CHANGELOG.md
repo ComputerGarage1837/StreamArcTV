@@ -15,8 +15,8 @@ version is shown to users inside the app when an update is available.
   the app itself, so short outages no longer interrupt what you are watching.
 
 ### Changed
-- The LIVE badge now switches to "Paused" or "behind live" the instant you pause or rewind, and
-  stays on screen (amber) until you are back at live, even after the player controls hide.
+- The LIVE badge now switches to "Paused" or "behind live" (amber) the instant you pause or
+  rewind, shown whenever the player controls are up.
 
 ## v1.0.33 — 2026-09-12
 
