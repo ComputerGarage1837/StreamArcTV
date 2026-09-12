@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.24 — 2026-09-12
+
+### Added
+- Live preview in the TV guide: pressing OK on a channel plays it in the small box at the top
+  left while you keep browsing; pressing OK on the same channel again goes full screen, and
+  backing out of full screen returns it to the box.
+
 ## v1.0.23 — 2026-09-12
 
 ### Changed

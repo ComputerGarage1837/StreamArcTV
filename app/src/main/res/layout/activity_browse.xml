@@ -167,15 +167,45 @@
         app:layout_constraintStart_toEndOf="@id/listCategories"
         app:layout_constraintTop_toBottomOf="@id/listCategoriesTop">
 
-        <ImageView
-            android:id="@+id/imgPanelLogo"
-            android:layout_width="120dp"
-            android:layout_height="68dp"
-            android:background="#0A1628"
-            android:contentDescription="@null"
-            android:padding="6dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_placeholder" />
+        <FrameLayout
+            android:id="@+id/previewBox"
+            android:layout_width="@dimen/preview_w"
+            android:layout_height="@dimen/preview_h"
+            android:background="#000000">
+
+            <ImageView
+                android:id="@+id/imgPanelLogo"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#0A1628"
+                android:contentDescription="@null"
+                android:padding="6dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_placeholder" />
+
+            <androidx.media3.ui.PlayerView
+                android:id="@+id/previewPlayer"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone"
+                app:resize_mode="fit"
+                app:surface_type="surface_view"
+                app:use_controller="false" />
+
+            <TextView
+                android:id="@+id/txtPreviewHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:background="#99000000"
+                android:gravity="center"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:text="@string/preview_hint"
+                android:textColor="@color/text"
+                android:textSize="10sp"
+                android:visibility="gone" />
+        </FrameLayout>
 
         <LinearLayout
             android:layout_width="0dp"

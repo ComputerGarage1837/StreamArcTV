@@ -2,4 +2,6 @@
 <resources>
     <dimen name="poster_height">220dp</dimen>
     <integer name="poster_columns">5</integer>
+    <dimen name="preview_w">208dp</dimen>
+    <dimen name="preview_h">117dp</dimen>
 </resources>
