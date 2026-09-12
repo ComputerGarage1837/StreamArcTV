@@ -43,8 +43,10 @@ object UpdateChecker {
 
     private val repo: String get() = BuildConfig.GITHUB_REPO
 
+    // The timestamp query string is ignored by GitHub but defeats the raw-file
+    // CDN cache (5 minutes), so a check right after a release sees the new feed.
     private val feedUrl: String
-        get() = "https://raw.githubusercontent.com/$repo/main/release/update.json"
+        get() = "https://raw.githubusercontent.com/$repo/main/release/update.json?t=${System.currentTimeMillis()}"
 
     /**
      * @param manual true when the user pressed the Update button: always
