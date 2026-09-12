@@ -5,6 +5,11 @@ version is shown to users inside the app when an update is available.
 
 ## v1.0.21 — 2026-09-12
 
+### Added
+- Settings → Live TV: switch off categories you don't use (their channels disappear from the
+  guide, All and search) and choose the category the guide opens on: any category, Favorites or
+  All. By default it opens on the provider's "General" category when there is one.
+
 ### Changed
 - The recording hour wheel runs through the whole day (11 AM rolls into 12 PM, 11 PM into
   12 AM of the next day) instead of a separate AM/PM switch.

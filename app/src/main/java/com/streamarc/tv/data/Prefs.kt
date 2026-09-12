@@ -47,6 +47,21 @@ class Prefs(context: Context) {
         e.apply()
     }
 
+    // ---- Live TV categories --------------------------------------------
+
+    /** Category ids the user switched off; their channels are left out everywhere. */
+    var hiddenLiveCategories: Set<String>
+        get() = sp.getStringSet("live_hidden_cats", emptySet())?.toSet() ?: emptySet()
+        set(value) { sp.edit().putStringSet("live_hidden_cats", value).apply() }
+
+    /**
+     * Category the guide opens on: a provider category id, [CATEGORY_FAVORITES],
+     * [CATEGORY_ALL], or null for the automatic choice ("General" if present, else All).
+     */
+    var defaultLiveCategory: String?
+        get() = sp.getString("live_default_cat", null)
+        set(value) { sp.edit().putString("live_default_cat", value).apply() }
+
     // ---- Favorites -----------------------------------------------------
 
     private fun favKey(service: Service, kind: ContentKind) = k(service, "favs_${kind.name.lowercase()}")
@@ -100,4 +115,9 @@ class Prefs(context: Context) {
         set(value) { sp.edit().putString("live_format", value).apply() }
 
     private fun k(s: Service, key: String) = "${s.name.lowercase()}_$key"
+
+    companion object {
+        const val CATEGORY_FAVORITES = "__favorites__"
+        const val CATEGORY_ALL = "__all__"
+    }
 }

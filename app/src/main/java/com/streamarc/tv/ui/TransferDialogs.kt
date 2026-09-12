@@ -167,6 +167,28 @@ object TransferDialogs {
         fun minute(): Int = minute.value
     }
 
+    /**
+     * Turns start/end clock times into epoch millis: a start earlier than now means
+     * tomorrow (unless it is within the last minute, which means "now"), and an end
+     * at or before the start rolls over to the next day.
+     */
+    private fun resolve(sh: Int, sm: Int, eh: Int, em: Int): Pair<Long, Long> {
+        val now = System.currentTimeMillis()
+        val start = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, sh); set(java.util.Calendar.MINUTE, sm); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+        }
+        var st = start.timeInMillis
+        if (st < now - 90_000) st += 24 * 3600 * 1000L
+        if (st < now) st = now
+        val end = java.util.Calendar.getInstance().apply {
+            timeInMillis = st
+            set(java.util.Calendar.HOUR_OF_DAY, eh); set(java.util.Calendar.MINUTE, em); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+        }
+        var en = end.timeInMillis
+        if (en <= st) en += 24 * 3600 * 1000L
+        return st to en
+    }
+
     private fun schedule(activity: AppCompatActivity, channel: String, url: String, startAt: Long, endAt: Long, folder: String?) {
         ensureNotifications(activity)
         val stamp = SimpleDateFormat("yyyy-MM-dd HH.mm", Locale.getDefault()).format(Date(startAt))
