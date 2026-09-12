@@ -71,6 +71,16 @@
                 android:padding="16dp"
                 android:text="@string/check_for_updates_now" />
 
+            <Button
+                android:id="@+id/btnInstallPermission"
+                style="@style/SecondaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="6dp"
+                android:gravity="start|center_vertical"
+                android:padding="16dp"
+                android:text="@string/allow_installing_updates" />
+
             <TextView
                 android:id="@+id/txtSkipped"
                 android:layout_width="match_parent"

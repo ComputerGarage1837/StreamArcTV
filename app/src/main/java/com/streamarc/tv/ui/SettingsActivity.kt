@@ -52,6 +52,7 @@ class SettingsActivity : AppCompatActivity() {
         renderFolders()
 
         b.btnCheckUpdates.setOnClickListener { UpdateChecker.check(this, manual = true) }
+        b.btnInstallPermission.setOnClickListener { MainActivity.openInstallPermissionSetting(this) }
         b.btnClearSkipped.setOnClickListener {
             prefs.skippedVersion = null
             Toast.makeText(this, R.string.skipped_cleared, Toast.LENGTH_SHORT).show()
