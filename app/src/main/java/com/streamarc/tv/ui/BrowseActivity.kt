@@ -95,13 +95,14 @@ class BrowseActivity : AppCompatActivity() {
 
         if (isLive) {
             b.panelEpg.visibility = View.VISIBLE
-            b.txtPanelChannel.text = getString(R.string.loading_guide)
+            b.txtPanelChannel.text = getString(R.string.tv_guide)
             b.txtPanelNow.text = ""
             b.txtPanelDesc.text = getString(R.string.hold_ok_hint)
             b.txtPanelUpcoming.text = ""
             b.listStreams.visibility = View.GONE
             b.epgGrid.visibility = View.VISIBLE
             b.epgGrid.guideLookup = { ch -> EpgCache.guideFor(service, ch.epgChannelId, ch.name) }
+            showGuideProgress(getString(R.string.guide_downloading), null)
             lifecycleScope.launch {
                 val ok = EpgCache.loadGuide(service, account)
                 if (ok) b.epgGrid.guideLoaded()
@@ -261,7 +262,11 @@ class BrowseActivity : AppCompatActivity() {
             null -> {}
             else -> all.firstOrNull { it.id == wanted }?.let { return it }
         }
-        return all.firstOrNull { it.id != null && it.id != FAV_ID && it.name?.contains("general", ignoreCase = true) == true } ?: all[1]
+        val provider = all.filter { it.id != null && it.id != FAV_ID }
+        return provider.firstOrNull { it.name?.trim().equals("General Streams", ignoreCase = true) }
+            ?: provider.firstOrNull { it.name?.contains("general streams", ignoreCase = true) == true }
+            ?: provider.firstOrNull { it.name?.contains("general", ignoreCase = true) == true }
+            ?: all[1]
     }
 
     private fun selectCategory(cat: Category) {
@@ -412,14 +417,42 @@ class BrowseActivity : AppCompatActivity() {
         prefetchJob?.cancel()
         val channels = allStreams
         prefetchJob = lifecycleScope.launch {
+            val total = channels.size
+            var done = 0
+            var lastShown = -1L
             for (ch in channels) {
+                done++
                 val id = ch.streamId ?: continue
-                if (EpgCache.peek(service, id) != null) continue
-                val fromGuide = EpgCache.guideFor(service, ch.epgChannelId, ch.name)
-                val list = fromGuide ?: EpgCache.get(service, account, id)
-                b.epgGrid.setEpg(id, list)
+                if (EpgCache.peek(service, id) == null) {
+                    val fromGuide = EpgCache.guideFor(service, ch.epgChannelId, ch.name)
+                    val list = fromGuide ?: EpgCache.get(service, account, id)
+                    b.epgGrid.setEpg(id, list)
+                }
+                val now = System.currentTimeMillis()
+                if (now - lastShown > 150 || done == total) {
+                    lastShown = now
+                    showGuideProgress(getString(R.string.guide_filling_fmt, done, total), if (total > 0) done * 1000 / total else 0)
+                }
             }
+            hideGuideProgress()
         }
+    }
+
+    /** Thin bar under the guide panel: indeterminate while the listing downloads, then per-channel progress. */
+    private fun showGuideProgress(text: String, progress: Int?) {
+        if (!isLive) return
+        b.guideLoading.visibility = View.VISIBLE
+        b.txtGuideLoading.text = text
+        if (progress == null) {
+            b.progressGuide.isIndeterminate = true
+        } else {
+            b.progressGuide.isIndeterminate = false
+            b.progressGuide.progress = progress.coerceIn(0, 1000)
+        }
+    }
+
+    private fun hideGuideProgress() {
+        b.guideLoading.visibility = View.GONE
     }
 
     private fun showChannelDetails(stream: Stream, programmes: List<EpgProgramme>?, focused: EpgProgramme? = null) {
