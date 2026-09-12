@@ -182,6 +182,10 @@
     <string name="category_diagnostics">Category diagnostics</string>
     <string name="diagnostics_running">Checking the provider\'s categories…</string>
     <string name="category_num_fmt">Category %1$s</string>
+    <string name="delete_all">Delete all</string>
+    <string name="delete_all_confirm_fmt">Delete all %1$d %2$s from this device? This cannot be undone.</string>
+    <string name="delete_all_active_fmt">%1$d in progress or scheduled will be cancelled.</string>
+    <string name="deleted_all_fmt">Deleted %1$d items.</string>
     <string name="delete_download_confirm_fmt">Delete %1$s from this device?</string>
     <string name="search_where">Search in</string>
     <string name="layout_question_title">How are you using Stream Arc TV?</string>

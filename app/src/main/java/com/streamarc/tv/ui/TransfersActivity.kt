@@ -45,6 +45,7 @@ class TransfersActivity : AppCompatActivity() {
         type = if (intent.getStringExtra(EXTRA_TYPE) == TransferType.RECORDING.name) TransferType.RECORDING else TransferType.DOWNLOAD
         b.txtTitle.text = getString(if (type == TransferType.RECORDING) R.string.recordings else R.string.nav_downloads)
         b.btnBack.setOnClickListener { finish() }
+        b.btnDeleteAll.setOnClickListener { confirmDeleteAll() }
         b.list.layoutManager = LinearLayoutManager(this)
         b.list.adapter = adapter
         b.rowFolder.setOnClickListener {
@@ -78,6 +79,31 @@ class TransfersActivity : AppCompatActivity() {
         renderNotice(all)
         b.txtEmpty.text = getString(if (type == TransferType.RECORDING) R.string.recordings_empty else R.string.downloads_empty)
         b.txtEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+        b.btnDeleteAll.visibility = if (items.isEmpty()) View.GONE else View.VISIBLE
+    }
+
+    private fun confirmDeleteAll() {
+        val all = TransferStore.get(this).all().filter { it.type == type }
+        if (all.isEmpty()) return
+        val active = all.count { it.isActive }
+        val what = getString(if (type == TransferType.RECORDING) R.string.recordings else R.string.nav_downloads)
+        val msg = getString(R.string.delete_all_confirm_fmt, all.size, what.lowercase()) +
+            if (active > 0) "\n\n" + getString(R.string.delete_all_active_fmt, active) else ""
+        AlertDialog.Builder(this)
+            .setTitle(R.string.delete_all)
+            .setMessage(msg)
+            .setPositiveButton(R.string.delete_all) { _, _ ->
+                val store = TransferStore.get(this)
+                for (j in all) {
+                    if (j.isActive) TransferService.cancel(this, j.id)
+                    Folders.delete(this, j.fileUri)
+                    store.remove(j.id)
+                }
+                Toast.makeText(this, getString(R.string.deleted_all_fmt, all.size), Toast.LENGTH_SHORT).show()
+                refresh()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     /** Recordings only: what is recording right now and what is scheduled, above the list. */

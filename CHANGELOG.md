@@ -22,6 +22,10 @@ version is shown to users inside the app when an update is available.
   fails after that is cleared from the Downloads list together with its partial file; the
   failure notification tells you why. The list shows the remaining queue in order.
 
+### Added
+- "Delete all" button at the top of the Downloads and Recordings lists, with a confirmation
+  that says how many items go and whether any in-progress or scheduled ones will be cancelled.
+
 ## v1.0.35 — 2026-09-12
 
 ### Fixed
