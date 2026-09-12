@@ -130,6 +130,11 @@ class Prefs(context: Context) {
         get() = sp.getString("live_format", "m3u8") ?: "m3u8"
         set(value) { sp.edit().putString("live_format", value).apply() }
 
+    /** One of [BufferLevel.key]; how much live video the player keeps buffered. */
+    var bufferLevel: String
+        get() = sp.getString("buffer_level", BufferLevel.NORMAL.key) ?: BufferLevel.NORMAL.key
+        set(value) { sp.edit().putString("buffer_level", value).apply() }
+
     private fun k(s: Service, key: String) = "${s.name.lowercase()}_$key"
 
     companion object {

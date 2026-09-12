@@ -53,6 +53,23 @@
     <string name="skipped_cleared">Skipped version cleared.</string>
     <string name="playback">Playback</string>
     <string name="live_stream_format">Live stream format</string>
+    <string name="live_buffer">Live TV buffer</string>
+    <string name="buffer_help_title">About buffer sizes</string>
+    <string name="buffer_help">The buffer is how much of the live stream the app downloads ahead of what you are watching. A bigger buffer rides out slow or patchy connections and lets you pause for longer without losing your place, but the channel takes a little longer to start and uses more memory.\n\nWhen you pause, the app keeps downloading until the buffer is full, and pressing play carries on exactly where you stopped. Once you have paused longer than the buffer allows, playback jumps back to live.\n\nHuge buffers are automatically limited to what this device\'s memory can hold.</string>
+    <string-array name="buffer_levels">
+        <item>Small (30 s ahead, fastest start)</item>
+        <item>Normal (1 min ahead)</item>
+        <item>Large (2 min ahead, pause up to 2 min)</item>
+        <item>Very large (5 min ahead, pause up to 5 min)</item>
+        <item>Huge (10 min ahead, pause up to 10 min)</item>
+    </string-array>
+    <string name="buffering">Buffering…</string>
+    <string name="buffering_fmt">Buffering… %1$d s ready</string>
+    <string name="reconnecting_fmt">Reconnecting… (%1$d of %2$d)</string>
+    <string name="playback_failed_fmt">Playback failed: %1$s</string>
+    <string name="live_window_lost">Paused longer than the provider keeps; jumping back to live.</string>
+    <string name="live_now">● LIVE</string>
+    <string name="behind_live_fmt">%1$s behind · select to go live</string>
     <string name="accounts">Accounts</string>
     <string name="about">About</string>
     <string name="view_releases">View releases &amp; changelog on GitHub</string>
