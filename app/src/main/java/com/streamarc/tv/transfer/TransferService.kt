@@ -42,7 +42,9 @@ class TransferService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val running = HashMap<String, Job>()
-    private val downloadSlots = Semaphore(2)
+    // Xtream panels normally allow one connection per account, so downloads run strictly one
+    // after another; a whole season is a queue, not a burst.
+    private val downloadSlots = Semaphore(1)
     private lateinit var store: TransferStore
     private var wakeLock: PowerManager.WakeLock? = null
 
@@ -112,50 +114,102 @@ class TransferService : Service() {
         store.update(id) { it.state = TransferState.RUNNING; it.error = null }
         val mime = if (job.fileName.endsWith(".ts", true)) "video/mp2t" else "video/mp4"
         var target: Folders.Target? = null
+        var done = 0L
+        var attempt = 0
         try {
-            target = Folders.create(this, job.folder, job.type, job.fileName, mime)
-            store.update(id) { it.fileUri = target.uri.toString() }
-            val client = XtreamApi.client.newBuilder()
-                .readTimeout(60, TimeUnit.SECONDS)
-                .callTimeout(0, TimeUnit.MILLISECONDS)
-                .build()
-            val req = Request.Builder().url(job.url).header("User-Agent", XtreamApi.USER_AGENT).build()
-            client.newCall(req).execute().use { resp ->
-                if (!resp.isSuccessful) throw IllegalStateException("Server returned HTTP ${resp.code}")
-                val body = resp.body ?: throw IllegalStateException("Empty response")
-                val total = if (job.type == TransferType.DOWNLOAD) body.contentLength() else -1L
-                store.update(id) { it.total = total }
-                val input = body.byteStream()
-                val buf = ByteArray(256 * 1024)
-                var done = 0L
-                var lastFlush = System.currentTimeMillis()
-                while (scope.isActive && running.containsKey(id)) {
-                    if (job.type == TransferType.RECORDING && System.currentTimeMillis() >= job.endAt) break
-                    val n = input.read(buf)
-                    if (n < 0) break
-                    target.stream.write(buf, 0, n)
-                    done += n
-                    val now = System.currentTimeMillis()
-                    if (now - lastFlush > 1000) {
-                        lastFlush = now
+            while (scope.isActive && running.containsKey(id)) {
+                try {
+                    val client = XtreamApi.client.newBuilder()
+                        .readTimeout(60, TimeUnit.SECONDS)
+                        .callTimeout(0, TimeUnit.MILLISECONDS)
+                        .build()
+                    val rb = Request.Builder().url(job.url).header("User-Agent", XtreamApi.USER_AGENT)
+                    val resuming = job.type == TransferType.DOWNLOAD && done > 0 && target != null
+                    if (resuming) rb.header("Range", "bytes=$done-")
+                    client.newCall(rb.build()).execute().use { resp ->
+                        if (!resp.isSuccessful) throw HttpException(resp.code)
+                        val body = resp.body ?: throw IllegalStateException("Empty response")
+                        var out: Folders.Target? = null
+                        if (resuming && resp.code == 206) {
+                            // Carry on where the last attempt stopped.
+                            try { target?.stream?.close() } catch (_: Exception) {}
+                            out = try { Folders.append(this, target!!.uri) } catch (_: Exception) { null }
+                        }
+                        if (out == null) {
+                            try { target?.stream?.close() } catch (_: Exception) {}
+                            out = Folders.create(this, job.folder, job.type, job.fileName, mime)
+                            done = 0L
+                            if (resuming && resp.code == 206) throw IllegalStateException("Can't resume file")
+                        }
+                        target = out
+                        val uriStr = out.uri.toString()
+                        val total = when {
+                            job.type != TransferType.DOWNLOAD -> -1L
+                            resp.code == 206 && body.contentLength() >= 0 -> body.contentLength() + done
+                            else -> body.contentLength()
+                        }
+                        store.update(id) { it.fileUri = uriStr; it.total = total; it.error = null }
+                        val input = body.byteStream()
+                        val buf = ByteArray(256 * 1024)
+                        var lastFlush = System.currentTimeMillis()
+                        while (scope.isActive && running.containsKey(id)) {
+                            if (job.type == TransferType.RECORDING && System.currentTimeMillis() >= job.endAt) break
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            out.stream.write(buf, 0, n)
+                            done += n
+                            val now = System.currentTimeMillis()
+                            if (now - lastFlush > 1000) {
+                                lastFlush = now
+                                val d = done
+                                store.update(id) { it.bytes = d }
+                            }
+                        }
+                        out.stream.flush()
                         val d = done
                         store.update(id) { it.bytes = d }
+                        if (job.type == TransferType.DOWNLOAD && total > 0 && done < total && running.containsKey(id) && scope.isActive)
+                            throw IllegalStateException("Connection closed early")
                     }
+                    if (!running.containsKey(id)) return   // cancelled
+                    store.update(id) { it.state = TransferState.DONE; it.error = null }
+                    notifyDone(job, true, null)
+                    return
+                } catch (e: Exception) {
+                    if (!running.containsKey(id) || !scope.isActive) return
+                    attempt++
+                    if (attempt >= MAX_ATTEMPTS) throw e
+                    val wait = RETRY_DELAYS_MS[minOf(attempt - 1, RETRY_DELAYS_MS.size - 1)]
+                    val why = describe(e)
+                    store.update(id) { it.error = getString(R.string.retrying_fmt, attempt, MAX_ATTEMPTS, wait / 1000, why) }
+                    delay(wait)
                 }
-                target.stream.flush()
-                val d = done
-                store.update(id) { it.bytes = d }
             }
-            if (!running.containsKey(id)) return   // cancelled
-            store.update(id) { it.state = TransferState.DONE }
-            notifyDone(job, true, null)
         } catch (e: Exception) {
             if (!running.containsKey(id)) return
-            store.update(id) { it.state = TransferState.FAILED; it.error = e.message }
-            notifyDone(job, false, e.message)
+            val why = describe(e)
+            if (job.type == TransferType.DOWNLOAD) {
+                // A download that gave up leaves nothing behind: drop the partial file and the
+                // list entry; the notification carries the reason.
+                try { target?.stream?.close() } catch (_: Exception) {}
+                Folders.delete(this, target?.uri?.toString())
+                store.remove(id)
+            } else {
+                store.update(id) { it.state = TransferState.FAILED; it.error = why }
+            }
+            notifyDone(job, false, why)
         } finally {
             try { target?.stream?.close() } catch (_: Exception) {}
         }
+    }
+
+    private class HttpException(val code: Int) : Exception("HTTP $code")
+
+    private fun describe(e: Exception): String = when {
+        e is HttpException && e.code in setOf(403, 429, 458, 509) -> getString(R.string.err_provider_limit_fmt, e.code)
+        e is HttpException && e.code == 404 -> getString(R.string.err_not_found_fmt, e.code)
+        e is HttpException -> getString(R.string.err_http_fmt, e.code)
+        else -> e.message ?: e.javaClass.simpleName
     }
 
     private suspend fun progressLoop() {
@@ -232,6 +286,9 @@ class TransferService : Service() {
         const val EXTRA_ID = "id"
 
         /** Adds a job and makes sure the service is running (or the alarm is set). */
+        private const val MAX_ATTEMPTS = 6
+        private val RETRY_DELAYS_MS = longArrayOf(5_000, 15_000, 30_000, 60_000, 120_000)
+
         fun enqueue(context: Context, job: TransferJob) {
             TransferStore.get(context).put(job)
             if (job.state == TransferState.SCHEDULED && job.startAt > System.currentTimeMillis() + 60_000) {

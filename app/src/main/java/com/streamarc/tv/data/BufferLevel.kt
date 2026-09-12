@@ -27,6 +27,7 @@ enum class BufferLevel(
     val onDisk: Boolean get() = diskMinutes > 0
 
     companion object {
-        fun from(key: String?): BufferLevel = entries.firstOrNull { it.key == key } ?: NORMAL
+        /** Huge is the default: the heap cap already scales it down on small devices. */
+        fun from(key: String?): BufferLevel = entries.firstOrNull { it.key == key } ?: MAX
     }
 }

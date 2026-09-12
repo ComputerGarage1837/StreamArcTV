@@ -61,7 +61,7 @@
         <item>Normal (1 min ahead)</item>
         <item>Large (2 min ahead, pause up to 2 min)</item>
         <item>Very large (5 min ahead, pause up to 5 min)</item>
-        <item>Huge (10 min ahead, pause up to 10 min)</item>
+        <item>Huge (10 min ahead, pause up to 10 min) – default</item>
         <item>20 min (written to device storage)</item>
         <item>30 min (written to device storage)</item>
         <item>1 hour (written to device storage)</item>
@@ -154,6 +154,10 @@
     <string name="transfers_idle">Waiting</string>
     <string name="transfers_count_fmt">%1$d transfers in progress</string>
     <string name="transfer_done_fmt">%1$s finished.</string>
+    <string name="retrying_fmt">Retrying (%1$d of %2$d) in %3$d s – %4$s</string>
+    <string name="err_provider_limit_fmt">Provider refused the connection (HTTP %1$d), usually because too many streams are open on this account. It is retried automatically; pause other playback if it keeps failing.</string>
+    <string name="err_not_found_fmt">The provider has no file for this episode (HTTP %1$d).</string>
+    <string name="err_http_fmt">Provider error (HTTP %1$d).</string>
     <string name="transfer_failed_fmt">%1$s failed: %2$s</string>
     <string name="download_folder">Download folder</string>
     <string name="recording_folder">Recordings folder</string>
@@ -178,6 +182,10 @@
     <string name="category_diagnostics">Category diagnostics</string>
     <string name="diagnostics_running">Checking the provider\'s categories…</string>
     <string name="category_num_fmt">Category %1$s</string>
+    <string name="delete_all">Delete all</string>
+    <string name="delete_all_confirm_fmt">Delete all %1$d %2$s from this device? This cannot be undone.</string>
+    <string name="delete_all_active_fmt">%1$d in progress or scheduled will be cancelled.</string>
+    <string name="deleted_all_fmt">Deleted %1$d items.</string>
     <string name="delete_download_confirm_fmt">Delete %1$s from this device?</string>
     <string name="search_where">Search in</string>
     <string name="layout_question_title">How are you using Stream Arc TV?</string>

@@ -31,6 +31,17 @@
             android:fontFamily="sans-serif-medium"
             android:textColor="@color/text"
             android:textSize="20sp" />
+
+        <Button
+            android:id="@+id/btnDeleteAll"
+            style="@style/PrimaryButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@color/danger"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:text="@string/delete_all"
+            android:visibility="gone" />
     </LinearLayout>
 
     <LinearLayout

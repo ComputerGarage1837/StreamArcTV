@@ -132,7 +132,7 @@ class Prefs(context: Context) {
 
     /** One of [BufferLevel.key]; how much live video the player keeps buffered. */
     var bufferLevel: String
-        get() = sp.getString("buffer_level", BufferLevel.NORMAL.key) ?: BufferLevel.NORMAL.key
+        get() = sp.getString("buffer_level", BufferLevel.MAX.key) ?: BufferLevel.MAX.key
         set(value) { sp.edit().putString("buffer_level", value).apply() }
 
     private fun k(s: Service, key: String) = "${s.name.lowercase()}_$key"

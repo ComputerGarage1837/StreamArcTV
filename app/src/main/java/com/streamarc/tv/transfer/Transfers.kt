@@ -7,6 +7,7 @@ import androidx.documentfile.provider.DocumentFile
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.File
+import java.io.FileOutputStream
 import java.io.OutputStream
 
 enum class TransferType { DOWNLOAD, RECORDING }
@@ -111,6 +112,16 @@ object Folders {
         val f = File(appDir(context, type), fileName)
         if (f.exists()) f.delete()
         return Target(Uri.fromFile(f), f.outputStream())
+    }
+
+    /** Reopens an existing output file for appending (used to resume an interrupted download). */
+    fun append(context: Context, uri: Uri): Target {
+        if (uri.scheme == "file") {
+            val f = File(uri.path ?: throw IllegalStateException("Bad file"))
+            return Target(uri, FileOutputStream(f, true))
+        }
+        val out = context.contentResolver.openOutputStream(uri, "wa") ?: throw IllegalStateException("Can't reopen file")
+        return Target(uri, out)
     }
 
     fun delete(context: Context, fileUri: String?) {
