@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity() {
         prefs = Prefs(this)
         inflateHome()
 
-        if (prefs.layoutMode == null) askLayout()
+        if (prefs.layoutMode == null) askLayout() else maybeAskInstallPermission()
 
         if (savedInstanceState == null && prefs.autoCheckUpdates && !checkedUpdatesThisLaunch) {
             checkedUpdatesThisLaunch = true
@@ -128,6 +128,27 @@ class MainActivity : AppCompatActivity() {
             inflateHome()
             refreshAll()
         }
+        maybeAskInstallPermission()
+    }
+
+    /**
+     * First-time setup: Android must allow this app to install updates. Ask once (or until
+     * granted) and open the exact system screen, so a new box is ready before its first update.
+     */
+    private fun maybeAskInstallPermission() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return
+        if (packageManager.canRequestPackageInstalls()) { prefs.installPermissionAsked = true; return }
+        if (prefs.installPermissionAsked) return
+        AlertDialog.Builder(this)
+            .setTitle(R.string.install_permission_title)
+            .setMessage(R.string.install_permission_message)
+            .setCancelable(false)
+            .setPositiveButton(R.string.open_setting) { _, _ ->
+                prefs.installPermissionAsked = true
+                openInstallPermissionSetting(this)
+            }
+            .setNegativeButton(R.string.later) { _, _ -> prefs.installPermissionAsked = true }
+            .show()
     }
 
     /** Rotation is handled here (no recreate) so nothing resets; the phone layout is swapped. */
@@ -139,6 +160,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Back from the system screen with the permission granted: nothing more to ask.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O && packageManager.canRequestPackageInstalls()) {
+            prefs.installPermissionAsked = true
+        }
         if (prefs.layoutMode != null && prefs.layoutMode != appliedLayout) inflateHome()
         refreshAll()
         if (currentFocus == null) findViewById<View>(R.id.btnLive).requestFocus()
@@ -211,5 +236,18 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.expires_fmt, Format.expiry(account.expDate))
         }
         view.setTextColor(ContextCompat.getColor(this, if (expired) R.color.danger else R.color.accent))
+    }
+
+    companion object {
+        /** Opens Android's "Install unknown apps" page for this app (or general security settings). */
+        fun openInstallPermissionSetting(activity: android.app.Activity) {
+            val i = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                .setData(android.net.Uri.parse("package:${activity.packageName}"))
+            try {
+                activity.startActivity(i)
+            } catch (_: Exception) {
+                try { activity.startActivity(Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS)) } catch (_: Exception) {}
+            }
+        }
     }
 }

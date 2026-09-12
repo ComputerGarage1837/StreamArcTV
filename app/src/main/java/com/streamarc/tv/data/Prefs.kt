@@ -90,6 +90,13 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("auto_check_updates", true)
         set(value) { sp.edit().putBoolean("auto_check_updates", value).apply() }
 
+    // ---- First-run ---------------------------------------------------------
+
+    /** True once the "allow installing updates" prompt has been shown (or the permission is held). */
+    var installPermissionAsked: Boolean
+        get() = sp.getBoolean("install_perm_asked", false)
+        set(value) { sp.edit().putBoolean("install_perm_asked", value).apply() }
+
     // ---- Display -------------------------------------------------------
 
     /** "phone", "tv", or null when the user hasn't been asked yet. */

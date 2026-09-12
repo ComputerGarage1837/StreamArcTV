@@ -49,6 +49,7 @@ data class Stream(
     @SerializedName("stream_icon") val icon: String?,
     @SerializedName("cover") val cover: String?,
     val plot: String?,
+    val genre: String?,
     @SerializedName("category_id") val categoryId: String?,
     @SerializedName("category_ids") val categoryIds: List<String>?,
     @SerializedName("container_extension") val containerExtension: String?,
@@ -57,6 +58,10 @@ data class Stream(
     val rating: String?,
     val added: String?
 ) {
+    /** Genre names from the panel's free-text genre field ("Comedy, Drama" → [Comedy, Drama]). */
+    val genres: List<String>
+        get() = genre.orEmpty().split(',', '/', '|', ';').map { it.trim() }.filter { it.length in 2..30 }.distinct()
+
     /** Every category this item belongs to (some panels send a list as well as the single id). */
     val allCategoryIds: List<String>
         get() = (listOfNotNull(categoryId) + categoryIds.orEmpty()).map { it.trim() }.filter { it.isNotEmpty() }.distinct()

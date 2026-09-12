@@ -149,6 +149,11 @@
     <string name="search_where">Search in</string>
     <string name="layout_question_title">How are you using Stream Arc TV?</string>
     <string name="layout_question_message">Pick the layout that fits this device. You can change it later in Settings.</string>
+    <string name="install_permission_title">Allow updates to install</string>
+    <string name="install_permission_message">Stream Arc TV updates itself from inside the app. Android needs your permission once: on the next screen, turn on \"Allow from this source\" for Stream Arc TV, then press Back.</string>
+    <string name="open_setting">Open setting</string>
+    <string name="later">Later</string>
+    <string name="allow_installing_updates">Allow installing updates (system setting)</string>
     <string name="layout_phone">Phone</string>
     <string name="layout_tv">TV or tablet</string>
     <string name="display_layout">Display layout</string>
