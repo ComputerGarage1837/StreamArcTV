@@ -67,14 +67,6 @@ jobs:
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
           echo "Publish release v$V: $publish"
 
-      - name: Report configured secret names
-        env:
-          SECRETS_JSON: ${{ toJSON(secrets) }}
-        run: |
-          # Values are masked by GitHub; only the names are printed so a mis-named
-          # secret is easy to spot in the log.
-          echo "$SECRETS_JSON" | python3 -c "import json,sys; ks=sorted(k for k in json.load(sys.stdin) if k!='github_token'); print('Repository secrets visible to this run:', ', '.join(ks) or '(none)')"
-
       - name: Check release inputs
         if: steps.rel.outputs.publish == 'true'
         env:
