@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.32 — 2026-09-12
+
+### Changed
+- TV guide on phones held upright: categories stay as a row across the top, the channel column
+  is slimmer with smaller logos, and the top panel is shorter, giving the programme grid more of
+  the screen.
+
 ## v1.0.31 — 2026-09-12
 
 ### Changed

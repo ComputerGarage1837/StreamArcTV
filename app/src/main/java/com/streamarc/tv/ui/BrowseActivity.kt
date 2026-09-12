@@ -255,6 +255,11 @@ class BrowseActivity : AppCompatActivity() {
         val compact = compactCategories()
         categoryAdapter.chips = compact
         placeTabs(compact)
+        // Portrait phones: keep the guide panel short so the grid gets the height.
+        b.txtPanelDesc.visibility = if (compact) View.GONE else View.VISIBLE
+        b.txtPanelUpcoming.visibility = if (compact) View.GONE else View.VISIBLE
+        val pad = ((if (compact) 6 else 10) * resources.displayMetrics.density).toInt()
+        b.panelEpg.setPadding(b.panelEpg.paddingLeft, pad, b.panelEpg.paddingRight, pad)
         b.listCategories.adapter = null
         b.listCategoriesTop.adapter = null
         if (compact) {
