@@ -137,6 +137,11 @@ class SeriesActivity : AppCompatActivity() {
             b.txtError.text = e.message; b.txtError.visibility = View.VISIBLE; return
         }
         val title = "${b.txtTitle.text} · S${ep.season}E${ep.number} ${ep.title}"
+        WatchProgress.describe(
+            WatchProgress.episodeKey(ep.id), WatchProgress.KIND_EPISODE, b.txtTitle.text.toString(),
+            intent.getStringExtra(EXTRA_COVER), ep.containerExtension, ep.id,
+            subtitle = ep.title, seriesId = intent.getStringExtra(EXTRA_ID), season = ep.season, episode = ep.number
+        )
         startActivity(PlayerActivity.intent(this, url, title, false, WatchProgress.episodeKey(ep.id)))
     }
 

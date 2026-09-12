@@ -138,7 +138,9 @@ class TransfersActivity : AppCompatActivity() {
         val uri = j.fileUri?.takeIf { Folders.exists(this, it) } ?: run {
             Toast.makeText(this, R.string.download_missing, Toast.LENGTH_SHORT).show(); return
         }
-        startActivity(PlayerActivity.intent(this, uri, j.title, false, com.streamarc.tv.data.WatchProgress.downloadKey(j.id)))
+        val key = com.streamarc.tv.data.WatchProgress.downloadKey(j.id)
+        com.streamarc.tv.data.WatchProgress.describe(key, com.streamarc.tv.data.WatchProgress.KIND_DOWNLOAD, j.title, null, null, j.id, subtitle = j.subtitle)
+        startActivity(PlayerActivity.intent(this, uri, j.title, false, key))
     }
 
     private fun confirmDelete(j: TransferJob) {

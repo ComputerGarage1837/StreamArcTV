@@ -15,7 +15,24 @@ object WatchProgress {
         var durationMs: Long = 0,
         var watched: Boolean = false,
         var updatedAt: Long = 0,
-    )
+    ) {
+        // What the item is, so Continue Watching / Next Episodes can show and play it without a catalogue lookup.
+        var kind: String? = null       // "movie", "ep" or "dl"
+        var title: String? = null      // movie title, series title, or download title
+        var subtitle: String? = null   // episode title
+        var image: String? = null
+        var ext: String? = null
+        var itemId: String? = null     // stream id, episode id or download job id
+        var seriesId: String? = null
+        var season: Int = 0
+        var episode: Int = 0
+
+        val remainingMs: Long get() = (durationMs - positionMs).coerceAtLeast(0L)
+    }
+
+    const val KIND_MOVIE = "movie"
+    const val KIND_EPISODE = "ep"
+    const val KIND_DOWNLOAD = "dl"
 
     private const val MAX_ENTRIES = 2000
     /** Within this of the end (or past 93%) counts as watched. */
@@ -52,6 +69,41 @@ object WatchProgress {
     }
 
     fun isWatched(key: String): Boolean = get(key)?.watched == true
+
+    /** Records what an item is (called when it is opened) without touching its position. */
+    fun describe(
+        key: String, kind: String, title: String, image: String?, ext: String?, itemId: String,
+        subtitle: String? = null, seriesId: String? = null, season: Int = 0, episode: Int = 0,
+    ) = synchronized(this) {
+        val m = map()
+        val e = m[key] ?: Entry()
+        e.kind = kind; e.title = title; e.subtitle = subtitle; e.image = image; e.ext = ext; e.itemId = itemId
+        e.seriesId = seriesId; e.season = season; e.episode = episode
+        if (e.updatedAt == 0L) e.updatedAt = System.currentTimeMillis()
+        m[key] = e
+        persist(m)
+    }
+
+    fun remove(key: String) = synchronized(this) { val m = map(); if (m.remove(key) != null) persist(m) }
+
+    /** Partly watched items, most recent first. */
+    fun continueWatching(limit: Int = 20): List<Pair<String, Entry>> = synchronized(this) {
+        map().entries
+            .filter { it.value.kind != null && !it.value.watched && it.value.positionMs >= RESUME_MIN_MS && it.value.durationMs > 0 }
+            .sortedByDescending { it.value.updatedAt }
+            .take(limit)
+            .map { it.key to it.value }
+    }
+
+    /** Series that have been started: the most recently touched episode entry per series, newest first. */
+    fun startedSeries(limit: Int = 12): List<Entry> = synchronized(this) {
+        map().values
+            .filter { it.kind == KIND_EPISODE && it.seriesId != null && (it.watched || it.positionMs >= RESUME_MIN_MS) }
+            .groupBy { it.seriesId!! }
+            .map { (_, list) -> list.maxByOrNull { it.updatedAt }!! }
+            .sortedByDescending { it.updatedAt }
+            .take(limit)
+    }
 
     /** Records the current position; near the end it flips to watched and clears the position. */
     fun save(key: String, positionMs: Long, durationMs: Long) = synchronized(this) {
