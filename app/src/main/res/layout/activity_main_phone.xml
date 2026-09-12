@@ -119,130 +119,181 @@
                 <LinearLayout
                     android:id="@+id/cards"
                     android:layout_width="match_parent"
-                    android:layout_height="@dimen/home_card_height"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"
                     android:layout_marginBottom="12dp"
                     android:clipChildren="false"
-                    android:orientation="horizontal">
+                    android:orientation="vertical">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/btnLive"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="@drawable/fg_focus_ring">
+
+                    <ImageView
+                        android:id="@+id/imgLiveCard"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:contentDescription="@null"
+                        android:scaleType="fitXY"
+                        android:src="@drawable/bg_card_live_img"
+                        app:layout_constraintDimensionRatio="295:100"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <ImageView
+                        android:id="@+id/imgLiveIcon"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:layout_marginStart="18dp"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/img_live_tv"
+                        app:layout_constraintBottom_toBottomOf="@id/imgLiveCard"
+                        app:layout_constraintDimensionRatio="1:1"
+                        app:layout_constraintHeight_percent="0.52"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/imgLiveCard" />
+
+                    <ImageView
+                        android:id="@+id/imgLiveChevron"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:layout_marginEnd="16dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/img_btn_next_live"
+                        app:layout_constraintBottom_toBottomOf="@id/imgLiveCard"
+                        app:layout_constraintDimensionRatio="1:1"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintHeight_percent="0.42"
+                        app:layout_constraintTop_toTopOf="@id/imgLiveCard" />
 
                     <LinearLayout
-                        android:id="@+id/btnLive"
                         android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_marginEnd="6dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_card_live"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:gravity="center_horizontal"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="8dp"
                         android:orientation="vertical"
-                        android:paddingStart="8dp"
-                        android:paddingTop="12dp"
-                        android:paddingEnd="8dp"
-                        android:paddingBottom="10dp">
-
-                        <ImageView
-                            android:layout_width="56dp"
-                            android:layout_height="56dp"
-                            android:contentDescription="@null"
-                            android:scaleType="fitCenter"
-                            android:src="@drawable/img_live_tv" />
+                        app:layout_constraintBottom_toBottomOf="@id/imgLiveCard"
+                        app:layout_constraintEnd_toStartOf="@id/imgLiveChevron"
+                        app:layout_constraintStart_toEndOf="@id/imgLiveIcon"
+                        app:layout_constraintTop_toTopOf="@id/imgLiveCard">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
                             android:fontFamily="sans-serif-medium"
                             android:text="@string/live_tv"
                             android:textColor="@color/text"
-                            android:textSize="17sp" />
+                            android:textSize="20sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:gravity="center"
                             android:text="@string/live_tv_subtitle"
                             android:textColor="#BFDBFE"
-                            android:textSize="11sp" />
+                            android:textSize="13sp" />
 
                         <TextView
                             android:id="@+id/txtLiveStatus"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:gravity="center"
+                            android:layout_marginTop="4dp"
                             android:text="@string/not_signed_in"
                             android:textColor="@color/text_muted"
-                            android:textSize="10sp" />
-
-                        <Space android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
-
-                        <ImageView
-                            android:layout_width="34dp"
-                            android:layout_height="34dp"
-                            android:contentDescription="@null"
-                            android:src="@drawable/img_btn_next_live" />
+                            android:textSize="11sp" />
                     </LinearLayout>
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/btnVod"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="@drawable/fg_focus_ring">
+
+                    <ImageView
+                        android:id="@+id/imgVodCard"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:contentDescription="@null"
+                        android:scaleType="fitXY"
+                        android:src="@drawable/bg_card_vod_img"
+                        app:layout_constraintDimensionRatio="295:100"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <ImageView
+                        android:id="@+id/imgVodIcon"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:layout_marginStart="18dp"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/img_vod"
+                        app:layout_constraintBottom_toBottomOf="@id/imgVodCard"
+                        app:layout_constraintDimensionRatio="1:1"
+                        app:layout_constraintHeight_percent="0.52"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/imgVodCard" />
+
+                    <ImageView
+                        android:id="@+id/imgVodChevron"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:layout_marginEnd="16dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/img_btn_next_vod"
+                        app:layout_constraintBottom_toBottomOf="@id/imgVodCard"
+                        app:layout_constraintDimensionRatio="1:1"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintHeight_percent="0.42"
+                        app:layout_constraintTop_toTopOf="@id/imgVodCard" />
 
                     <LinearLayout
-                        android:id="@+id/btnVod"
                         android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_marginStart="6dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_card_vod"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:gravity="center_horizontal"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="8dp"
                         android:orientation="vertical"
-                        android:paddingStart="8dp"
-                        android:paddingTop="12dp"
-                        android:paddingEnd="8dp"
-                        android:paddingBottom="10dp">
-
-                        <ImageView
-                            android:layout_width="56dp"
-                            android:layout_height="56dp"
-                            android:contentDescription="@null"
-                            android:scaleType="fitCenter"
-                            android:src="@drawable/img_vod" />
+                        app:layout_constraintBottom_toBottomOf="@id/imgVodCard"
+                        app:layout_constraintEnd_toStartOf="@id/imgVodChevron"
+                        app:layout_constraintStart_toEndOf="@id/imgVodIcon"
+                        app:layout_constraintTop_toTopOf="@id/imgVodCard">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
                             android:fontFamily="sans-serif-medium"
-                            android:gravity="center"
                             android:text="@string/video_on_demand"
                             android:textColor="@color/text"
-                            android:textSize="17sp" />
+                            android:textSize="20sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:gravity="center"
                             android:text="@string/vod_subtitle"
                             android:textColor="#DDD6FE"
-                            android:textSize="11sp" />
+                            android:textSize="13sp" />
 
                         <TextView
                             android:id="@+id/txtVodStatus"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:gravity="center"
+                            android:layout_marginTop="4dp"
                             android:text="@string/not_signed_in"
                             android:textColor="@color/text_muted"
-                            android:textSize="10sp" />
-
-                        <Space android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
-
-                        <ImageView
-                            android:layout_width="34dp"
-                            android:layout_height="34dp"
-                            android:contentDescription="@null"
-                            android:src="@drawable/img_btn_next_vod" />
+                            android:textSize="11sp" />
                     </LinearLayout>
+                </androidx.constraintlayout.widget.ConstraintLayout>
                 </LinearLayout>
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>

@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.12 — 2026-09-12
+
+### Changed
+- Phone home: Live TV and Video on Demand are now two full-width cards stacked at the wide
+  proportion of the card artwork, with icon, title, expiry and chevron inside, so they no longer
+  cover the scenery.
+
 ## v1.0.11 — 2026-09-12
 
 ### Changed
