@@ -3,6 +3,22 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.38 — 2026-09-12
+
+### Added
+- New Video on Demand home in the style of a streaming service: a featured banner that rotates
+  through what's new (Play / Open and My List), then rows for Continue watching (with time left),
+  Next episodes for series you have started, My List, New movies, New series, and the most
+  common genres for movies and series. Hold OK on any card for play, favorites, download and
+  watched options. "See all" on a row opens that group in the grid browser.
+- Home, Search, Categories, Downloads and Profile sit in a side rail on TVs and landscape, and
+  as a row of tabs on an upright phone. Categories and Search open the existing grid browser
+  with every provider category, genre group and the search box, so nothing is lost.
+
+### Fixed
+- Opening Movies or Series with the catalogue already on disk lost the genre groups from the
+  category list until the next refresh.
+
 ## v1.0.37 — 2026-09-12
 
 ### Added

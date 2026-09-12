@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="vod_hero_height">340dp</dimen>
+    <dimen name="vod_hero_poster_w">210dp</dimen>
+    <dimen name="vod_hero_text_end">260dp</dimen>
+    <dimen name="vod_hero_title">34sp</dimen>
+    <dimen name="vod_card_w">150dp</dimen>
+    <dimen name="vod_card_h">215dp</dimen>
+</resources>

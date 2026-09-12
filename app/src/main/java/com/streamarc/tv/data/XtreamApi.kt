@@ -187,6 +187,15 @@ object XtreamApi {
             EpgParser.parse(body)
         }
 
+    /** Direct movie address from an id and container extension (for items remembered outside the catalogue). */
+    fun movieUrl(service: Service, account: Account, streamId: String, ext: String?): String =
+        serverUrl(service).newBuilder()
+            .addPathSegment("movie")
+            .addPathSegment(account.username)
+            .addPathSegment(account.password)
+            .addPathSegment("$streamId.${ext?.takeIf { it.isNotBlank() } ?: "mp4"}")
+            .build().toString()
+
     fun streamUrl(service: Service, account: Account, stream: Stream, liveFormat: String): String {
         val base = serverUrl(service)
         val id = stream.streamId ?: throw ApiException("Stream has no id")

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:orientation="vertical">
+
+    <include
+        android:id="@+id/header"
+        layout="@layout/view_home_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="14dp" />
+
+    <LinearLayout
+        android:id="@+id/body"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/nav"
+            android:layout_width="96dp"
+            android:layout_height="match_parent"
+            android:layout_marginTop="6dp"
+            android:orientation="vertical"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp">
+
+            <LinearLayout android:id="@+id/navHome" style="@style/VodNavItem">
+                <ImageView android:layout_width="@dimen/home_nav_icon" android:layout_height="@dimen/home_nav_icon" android:contentDescription="@null" android:src="@drawable/img_nav_home" />
+                <TextView style="@style/NavLabel" android:text="@string/nav_home" android:textColor="#A78BFA" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/navSearch" style="@style/VodNavItem">
+                <ImageView android:layout_width="@dimen/home_nav_icon" android:layout_height="@dimen/home_nav_icon" android:contentDescription="@null" android:src="@drawable/img_nav_search" />
+                <TextView style="@style/NavLabel" android:text="@string/nav_search" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/navCategories" style="@style/VodNavItem">
+                <ImageView android:layout_width="@dimen/home_nav_icon" android:layout_height="@dimen/home_nav_icon" android:contentDescription="@null" android:src="@drawable/ic_vod" />
+                <TextView style="@style/NavLabel" android:text="@string/categories" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/navDownloads" style="@style/VodNavItem">
+                <ImageView android:layout_width="@dimen/home_nav_icon" android:layout_height="@dimen/home_nav_icon" android:contentDescription="@null" android:src="@drawable/img_nav_downloads" />
+                <TextView style="@style/NavLabel" android:text="@string/nav_downloads" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/navProfile" style="@style/VodNavItem">
+                <ImageView android:layout_width="@dimen/home_nav_icon" android:layout_height="@dimen/home_nav_icon" android:contentDescription="@null" android:src="@drawable/img_nav_profile" />
+                <TextView style="@style/NavLabel" android:text="@string/nav_profile" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/listRows"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingBottom="24dp" />
+
+            <ProgressBar
+                android:id="@+id/progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center" />
+
+            <TextView
+                android:id="@+id/txtError"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:padding="24dp"
+                android:textColor="@color/danger"
+                android:textSize="15sp"
+                android:visibility="gone" />
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>

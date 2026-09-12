@@ -176,7 +176,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun open(service: Service) {
         val intent = if (prefs.isSignedIn(service)) {
-            BrowseActivity.intent(this, service)
+            if (service == Service.VOD) VodHomeActivity.intent(this, service) else BrowseActivity.intent(this, service)
         } else {
             LoginActivity.intent(this, service)
         }

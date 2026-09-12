@@ -87,7 +87,9 @@ class BrowseActivity : AppCompatActivity() {
             return
         }
         account = acct
-        kind = service.kind
+        kind = intent.getStringExtra(EXTRA_KIND)?.let { runCatching { ContentKind.valueOf(it) }.getOrNull() } ?: service.kind
+        pendingCategory = intent.getStringExtra(EXTRA_CATEGORY)
+        if (intent.getBooleanExtra(EXTRA_SEARCH, false)) b.inputSearch.post { b.inputSearch.requestFocus() }
 
         b.txtTitle.text = if (isLive) getString(R.string.tv_guide) else service.title
         b.btnBack.setOnClickListener { finish() }
@@ -339,27 +341,30 @@ class BrowseActivity : AppCompatActivity() {
                 val fetched = XtreamApi.categories(service, account, kind)
                 val cats = if (isLive) fetched.filter { it.id !in prefs.hiddenLiveCategories } else fetched
                 providerCategories = cats
-                if (!isLive) {
-                    // Show the provider's list right away; genre and extra groups are added
-                    // as soon as the catalogue is in (see augmentCategories).
-                    val cached = CatalogCache.peek(service, kind)
-                    if (cached != null) { categoryAdapter.submit(buildVodCategories(cats, cached)); augmented = true }
-                }
-                val all = if (isLive) {
-                    listOf(
+                // With the catalogue already on disk the genre / extra groups are known now;
+                // otherwise they are added as soon as it arrives (see augmentCategories).
+                val cached = if (isLive) null else CatalogCache.peek(service, kind)
+                val all = when {
+                    isLive -> listOf(
                         Category(FAV_ID, "★ " + getString(R.string.favorites)),
                         Category(null, getString(R.string.all_categories))
                     ) + cats
-                } else {
-                    listOf(
+                    cached != null -> { augmented = true; buildVodCategories(cats, cached) }
+                    else -> listOf(
                         Category(FAV_ID, "★ " + getString(R.string.favorites)),
                         Category(RECENT_ID, getString(R.string.recently_added)),
                         Category(null, getString(R.string.all_categories))
                     ) + cats
                 }
                 categoryAdapter.submit(all)
+                val wanted = pendingCategory
+                pendingCategory = null
                 if (isLive) {
                     selectCategory(defaultLiveCategory(all))
+                } else if (wanted != null) {
+                    // Opened from the VOD home on a particular group (a genre row's "See all", say).
+                    selectCategory(all.firstOrNull { it.id == wanted }
+                        ?: if (wanted.startsWith(GENRE_PREFIX)) Category(wanted, wanted.removePrefix(GENRE_PREFIX)) else all[1])
                 } else {
                     // Movies and series open on Recently added.
                     selectCategory(all[1])
@@ -388,6 +393,7 @@ class BrowseActivity : AppCompatActivity() {
 
     private var providerCategories: List<Category> = emptyList()
     private var augmented = false
+    private var pendingCategory: String? = null
 
     /** Favorites / Recently added / All, then genre groups from the catalogue, then the provider's list. */
     private fun buildVodCategories(provider: List<Category>, catalogue: List<Stream>): List<Category> {
@@ -490,6 +496,7 @@ class BrowseActivity : AppCompatActivity() {
             showError(e.message ?: getString(R.string.load_failed)); return
         }
         val key = if (kind == ContentKind.MOVIE) stream.streamId?.let { WatchProgress.movieKey(service, it) } else null
+        if (key != null) WatchProgress.describe(key, WatchProgress.KIND_MOVIE, stream.name ?: "", stream.image, stream.containerExtension, stream.streamId!!)
         startActivity(PlayerActivity.intent(this, url, stream.name ?: "", isLive, key))
     }
 
@@ -764,12 +771,19 @@ class BrowseActivity : AppCompatActivity() {
 
     companion object {
         private const val EXTRA_SERVICE = "service"
+        private const val EXTRA_KIND = "kind"
+        private const val EXTRA_CATEGORY = "category"
+        private const val EXTRA_SEARCH = "search"
         private const val FAV_ID = Prefs.CATEGORY_FAVORITES
-        private const val RECENT_ID = "__recent__"
-        private const val GENRE_PREFIX = "__genre__:"
+        const val RECENT_ID = "__recent__"
+        const val GENRE_PREFIX = "__genre__:"
         /** Above this, the whole-guide file is not worth downloading; channels are fetched individually. */
         private const val FULL_GUIDE_LIMIT = 60L * 1024 * 1024
         fun intent(ctx: Context, service: Service): Intent =
             Intent(ctx, BrowseActivity::class.java).putExtra(EXTRA_SERVICE, service.name)
+
+        /** Opens movies or series on a given group (a category id, [RECENT_ID] or a [GENRE_PREFIX] genre), or on the search box. */
+        fun intent(ctx: Context, service: Service, kind: ContentKind, category: String? = null, search: Boolean = false): Intent =
+            intent(ctx, service).putExtra(EXTRA_KIND, kind.name).putExtra(EXTRA_CATEGORY, category).putExtra(EXTRA_SEARCH, search)
     }
 }

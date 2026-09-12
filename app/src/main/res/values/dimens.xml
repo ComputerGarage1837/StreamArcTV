@@ -18,4 +18,10 @@
     <!-- Live preview box in the guide panel -->
     <dimen name="preview_w">144dp</dimen>
     <dimen name="preview_h">81dp</dimen>
+    <dimen name="vod_hero_height">300dp</dimen>
+    <dimen name="vod_hero_poster_w">0dp</dimen>
+    <dimen name="vod_hero_text_end">22dp</dimen>
+    <dimen name="vod_hero_title">26sp</dimen>
+    <dimen name="vod_card_w">126dp</dimen>
+    <dimen name="vod_card_h">180dp</dimen>
 </resources>
