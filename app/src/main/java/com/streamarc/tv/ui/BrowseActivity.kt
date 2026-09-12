@@ -97,6 +97,11 @@ class BrowseActivity : AppCompatActivity() {
             b.txtPanelUpcoming.text = ""
             b.listStreams.visibility = View.GONE
             b.epgGrid.visibility = View.VISIBLE
+            b.epgGrid.guideLookup = { ch -> EpgCache.guideFor(service, ch.epgChannelId) }
+            lifecycleScope.launch {
+                val ok = EpgCache.loadGuide(service, account)
+                if (ok) b.epgGrid.guideLoaded()
+            }
             b.epgGrid.listener = object : EpgGridView.Listener {
                 override fun onFocusChanged(channel: Stream, programme: EpgProgramme?) {
                     showChannelDetails(channel, channel.streamId?.let { EpgCache.peek(service, it) }, programme)
@@ -106,7 +111,11 @@ class BrowseActivity : AppCompatActivity() {
                 override fun onNeedEpg(channel: Stream) {
                     val id = channel.streamId ?: return
                     lifecycleScope.launch {
-                        val list = EpgCache.get(service, account, id)
+                        // Prefer the whole-guide download; fall back to the per-channel call
+                        // for channels the guide doesn't cover.
+                        EpgCache.loadGuide(service, account)
+                        val fromGuide = EpgCache.guideFor(service, channel.epgChannelId)
+                        val list = fromGuide ?: EpgCache.get(service, account, id)
                         b.epgGrid.setEpg(id, list)
                     }
                 }

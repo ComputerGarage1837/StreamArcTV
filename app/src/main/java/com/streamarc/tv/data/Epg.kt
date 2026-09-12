@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -81,6 +82,68 @@ object EpgParser {
     }
 }
 
+/** Streaming parser for XMLTV (`xmltv.php`). */
+object XmltvParser {
+    private val fmt = SimpleDateFormat("yyyyMMddHHmmss Z", Locale.US)
+    private val fmtNoZone = SimpleDateFormat("yyyyMMddHHmmss", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
+
+    fun parse(input: java.io.InputStream, from: Long, to: Long): Map<String, List<EpgProgramme>> {
+        val out = HashMap<String, ArrayList<EpgProgramme>>()
+        val parser = android.util.Xml.newPullParser()
+        parser.setFeature(org.xmlpull.v1.XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
+        parser.setInput(input, null)
+        var event = parser.eventType
+        var channel: String? = null
+        var start = 0L
+        var end = 0L
+        var title = ""
+        var desc = ""
+        var inProgramme = false
+        var text: String? = null
+        while (event != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+            when (event) {
+                org.xmlpull.v1.XmlPullParser.START_TAG -> when (parser.name) {
+                    "programme" -> {
+                        inProgramme = true
+                        channel = parser.getAttributeValue(null, "channel")
+                        start = time(parser.getAttributeValue(null, "start"))
+                        end = time(parser.getAttributeValue(null, "stop"))
+                        title = ""; desc = ""
+                    }
+                    "title", "desc" -> if (inProgramme) text = ""
+                }
+                org.xmlpull.v1.XmlPullParser.TEXT -> if (text != null) text += parser.text
+                org.xmlpull.v1.XmlPullParser.END_TAG -> when (parser.name) {
+                    "title" -> if (inProgramme && text != null) { if (title.isBlank()) title = text.trim(); text = null }
+                    "desc" -> if (inProgramme && text != null) { if (desc.isBlank()) desc = text.trim(); text = null }
+                    "programme" -> {
+                        inProgramme = false
+                        val ch = channel
+                        if (ch != null && end > from && start < to && end > start) {
+                            out.getOrPut(ch) { ArrayList() }.add(EpgProgramme(title.ifBlank { "Untitled programme" }, desc, start, end))
+                        }
+                    }
+                }
+            }
+            event = parser.next()
+        }
+        for (list in out.values) list.sortBy { it.start }
+        return out
+    }
+
+    private fun time(value: String?): Long {
+        if (value.isNullOrBlank()) return 0L
+        val v = value.trim()
+        return try {
+            synchronized(fmt) {
+                if (v.length > 14) fmt.parse(v)?.time?.div(1000) ?: 0L else fmtNoZone.parse(v)?.time?.div(1000) ?: 0L
+            }
+        } catch (_: Exception) {
+            0L
+        }
+    }
+}
+
 /**
  * Small in-memory cache of per-channel EPG so guide rows can be filled lazily
  * without hammering the panel. Entries expire after a few minutes.
@@ -89,6 +152,52 @@ object EpgCache {
     private const val TTL_MS = 5 * 60 * 1000L
     private val cache = HashMap<String, Pair<Long, List<EpgProgramme>>>()
     private val gate = Semaphore(4)
+
+    private const val GUIDE_TTL_MS = 30 * 60 * 1000L
+    private val guides = HashMap<Service, Pair<Long, Map<String, List<EpgProgramme>>>>()
+    private val guideFailedAt = HashMap<Service, Long>()
+    private val guideMutex = kotlinx.coroutines.sync.Mutex()
+
+    /** True once the whole guide for the service is in memory and fresh. */
+    fun guideLoaded(service: Service): Boolean {
+        val g = synchronized(guides) { guides[service] } ?: return false
+        return System.currentTimeMillis() - g.first < GUIDE_TTL_MS
+    }
+
+    /** Programmes for a channel from the full guide, matched by its XMLTV id; null if unknown. */
+    fun guideFor(service: Service, epgChannelId: String?): List<EpgProgramme>? {
+        val id = epgChannelId?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        val g = synchronized(guides) { guides[service] }?.second ?: return null
+        return g[id] ?: g[id.lowercase()] ?: g.entries.firstOrNull { it.key.equals(id, ignoreCase = true) }?.value
+    }
+
+    /**
+     * Downloads the whole guide once (per service, refreshed every 30 minutes).
+     * Returns true when a guide is available afterwards. Never throws.
+     */
+    suspend fun loadGuide(service: Service, account: Account): Boolean {
+        if (guideLoaded(service)) return true
+        return guideMutex.withLock {
+            if (guideLoaded(service)) return@withLock true
+            // Don't retry a failed download more than once every few minutes.
+            val failed = synchronized(guides) { guideFailedAt[service] }
+            if (failed != null && System.currentTimeMillis() - failed < 5 * 60 * 1000L) return@withLock false
+            val now = System.currentTimeMillis() / 1000
+            val from = (now / 1800) * 1800 - 2 * 3600
+            val to = from + 26 * 3600
+            try {
+                val map = XtreamApi.fullGuide(service, account, from, to)
+                synchronized(guides) {
+                    guides[service] = System.currentTimeMillis() to map
+                    guideFailedAt.remove(service)
+                }
+                map.isNotEmpty()
+            } catch (_: Exception) {
+                synchronized(guides) { guideFailedAt[service] = System.currentTimeMillis() }
+                false
+            }
+        }
+    }
 
     private fun key(service: Service, streamId: String) = "${service.name}/$streamId"
 

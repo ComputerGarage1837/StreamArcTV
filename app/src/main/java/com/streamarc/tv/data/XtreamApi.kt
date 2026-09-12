@@ -117,6 +117,35 @@ object XtreamApi {
             .build().toString()
     }
 
+    /**
+     * The whole programme guide in one request (`xmltv.php`), parsed as a stream so
+     * large files stay cheap. Returns programmes keyed by XMLTV channel id, limited
+     * to [fromEpoch, toEpoch) so a week-long file doesn't fill memory.
+     */
+    suspend fun fullGuide(service: Service, account: Account, fromEpoch: Long, toEpoch: Long): Map<String, List<EpgProgramme>> =
+        withContext(Dispatchers.IO) {
+            val base = serverUrl(service)
+            val url = base.newBuilder()
+                .addPathSegment("xmltv.php")
+                .addQueryParameter("username", account.username)
+                .addQueryParameter("password", account.password)
+                .build()
+            val req = Request.Builder().url(url).header("User-Agent", USER_AGENT).build()
+            val slowClient = client.newBuilder()
+                .readTimeout(180, TimeUnit.SECONDS)
+                .callTimeout(300, TimeUnit.SECONDS)
+                .build()
+            try {
+                slowClient.newCall(req).execute().use { resp ->
+                    if (!resp.isSuccessful) throw ApiException("Guide download failed (HTTP ${resp.code})")
+                    val body = resp.body ?: throw ApiException("Empty guide")
+                    body.byteStream().use { input -> XmltvParser.parse(input, fromEpoch, toEpoch) }
+                }
+            } catch (e: IOException) {
+                throw ApiException("Can't download guide: ${e.message ?: "network error"}")
+            }
+        }
+
     /** Now/next programmes for one live channel (`get_short_epg`). */
     suspend fun shortEpg(service: Service, account: Account, streamId: String, limit: Int = 30): List<EpgProgramme> =
         withContext(Dispatchers.IO) {
