@@ -89,16 +89,32 @@ object TransferDialogs {
         Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
     }
 
-    /** Start-time (5-minute steps) and duration pickers, then the folder step, then the schedule. */
+    /** Start and end clock times (to the minute), the folder line, then the schedule. */
     fun record(activity: AppCompatActivity, picker: FolderPicker, channelName: String, url: String) {
         val vb = DialogRecordBinding.inflate(LayoutInflater.from(activity))
-        val startLabels = Array(288) { i -> if (i == 0) activity.getString(R.string.record_now) else offsetLabel(i * 5) }
-        val durLabels = Array(72) { i -> offsetLabel((i + 1) * 5) }
-        vb.pickStart.minValue = 0; vb.pickStart.maxValue = startLabels.size - 1; vb.pickStart.displayedValues = startLabels
-        vb.pickStart.wrapSelectorWheel = false
-        vb.pickDuration.minValue = 0; vb.pickDuration.maxValue = durLabels.size - 1; vb.pickDuration.displayedValues = durLabels
-        vb.pickDuration.value = 11   // 60 minutes
-        vb.pickDuration.wrapSelectorWheel = false
+        val portraitPhone = activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT &&
+            activity.resources.configuration.smallestScreenWidthDp < 600
+        if (portraitPhone) vb.pickers.orientation = android.widget.LinearLayout.VERTICAL
+
+        val now = java.util.Calendar.getInstance()
+        val startCal = (now.clone() as java.util.Calendar).apply { add(java.util.Calendar.MINUTE, 1); set(java.util.Calendar.SECOND, 0) }
+        val endCal = (startCal.clone() as java.util.Calendar).apply { add(java.util.Calendar.HOUR_OF_DAY, 1) }
+        setTime(vb.pickStart, startCal)
+        setTime(vb.pickEnd, endCal)
+
+        fun times(): Pair<Long, Long> = resolve(getHour(vb.pickStart), getMinute(vb.pickStart), getHour(vb.pickEnd), getMinute(vb.pickEnd))
+        fun summarize() {
+            val (st, en) = times()
+            val day = SimpleDateFormat("EEE MMM d", Locale.getDefault())
+            val t = SimpleDateFormat("h:mm a", Locale.getDefault())
+            val sameDay = day.format(Date(st)) == day.format(Date(en))
+            vb.txtSummary.text = if (sameDay) "${day.format(Date(st))}  ${t.format(Date(st))} – ${t.format(Date(en))}"
+            else "${day.format(Date(st))} ${t.format(Date(st))} – ${day.format(Date(en))} ${t.format(Date(en))}"
+        }
+        vb.pickStart.setOnTimeChangedListener { _, _, _ -> summarize() }
+        vb.pickEnd.setOnTimeChangedListener { _, _, _ -> summarize() }
+        summarize()
+
         val prefs = Prefs(activity)
         vb.txtFolder.text = activity.getString(
             R.string.folder_current_fmt,
@@ -108,12 +124,11 @@ object TransferDialogs {
             .setTitle(activity.getString(R.string.record_fmt, channelName))
             .setView(vb.root)
             .setPositiveButton(R.string.record) { _, _ ->
-                val startIn = vb.pickStart.value * 5 * 60_000L
-                val duration = (vb.pickDuration.value + 1) * 5 * 60_000L
+                val (st, en) = times()
                 val current = prefs.recordingFolder?.takeIf { Folders.usable(activity, it) }
                 if (current == null && prefs.recordingFolder == null) {
-                    pickFolder(activity, picker, TransferType.RECORDING) { f -> schedule(activity, channelName, url, startIn, duration, f) }
-                } else schedule(activity, channelName, url, startIn, duration, current)
+                    pickFolder(activity, picker, TransferType.RECORDING) { f -> schedule(activity, channelName, url, st, en, f) }
+                } else schedule(activity, channelName, url, st, en, current)
             }
             .setNeutralButton(R.string.choose_folder, null)
             .setNegativeButton(android.R.string.cancel, null)
@@ -126,25 +141,60 @@ object TransferDialogs {
         }
     }
 
-    private fun schedule(activity: AppCompatActivity, channel: String, url: String, startIn: Long, duration: Long, folder: String?) {
+    /**
+     * Turns start/end clock times into epoch millis: a start earlier than now means
+     * tomorrow (unless it is within the last minute, which means "now"), and an end
+     * at or before the start rolls over to the next day.
+     */
+    private fun resolve(sh: Int, sm: Int, eh: Int, em: Int): Pair<Long, Long> {
+        val now = System.currentTimeMillis()
+        val start = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, sh); set(java.util.Calendar.MINUTE, sm); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+        }
+        var st = start.timeInMillis
+        if (st < now - 90_000) st += 24 * 3600 * 1000L
+        if (st < now) st = now
+        val end = java.util.Calendar.getInstance().apply {
+            timeInMillis = st
+            set(java.util.Calendar.HOUR_OF_DAY, eh); set(java.util.Calendar.MINUTE, em); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+        }
+        var en = end.timeInMillis
+        if (en <= st) en += 24 * 3600 * 1000L
+        return st to en
+    }
+
+    @Suppress("DEPRECATION")
+    private fun setTime(p: android.widget.TimePicker, cal: java.util.Calendar) {
+        if (Build.VERSION.SDK_INT >= 23) { p.hour = cal.get(java.util.Calendar.HOUR_OF_DAY); p.minute = cal.get(java.util.Calendar.MINUTE) }
+        else { p.currentHour = cal.get(java.util.Calendar.HOUR_OF_DAY); p.currentMinute = cal.get(java.util.Calendar.MINUTE) }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun getHour(p: android.widget.TimePicker): Int = if (Build.VERSION.SDK_INT >= 23) p.hour else p.currentHour
+
+    @Suppress("DEPRECATION")
+    private fun getMinute(p: android.widget.TimePicker): Int = if (Build.VERSION.SDK_INT >= 23) p.minute else p.currentMinute
+
+    private fun schedule(activity: AppCompatActivity, channel: String, url: String, startAt: Long, endAt: Long, folder: String?) {
         ensureNotifications(activity)
-        val startAt = System.currentTimeMillis() + startIn
         val stamp = SimpleDateFormat("yyyy-MM-dd HH.mm", Locale.getDefault()).format(Date(startAt))
+        val t = SimpleDateFormat("h:mm a", Locale.getDefault())
         val job = TransferJob(
             id = UUID.randomUUID().toString(),
             type = TransferType.RECORDING,
             title = channel,
-            subtitle = "$stamp · ${offsetLabel((duration / 60_000).toInt())}",
+            subtitle = "${SimpleDateFormat("EEE MMM d", Locale.getDefault()).format(Date(startAt))} · ${t.format(Date(startAt))} – ${t.format(Date(endAt))}",
             url = url,
             fileName = Folders.safeName("$channel $stamp") + ".ts",
             folder = folder,
             startAt = startAt,
-            endAt = startAt + duration,
+            endAt = endAt,
             createdAt = System.currentTimeMillis()
         )
         TransferService.enqueue(activity, job)
-        val msg = if (startIn == 0L) activity.getString(R.string.recording_started_fmt, channel)
-        else activity.getString(R.string.recording_scheduled_fmt, channel, SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(startAt)))
+        val startsNow = startAt <= System.currentTimeMillis() + 60_000
+        val msg = if (startsNow) activity.getString(R.string.recording_started_fmt, channel)
+        else activity.getString(R.string.recording_scheduled_fmt, channel, t.format(Date(startAt)))
         Toast.makeText(activity, msg, Toast.LENGTH_LONG).show()
     }
 

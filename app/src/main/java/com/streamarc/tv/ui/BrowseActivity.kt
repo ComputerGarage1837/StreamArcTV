@@ -87,7 +87,6 @@ class BrowseActivity : AppCompatActivity() {
         applyCategoryLayout()
 
         if (service.kind != ContentKind.LIVE) {
-            b.tabs.visibility = View.VISIBLE
             b.btnTabMovies.setOnClickListener { switchKind(ContentKind.MOVIE) }
             b.btnTabSeries.setOnClickListener { switchKind(ContentKind.SERIES) }
             b.btnTabDownloads.setOnClickListener { startActivity(TransfersActivity.intent(this, com.streamarc.tv.transfer.TransferType.DOWNLOAD)) }
@@ -154,6 +153,7 @@ class BrowseActivity : AppCompatActivity() {
     private fun applyCategoryLayout() {
         val compact = compactCategories()
         categoryAdapter.chips = compact
+        placeTabs(compact)
         b.listCategories.adapter = null
         b.listCategoriesTop.adapter = null
         if (compact) {
@@ -167,6 +167,28 @@ class BrowseActivity : AppCompatActivity() {
             b.listCategories.layoutManager = LinearLayoutManager(this)
             b.listCategories.adapter = categoryAdapter
         }
+    }
+
+    /** Tabs live in the top bar on wide screens and on their own full-width row on portrait phones. */
+    private fun placeTabs(compact: Boolean) {
+        val showTabs = service.kind != ContentKind.LIVE
+        val buttons = listOf(b.btnTabMovies, b.btnTabSeries, b.btnTabDownloads)
+        val target: ViewGroup = if (compact) b.tabsRow else b.tabs
+        for (btn in buttons) {
+            (btn.parent as? ViewGroup)?.removeView(btn)
+            val lp = if (compact) {
+                android.widget.LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            } else {
+                android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            }
+            if (btn !== b.btnTabMovies) lp.marginStart = (6 * resources.displayMetrics.density).toInt()
+            btn.maxLines = 1
+            target.addView(btn, lp)
+        }
+        b.tabs.visibility = if (showTabs && !compact) View.VISIBLE else View.GONE
+        b.tabsRow.visibility = if (showTabs && compact) View.VISIBLE else View.GONE
+        // The chip row already shows the category; the top-bar label is dropped on phones.
+        b.txtCategory.visibility = if (compact) View.GONE else View.VISIBLE
     }
 
     /** Rotation is handled in place (see the manifest) so the category and guide position survive. */

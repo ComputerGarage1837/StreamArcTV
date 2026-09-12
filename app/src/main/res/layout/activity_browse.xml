@@ -108,6 +108,20 @@
             android:src="@drawable/ic_profile" />
     </LinearLayout>
 
+    <!-- Portrait phones: the Movies / Series / Downloads tabs move here from the top bar -->
+    <LinearLayout
+        android:id="@+id/tabsRow"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/topBar" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/listCategoriesTop"
         android:layout_width="0dp"
@@ -119,7 +133,7 @@
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/topBar" />
+        app:layout_constraintTop_toBottomOf="@id/tabsRow" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/listCategories"
