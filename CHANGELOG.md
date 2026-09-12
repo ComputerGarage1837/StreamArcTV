@@ -3,6 +3,15 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.46 — 2026-09-12
+
+### Changed
+- Live TV: the category column on TVs and landscape screens is much slimmer (long names are
+  shortened with …), giving the programme grid the width it was wasting.
+- Video on Demand home: the banner is capped at 40% of the screen and everything under it is
+  smaller (posters, row titles, spacing), so the first row of posters is visible without
+  scrolling and more rows fit on screen at once.
+
 ## v1.0.45 — 2026-09-12
 
 ### Changed
