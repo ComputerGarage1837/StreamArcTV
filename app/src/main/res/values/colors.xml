@@ -5,8 +5,8 @@
     <color name="surface">#132A4F</color>
     <color name="surface_focused">#1B3A6B</color>
     <color name="outline">#1E3A5F</color>
-    <color name="accent">#5EEAD4</color>
-    <color name="accent_dark">#22C55E</color>
+    <color name="accent">#22D3EE</color>
+    <color name="accent_dark">#7C3AED</color>
     <color name="text">#F8FAFC</color>
     <color name="text_muted">#94A3B8</color>
     <color name="danger">#F87171</color>

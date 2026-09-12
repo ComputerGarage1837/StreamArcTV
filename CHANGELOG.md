@@ -6,6 +6,8 @@ version is shown to users inside the app when an update is available.
 ## v1.0.7 — 2026-09-12
 
 ### Changed
+- New launcher icon, TV banner and in-app wordmark based on the Stream Arc TV logo, with the white
+  backdrop removed so it sits cleanly on the dark theme; accent colours now match the logo.
 - Updater now reads the signed `release/update.json` feed from this repository, compares the
   Android version code, and downloads the APK named in the feed from the matching GitHub release.
 - Update downloads show a progress dialog and are verified against the feed's SHA-256 and size
