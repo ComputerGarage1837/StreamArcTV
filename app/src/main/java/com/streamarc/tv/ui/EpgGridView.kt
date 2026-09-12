@@ -56,7 +56,9 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private val channelColW = 170 * d
     private val rowH = 58 * d
     private val headerH = 32 * d
-    private val pxPerMin = 3.4f * d
+    /** Scale chosen so about two hours fit across the programme area (never tighter than 3.4dp/min). */
+    private var pxPerMin = 3.4f * d
+    private val hoursAcross = 2f
     private val gap = 2 * d
     private val corner = 6 * d
 
@@ -124,6 +126,16 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     fun focusedChannel(): Stream? = channels.getOrNull(focusRow)
 
     // ---- Lifecycle -----------------------------------------------------
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        val area = w - channelColW
+        if (area > 0) {
+            val focusMinutes = (scrollX / pxPerMin)
+            pxPerMin = max(3.4f * d, area / (hoursAcross * 60f))
+            scrollX = (focusMinutes * pxPerMin).coerceIn(0f, maxScrollX())
+        }
+    }
 
     override fun onAttachedToWindow() { super.onAttachedToWindow(); postDelayed(ticker, 60_000) }
     override fun onDetachedFromWindow() { removeCallbacks(ticker); super.onDetachedFromWindow() }
