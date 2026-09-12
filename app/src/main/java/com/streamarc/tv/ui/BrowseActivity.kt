@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.streamarc.tv.R
 import com.streamarc.tv.data.Account
+import com.streamarc.tv.data.CatalogCache
 import com.streamarc.tv.data.Category
 import com.streamarc.tv.data.ContentKind
 import com.streamarc.tv.data.EpgCache
@@ -162,14 +163,26 @@ class BrowseActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val cats = XtreamApi.categories(service, account, kind)
-                val all = listOf(
-                    Category(FAV_ID, "★ " + getString(R.string.favorites)),
-                    Category(null, getString(R.string.all_categories))
-                ) + cats
+                val all = if (isLive) {
+                    listOf(
+                        Category(FAV_ID, "★ " + getString(R.string.favorites)),
+                        Category(null, getString(R.string.all_categories))
+                    ) + cats
+                } else {
+                    listOf(
+                        Category(FAV_ID, "★ " + getString(R.string.favorites)),
+                        Category(RECENT_ID, getString(R.string.recently_added)),
+                        Category(null, getString(R.string.all_categories))
+                    ) + cats
+                }
                 categoryAdapter.submit(all)
-                // Open on Favorites when the user has some, otherwise on All.
-                val start = if (prefs.favorites(service, kind).isNotEmpty()) all[0] else all[1]
-                selectCategory(start)
+                if (isLive) {
+                    // Open on Favorites when the user has some, otherwise on All.
+                    selectCategory(if (prefs.favorites(service, kind).isNotEmpty()) all[0] else all[1])
+                } else {
+                    // Movies and series open on Recently added.
+                    selectCategory(all[1])
+                }
             } catch (e: Exception) {
                 showError(e.message ?: getString(R.string.load_failed))
             }
@@ -178,7 +191,8 @@ class BrowseActivity : AppCompatActivity() {
 
     private fun selectCategory(cat: Category) {
         favoritesMode = cat.id == FAV_ID
-        selectedCategoryId = if (favoritesMode) null else cat.id
+        val recentMode = cat.id == RECENT_ID
+        selectedCategoryId = if (favoritesMode || recentMode) null else cat.id
         categoryAdapter.selectedId = cat.id
         b.txtCategory.text = cat.name
         loadJob?.cancel()
@@ -186,7 +200,17 @@ class BrowseActivity : AppCompatActivity() {
         loadJob = lifecycleScope.launch {
             try {
                 val key = selectedCategoryId
-                allStreams = streamCache[key] ?: XtreamApi.streams(service, account, key, kind).also { streamCache[key] = it }
+                allStreams = if (isLive) {
+                    streamCache[key] ?: XtreamApi.streams(service, account, key, kind).also { streamCache[key] = it }
+                } else {
+                    // Movies/series: the whole catalogue is fetched once and filtered here.
+                    val all = CatalogCache.get(service, account, kind)
+                    when {
+                        recentMode -> CatalogCache.recentlyAdded(all)
+                        key == null -> all
+                        else -> all.filter { it.categoryId == key }
+                    }
+                }
                 applyFilter()
                 setLoading(false)
             } catch (e: Exception) {
@@ -360,6 +384,7 @@ class BrowseActivity : AppCompatActivity() {
     companion object {
         private const val EXTRA_SERVICE = "service"
         private const val FAV_ID = "__favorites__"
+        private const val RECENT_ID = "__recent__"
         fun intent(ctx: Context, service: Service): Intent =
             Intent(ctx, BrowseActivity::class.java).putExtra(EXTRA_SERVICE, service.name)
     }

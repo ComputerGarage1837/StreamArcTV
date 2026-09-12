@@ -3,6 +3,14 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.16 — 2026-09-12
+
+### Changed
+- Movies and Series load their whole catalogue once (kept for 30 minutes), so switching categories
+  is instant.
+- Movies and Series open on a new "Recently added" section showing the newest titles first; "All"
+  and the provider's categories follow it.
+
 ## v1.0.15 — 2026-09-12
 
 ### Changed
