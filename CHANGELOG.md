@@ -3,6 +3,14 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.47 — 2026-09-12
+
+### Fixed
+- Updating from inside the app crashed on 1.0.44–1.0.46: the log-export feature had replaced the
+  file-sharing paths the updater uses to hand the downloaded APK to Android. Both now share one
+  correctly configured provider. If you are on one of those versions, install this one from the
+  GitHub release page once; updates from inside the app work again after that.
+
 ## v1.0.46 — 2026-09-12
 
 ### Changed
