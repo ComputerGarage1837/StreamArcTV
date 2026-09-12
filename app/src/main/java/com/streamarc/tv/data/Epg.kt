@@ -5,7 +5,10 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.withPermit
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -173,16 +176,30 @@ object EpgCache {
     private val cache = HashMap<String, Pair<Long, List<EpgProgramme>>>()
     private val gate = Semaphore(6)
 
-    private const val GUIDE_TTL_MS = 30 * 60 * 1000L
+    // ---- Whole-guide handling ------------------------------------------
+    //
+    // Other IPTV apps "lose" their guide because they refresh in the foreground, keep it
+    // only in memory, and accept whatever the panel returns, including the empty or
+    // half-built file a panel serves while it regenerates its EPG. Here the last good
+    // guide is kept on disk, refreshed in the background, and only replaced by a new
+    // download that is at least as complete.
+
+    private const val REFRESH_MS = 3 * 60 * 60 * 1000L          // refresh quietly after this age
+    private const val RETRY_MS = 5 * 60 * 1000L                 // back-off after a failed download
     private val guides = HashMap<Service, Pair<Long, XmltvParser.Guide>>()
     private val guideFailedAt = HashMap<Service, Long>()
     private val guideMutex = kotlinx.coroutines.sync.Mutex()
+    private val refreshing = HashSet<Service>()
+    @Volatile private var appContext: android.content.Context? = null
 
-    /** True once the whole guide for the service is in memory and fresh. */
-    fun guideLoaded(service: Service): Boolean {
-        val g = synchronized(guides) { guides[service] } ?: return false
-        return System.currentTimeMillis() - g.first < GUIDE_TTL_MS
-    }
+    /** Give the cache a context once (application) so guides can be kept on disk. */
+    fun init(context: android.content.Context) { appContext = context.applicationContext }
+
+    /** True while a guide (fresh or older) is in memory. */
+    fun guideLoaded(service: Service): Boolean = synchronized(guides) { guides[service] } != null
+
+    /** Age of the in-memory guide in ms, or -1. */
+    fun guideAge(service: Service): Long = synchronized(guides) { guides[service] }?.let { System.currentTimeMillis() - it.first } ?: -1L
 
     /**
      * Programmes for a channel from the full guide: by its XMLTV id first, then by a loose
@@ -204,53 +221,103 @@ object EpgCache {
     fun guideChannelCount(service: Service): Int = synchronized(guides) { guides[service] }?.second?.byId?.size ?: 0
 
     /**
-     * Downloads the whole guide once (per service, refreshed every 30 minutes).
-     * Returns true when a guide is available afterwards. Never throws.
+     * Makes a guide available: from memory, else from the disk copy (instantly), else by
+     * downloading. A guide older than [REFRESH_MS] is refreshed in the background while the
+     * old one stays in use. Returns true when a guide is available afterwards. Never throws.
      */
     suspend fun loadGuide(service: Service, account: Account, onProgress: ((Long, Long) -> Unit)? = null): Boolean {
-        if (guideLoaded(service)) return true
+        synchronized(guides) { guides[service] }?.let { (at, _) ->
+            if (System.currentTimeMillis() - at > REFRESH_MS) refreshInBackground(service, account)
+            return true
+        }
         return guideMutex.withLock {
-            if (guideLoaded(service)) return@withLock true
-            // Don't retry a failed download more than once every few minutes.
-            val failed = synchronized(guides) { guideFailedAt[service] }
-            if (failed != null && System.currentTimeMillis() - failed < 5 * 60 * 1000L) return@withLock false
-            val now = System.currentTimeMillis() / 1000
-            val from = (now / 1800) * 1800 - 2 * 3600
-            val to = from + 26 * 3600
-            try {
-                val guide = XtreamApi.fullGuide(service, account, from, to, onProgress)
-                synchronized(guides) {
-                    guides[service] = System.currentTimeMillis() to guide
-                    guideFailedAt.remove(service)
-                }
-                guide.byId.isNotEmpty()
-            } catch (_: Exception) {
-                synchronized(guides) { guideFailedAt[service] = System.currentTimeMillis() }
-                false
+            synchronized(guides) { guides[service] }?.let { return@withLock true }
+            val ctx = appContext
+            val disk = if (ctx != null) withContext(Dispatchers.IO) { readDisk(ctx, service) } else null
+            if (disk != null) {
+                synchronized(guides) { guides[service] = disk }
+                if (System.currentTimeMillis() - disk.first > REFRESH_MS) refreshInBackground(service, account)
+                return@withLock true
             }
+            val failed = synchronized(guides) { guideFailedAt[service] }
+            if (failed != null && System.currentTimeMillis() - failed < RETRY_MS) return@withLock false
+            download(service, account, onProgress)
         }
     }
 
-    private fun key(service: Service, streamId: String) = "${service.name}/$streamId"
-
-    /** Cached programmes if fresh, else null (no network). */
-    fun peek(service: Service, streamId: String): List<EpgProgramme>? {
-        val e = synchronized(cache) { cache[key(service, streamId)] } ?: return null
-        return if (System.currentTimeMillis() - e.first < TTL_MS) e.second else null
+    /** Downloads and installs a guide when it passes the completeness check against the current one. */
+    private suspend fun download(service: Service, account: Account, onProgress: ((Long, Long) -> Unit)?): Boolean {
+        val now = System.currentTimeMillis() / 1000
+        val from = (now / 1800) * 1800 - 2 * 3600
+        val to = from + 50 * 3600      // two days so a disk copy still covers the grid later
+        return try {
+            val guide = XtreamApi.fullGuide(service, account, from, to, onProgress)
+            val current = synchronized(guides) { guides[service] }?.second
+            if (guide.byId.isEmpty()) throw IllegalStateException("Empty guide")
+            if (current != null && !atLeastAsComplete(guide, current)) {
+                // The panel is probably regenerating its EPG; keep the good copy and try later.
+                synchronized(guides) { guideFailedAt[service] = System.currentTimeMillis() }
+                return current.byId.isNotEmpty()
+            }
+            val at = System.currentTimeMillis()
+            synchronized(guides) { guides[service] = at to guide; guideFailedAt.remove(service) }
+            appContext?.let { ctx -> withContext(Dispatchers.IO) { writeDisk(ctx, service, at, guide) } }
+            true
+        } catch (_: Exception) {
+            synchronized(guides) { guideFailedAt[service] = System.currentTimeMillis() }
+            guideLoaded(service)
+        }
     }
 
-    /** Programmes for the channel, fetching (at most 4 at a time) when not cached. */
-    suspend fun get(service: Service, account: Account, streamId: String): List<EpgProgramme> {
-        peek(service, streamId)?.let { return it }
-        return gate.withPermit {
-            peek(service, streamId)?.let { return@withPermit it }
-            val list = try {
-                XtreamApi.shortEpg(service, account, streamId)
-            } catch (_: Exception) {
-                emptyList()
+    private fun atLeastAsComplete(fresh: XmltvParser.Guide, old: XmltvParser.Guide): Boolean {
+        val oldChannels = old.byId.size
+        val oldProgrammes = old.byId.values.sumOf { it.size }
+        val newChannels = fresh.byId.size
+        val newProgrammes = fresh.byId.values.sumOf { it.size }
+        return newChannels >= oldChannels * 0.7 && newProgrammes >= oldProgrammes * 0.5
+    }
+
+    private val bgScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    private fun refreshInBackground(service: Service, account: Account) {
+        synchronized(refreshing) { if (!refreshing.add(service)) return }
+        val failed = synchronized(guides) { guideFailedAt[service] }
+        if (failed != null && System.currentTimeMillis() - failed < RETRY_MS) { synchronized(refreshing) { refreshing.remove(service) }; return }
+        bgScope.launch {
+            try { guideMutex.withLock { download(service, account, null) } } finally { synchronized(refreshing) { refreshing.remove(service) } }
+        }
+    }
+
+    // ---- Disk copy -----------------------------------------------------
+
+    private class DiskGuide(val savedAt: Long, val byId: Map<String, List<EpgProgramme>>, val idByName: Map<String, String>)
+
+    private fun guideFile(ctx: android.content.Context, service: Service) = java.io.File(ctx.cacheDir, "guide_${service.name}.json")
+
+    private fun readDisk(ctx: android.content.Context, service: Service): Pair<Long, XmltvParser.Guide>? {
+        val f = guideFile(ctx, service)
+        if (!f.exists()) return null
+        return try {
+            f.bufferedReader().use { r ->
+                val d = com.google.gson.Gson().fromJson(r, DiskGuide::class.java) ?: return null
+                if (d.byId.isEmpty()) return null
+                // Drop a copy whose programmes have all ended; it can't fill the grid anyway.
+                val nowSec = System.currentTimeMillis() / 1000
+                if (d.byId.values.none { list -> list.any { it.end > nowSec } }) { f.delete(); return null }
+                d.savedAt to XmltvParser.Guide(d.byId, d.idByName)
             }
-            synchronized(cache) { cache[key(service, streamId)] = System.currentTimeMillis() to list }
-            list
+        } catch (_: Exception) {
+            f.delete(); null
+        }
+    }
+
+    private fun writeDisk(ctx: android.content.Context, service: Service, savedAt: Long, guide: XmltvParser.Guide) {
+        try {
+            val f = guideFile(ctx, service)
+            val tmp = java.io.File(f.path + ".tmp")
+            tmp.bufferedWriter().use { w -> com.google.gson.Gson().toJson(DiskGuide(savedAt, guide.byId, guide.idByName), w) }
+            tmp.renameTo(f)
+        } catch (_: Exception) {
         }
     }
 
