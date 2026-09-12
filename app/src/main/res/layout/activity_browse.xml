@@ -223,6 +223,34 @@
                 android:maxLines="1"
                 android:textColor="@color/text_muted"
                 android:textSize="12sp" />
+
+            <LinearLayout
+                android:id="@+id/guideLoading"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <ProgressBar
+                    android:id="@+id/progressGuide"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="5dp"
+                    android:layout_weight="1"
+                    android:indeterminate="true"
+                    android:max="1000"
+                    android:progressDrawable="@drawable/progress_epg" />
+
+                <TextView
+                    android:id="@+id/txtGuideLoading"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:textColor="@color/text_muted"
+                    android:textSize="11sp" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 

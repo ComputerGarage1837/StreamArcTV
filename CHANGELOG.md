@@ -3,6 +3,14 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.22 — 2026-09-12
+
+### Changed
+- The TV guide shows a progress bar in its top panel while the listing downloads and fills in,
+  with a channel count, so it's clear it isn't stuck. Browsing keeps working meanwhile.
+- The automatic default category is "General Streams" (falling back to any "General" category,
+  then All).
+
 ## v1.0.21 — 2026-09-12
 
 ### Added

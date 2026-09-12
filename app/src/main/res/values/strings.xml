@@ -135,7 +135,9 @@
     <string name="default_live_category">Default category</string>
     <string name="all_shown">All</string>
     <string name="hidden_count_fmt">%1$d hidden</string>
-    <string name="default_auto">Automatic (General, or All)</string>
+    <string name="default_auto">General Streams (automatic)</string>
+    <string name="guide_downloading">Downloading guide…</string>
+    <string name="guide_filling_fmt">Loading guide: %1$d / %2$d channels</string>
     <string name="chosen_category">Chosen category</string>
     <string name="sign_in_live_first">Sign in to Live TV first.</string>
     <string name="delete_download_confirm_fmt">Delete %1$s from this device?</string>
