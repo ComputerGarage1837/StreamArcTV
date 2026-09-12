@@ -122,7 +122,10 @@ object XtreamApi {
      * large files stay cheap. Returns programmes keyed by XMLTV channel id, limited
      * to [fromEpoch, toEpoch) so a week-long file doesn't fill memory.
      */
-    suspend fun fullGuide(service: Service, account: Account, fromEpoch: Long, toEpoch: Long): XmltvParser.Guide =
+    suspend fun fullGuide(
+        service: Service, account: Account, fromEpoch: Long, toEpoch: Long,
+        onProgress: ((bytes: Long, total: Long) -> Unit)? = null
+    ): XmltvParser.Guide =
         withContext(Dispatchers.IO) {
             val base = serverUrl(service)
             val url = base.newBuilder()
@@ -139,7 +142,18 @@ object XtreamApi {
                 slowClient.newCall(req).execute().use { resp ->
                     if (!resp.isSuccessful) throw ApiException("Guide download failed (HTTP ${resp.code})")
                     val body = resp.body ?: throw ApiException("Empty guide")
-                    body.byteStream().use { input -> XmltvParser.parse(input, fromEpoch, toEpoch) }
+                    val total = body.contentLength()
+                    val counting = object : java.io.FilterInputStream(body.byteStream()) {
+                        var count = 0L
+                        var lastReport = 0L
+                        override fun read(): Int = super.read().also { if (it >= 0) tick(1) }
+                        override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also { if (it > 0) tick(it) }
+                        private fun tick(n: Int) {
+                            count += n
+                            if (count - lastReport >= 128 * 1024) { lastReport = count; onProgress?.invoke(count, total) }
+                        }
+                    }
+                    counting.use { input -> XmltvParser.parse(input, fromEpoch, toEpoch) }
                 }
             } catch (e: IOException) {
                 throw ApiException("Can't download guide: ${e.message ?: "network error"}")
