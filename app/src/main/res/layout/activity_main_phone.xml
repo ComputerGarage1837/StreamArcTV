@@ -122,30 +122,26 @@
 
                         <ImageView
                             android:id="@+id/imgLiveIcon"
-                            android:layout_width="0dp"
-                            android:layout_height="0dp"
+                            android:layout_width="72dp"
+                            android:layout_height="72dp"
+                            android:layout_marginTop="26dp"
                             android:contentDescription="@null"
                             android:scaleType="fitCenter"
                             android:src="@drawable/img_live_tv"
-                            app:layout_constraintDimensionRatio="1:1"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="@id/imgLiveCard"
-                            app:layout_constraintVertical_bias="0"
-                            app:layout_constraintBottom_toTopOf="@id/txtLiveTitle"
-                            app:layout_constraintHeight_percent="0.34"
-                            app:layout_constraintVertical_chainStyle="packed" />
+                            app:layout_constraintTop_toTopOf="@id/imgLiveCard" />
 
                         <TextView
                             android:id="@+id/txtLiveTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
+                            android:layout_marginTop="14dp"
                             android:fontFamily="sans-serif-medium"
                             android:gravity="center"
                             android:text="@string/live_tv"
                             android:textColor="@color/text"
-                            android:textSize="18sp"
+                            android:textSize="19sp"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toBottomOf="@id/imgLiveIcon" />
@@ -176,15 +172,13 @@
                             app:layout_constraintTop_toBottomOf="@id/txtLiveSub" />
 
                         <ImageView
-                            android:layout_width="0dp"
-                            android:layout_height="0dp"
-                            android:layout_marginBottom="12dp"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginBottom="18dp"
                             android:contentDescription="@null"
                             android:src="@drawable/img_btn_next_live"
                             app:layout_constraintBottom_toBottomOf="@id/imgLiveCard"
-                            app:layout_constraintDimensionRatio="1:1"
                             app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintHeight_percent="0.16"
                             app:layout_constraintStart_toStartOf="parent" />
                     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -212,30 +206,26 @@
 
                         <ImageView
                             android:id="@+id/imgVodIcon"
-                            android:layout_width="0dp"
-                            android:layout_height="0dp"
+                            android:layout_width="72dp"
+                            android:layout_height="72dp"
+                            android:layout_marginTop="26dp"
                             android:contentDescription="@null"
                             android:scaleType="fitCenter"
                             android:src="@drawable/img_vod"
-                            app:layout_constraintDimensionRatio="1:1"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="@id/imgVodCard"
-                            app:layout_constraintVertical_bias="0"
-                            app:layout_constraintBottom_toTopOf="@id/txtVodTitle"
-                            app:layout_constraintHeight_percent="0.34"
-                            app:layout_constraintVertical_chainStyle="packed" />
+                            app:layout_constraintTop_toTopOf="@id/imgVodCard" />
 
                         <TextView
                             android:id="@+id/txtVodTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
+                            android:layout_marginTop="14dp"
                             android:fontFamily="sans-serif-medium"
                             android:gravity="center"
                             android:text="@string/video_on_demand"
                             android:textColor="@color/text"
-                            android:textSize="18sp"
+                            android:textSize="19sp"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toBottomOf="@id/imgVodIcon" />
@@ -266,15 +256,13 @@
                             app:layout_constraintTop_toBottomOf="@id/txtVodSub" />
 
                         <ImageView
-                            android:layout_width="0dp"
-                            android:layout_height="0dp"
-                            android:layout_marginBottom="12dp"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginBottom="18dp"
                             android:contentDescription="@null"
                             android:src="@drawable/img_btn_next_vod"
                             app:layout_constraintBottom_toBottomOf="@id/imgVodCard"
-                            app:layout_constraintDimensionRatio="1:1"
                             app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintHeight_percent="0.16"
                             app:layout_constraintStart_toStartOf="parent" />
                     </androidx.constraintlayout.widget.ConstraintLayout>
                 </LinearLayout>
