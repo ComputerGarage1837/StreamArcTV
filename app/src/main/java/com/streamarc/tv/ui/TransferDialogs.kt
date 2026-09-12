@@ -26,8 +26,9 @@ data class DownloadItem(val title: String, val subtitle: String, val url: String
 object TransferDialogs {
 
     /**
-     * Confirms the folder (offering to change it or pick one the first time),
-     * then queues every item. Falls back to the app folder on devices without a picker.
+     * Queues every item into the saved download folder. The picker only appears the first time
+     * (or if the saved folder is no longer reachable); the folder is changed in Settings.
+     * Falls back to the app folder on devices without a picker.
      */
     fun download(activity: AppCompatActivity, picker: FolderPicker, items: List<DownloadItem>) {
         if (items.isEmpty()) return
@@ -37,16 +38,7 @@ object TransferDialogs {
             pickFolder(activity, picker, TransferType.DOWNLOAD) { folder -> enqueueDownloads(activity, items, folder) }
             return
         }
-        val what = if (items.size == 1) items[0].title else activity.getString(R.string.items_fmt, items.size)
-        AlertDialog.Builder(activity)
-            .setTitle(activity.getString(R.string.download_where_fmt, what))
-            .setMessage(activity.getString(R.string.folder_current_fmt, Folders.describe(activity, current, TransferType.DOWNLOAD)))
-            .setPositiveButton(R.string.download_here) { _, _ -> enqueueDownloads(activity, items, current) }
-            .setNeutralButton(R.string.choose_folder) { _, _ ->
-                pickFolder(activity, picker, TransferType.DOWNLOAD) { folder -> enqueueDownloads(activity, items, folder) }
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        enqueueDownloads(activity, items, current)
     }
 
     /** Opens the picker, saves the choice for this type, and continues with it (null = app folder). */
@@ -129,15 +121,9 @@ object TransferDialogs {
                     pickFolder(activity, picker, TransferType.RECORDING) { f -> schedule(activity, channelName, url, st, en, f) }
                 } else schedule(activity, channelName, url, st, en, current)
             }
-            .setNeutralButton(R.string.choose_folder, null)
             .setNegativeButton(android.R.string.cancel, null)
             .create()
         dialog.show()
-        dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener {
-            pickFolder(activity, picker, TransferType.RECORDING) { f ->
-                vb.txtFolder.text = activity.getString(R.string.folder_current_fmt, Folders.describe(activity, f, TransferType.RECORDING))
-            }
-        }
         vb.startHour.requestFocus()
     }
 

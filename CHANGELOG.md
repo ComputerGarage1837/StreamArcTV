@@ -9,6 +9,9 @@ version is shown to users inside the app when an update is available.
 - The playback buffer now defaults to Huge (10 minutes ahead) on every device. It is still capped
   to half of the memory Android gives the app, so smaller boxes automatically get as much as
   they can hold. Anyone who already picked a size keeps their choice.
+- Downloads and recordings no longer ask where to save each time. The folder picker appears
+  only the first time (or if the saved folder is no longer reachable); after that everything
+  goes to the saved folder until you change it under Settings → Downloads & recordings.
 
 ## v1.0.35 — 2026-09-12
 
