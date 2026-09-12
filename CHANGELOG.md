@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.39 — 2026-09-12
+
+### Fixed
+- Bigger buffer sizes made you wait before anything played (Huge waited for 6 seconds of video
+  to start and 12 after a stall). Playback now starts as soon as about 2 seconds are ready on
+  every level; the buffer size only changes how far ahead the app keeps downloading.
+
 ## v1.0.38 — 2026-09-12
 
 ### Added
