@@ -53,7 +53,7 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private val logos = HashMap<String, Bitmap?>()
 
     private val d = resources.displayMetrics.density
-    private val channelColW = 170 * d
+    private var channelColW = 170 * d
     private val rowH = 58 * d
     private val headerH = 32 * d
     /** Scale chosen so about two hours fit across the programme area (never tighter than 3.4dp/min). */
@@ -129,6 +129,8 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
+        // Phones held upright: a slimmer channel column so the programmes get the width.
+        channelColW = if (w < 520 * d) 118 * d else 170 * d
         val area = w - channelColW
         if (area > 0) {
             val focusMinutes = (scrollX / pxPerMin)
@@ -304,8 +306,9 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             val top = headerH + row * rowH - scrollY
             if (row == focusRow && hasFocus()) c.drawRect(0f, top, channelColW, top + rowH, rowFocusPaint)
             c.drawLine(0f, top + rowH, channelColW, top + rowH, linePaint)
-            val logoW = 44 * d; val logoH = 30 * d
-            val lx = 8 * d; val ly = top + (rowH - logoH) / 2
+            val narrow = channelColW < 150 * d
+            val logoW = (if (narrow) 34 else 44) * d; val logoH = (if (narrow) 24 else 30) * d
+            val lx = (if (narrow) 6 else 8) * d; val ly = top + (rowH - logoH) / 2
             val bmp = logoFor(ch)
             if (bmp != null) {
                 val scale = min(logoW / bmp.width, logoH / bmp.height)
@@ -316,9 +319,10 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
                 placeholder?.draw(c)
             }
             val name = (if (favorites.contains(ch.streamId)) "★ " else "") + (ch.name ?: "")
-            val nameAvail = channelColW - lx - logoW - 16 * d
+            val nameAvail = channelColW - lx - logoW - (if (narrow) 10 else 16) * d
+            channelPaint.textSize = (if (narrow) 11.5f else 13f) * d
             val txt = TextUtils.ellipsize(name, channelPaint, nameAvail, TextUtils.TruncateAt.END)
-            c.drawText(txt, 0, txt.length, lx + logoW + 8 * d, top + rowH / 2 + 5 * d, channelPaint)
+            c.drawText(txt, 0, txt.length, lx + logoW + (if (narrow) 5 else 8) * d, top + rowH / 2 + 5 * d, channelPaint)
         }
         c.restore()
         c.drawLine(channelColW, 0f, channelColW, height.toFloat(), linePaint)
