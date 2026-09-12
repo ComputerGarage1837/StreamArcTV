@@ -23,6 +23,7 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         b = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(b.root)
+        Edge.pad(b.root)
         prefs = Prefs(this)
 
         b.btnBack.setOnClickListener { finish() }

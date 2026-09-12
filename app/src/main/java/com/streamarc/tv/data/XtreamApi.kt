@@ -118,7 +118,7 @@ object XtreamApi {
     }
 
     /** Now/next programmes for one live channel (`get_short_epg`). */
-    suspend fun shortEpg(service: Service, account: Account, streamId: String, limit: Int = 6): List<EpgProgramme> =
+    suspend fun shortEpg(service: Service, account: Account, streamId: String, limit: Int = 30): List<EpgProgramme> =
         withContext(Dispatchers.IO) {
             val body = get(
                 apiUrl(

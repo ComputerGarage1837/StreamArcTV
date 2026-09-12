@@ -31,6 +31,7 @@ class SeriesActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         b = ActivitySeriesBinding.inflate(layoutInflater)
         setContentView(b.root)
+        Edge.pad(b.root)
         service = Service.valueOf(intent.getStringExtra(EXTRA_SERVICE) ?: Service.VOD.name)
         val seriesId = intent.getStringExtra(EXTRA_ID) ?: run { finish(); return }
         val account = Prefs(this).account(service) ?: run { finish(); return }

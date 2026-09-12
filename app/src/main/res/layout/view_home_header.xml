@@ -8,8 +8,8 @@
 
     <ImageView
         android:id="@+id/imgLogo"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
+        android:layout_width="@dimen/home_logo"
+        android:layout_height="@dimen/home_logo"
         android:contentDescription="@string/app_name"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_logo_mark" />
@@ -17,7 +17,7 @@
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="10dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -27,14 +27,14 @@
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif-black"
             android:textColor="@color/text"
-            android:textSize="26sp" />
+            android:textSize="@dimen/home_brand_text" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/tagline"
             android:textColor="#94A3B8"
-            android:textSize="13sp" />
+            android:textSize="@dimen/home_tagline_text" />
     </LinearLayout>
 
     <LinearLayout
@@ -45,57 +45,55 @@
 
         <ImageButton
             android:id="@+id/btnUpdate"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:background="@drawable/bg_circle_button"
+            android:layout_width="@dimen/home_round_btn"
+            android:layout_height="@dimen/home_round_btn"
+            android:background="@drawable/fg_focus_circle"
             android:contentDescription="@string/update"
-            android:padding="13dp"
             android:scaleType="fitCenter"
-            android:src="@drawable/ic_refresh" />
+            android:src="@drawable/img_btn_update" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="3dp"
             android:text="@string/update"
             android:textColor="@color/text"
-            android:textSize="12sp" />
+            android:textSize="@dimen/home_round_label" />
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="18dp"
+        android:layout_marginStart="14dp"
         android:gravity="center_horizontal"
         android:orientation="vertical">
 
         <ImageButton
             android:id="@+id/btnSettings"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:background="@drawable/bg_circle_button"
+            android:layout_width="@dimen/home_round_btn"
+            android:layout_height="@dimen/home_round_btn"
+            android:background="@drawable/fg_focus_circle"
             android:contentDescription="@string/settings"
-            android:padding="13dp"
             android:scaleType="fitCenter"
-            android:src="@drawable/ic_gear" />
+            android:src="@drawable/img_btn_settings" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="3dp"
             android:text="@string/settings"
             android:textColor="@color/text"
-            android:textSize="12sp" />
+            android:textSize="@dimen/home_round_label" />
     </LinearLayout>
 
     <TextClock
         android:id="@+id/txtClock"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
+        android:layout_marginStart="20dp"
         android:format12Hour="h:mm a"
         android:format24Hour="HH:mm"
         android:textColor="@color/text"
-        android:textSize="17sp"
+        android:textSize="15sp"
         android:visibility="gone" />
 </LinearLayout>

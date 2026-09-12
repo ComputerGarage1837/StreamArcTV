@@ -1,35 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/navBar"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_nav_bar"
     android:orientation="horizontal"
-    android:paddingTop="6dp"
-    android:paddingBottom="6dp">
+    android:paddingTop="2dp"
+    android:paddingBottom="2dp">
 
     <LinearLayout android:id="@+id/navHome" style="@style/NavItem">
-        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:contentDescription="@null" android:src="@drawable/ic_home" app:tint="@color/nav_item_tint"  android:duplicateParentState="true" />
-        <TextView style="@style/NavLabel" android:text="@string/nav_home" android:duplicateParentState="true" />
-        <View android:id="@+id/navHomeIndicator" android:layout_width="40dp" android:layout_height="3dp" android:layout_marginTop="4dp" android:background="@drawable/hero_accent_bar" />
+        <ImageView android:layout_width="@dimen/home_nav_icon" android:layout_height="@dimen/home_nav_icon" android:contentDescription="@null" android:src="@drawable/img_nav_home" />
+        <TextView style="@style/NavLabel" android:text="@string/nav_home" android:textColor="#A78BFA" />
+        <View android:layout_width="36dp" android:layout_height="3dp" android:layout_marginTop="3dp" android:background="@drawable/hero_accent_bar" />
     </LinearLayout>
 
     <LinearLayout android:id="@+id/navSearch" style="@style/NavItem">
-        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:contentDescription="@null" android:src="@drawable/ic_search" app:tint="@color/nav_item_tint"  android:duplicateParentState="true" />
-        <TextView style="@style/NavLabel" android:text="@string/nav_search" android:duplicateParentState="true" />
-        <View android:layout_width="40dp" android:layout_height="3dp" android:layout_marginTop="4dp" />
+        <ImageView android:layout_width="@dimen/home_nav_icon" android:layout_height="@dimen/home_nav_icon" android:contentDescription="@null" android:src="@drawable/img_nav_search" />
+        <TextView style="@style/NavLabel" android:text="@string/nav_search" />
+        <View android:layout_width="36dp" android:layout_height="3dp" android:layout_marginTop="3dp" />
     </LinearLayout>
 
     <LinearLayout android:id="@+id/navDownloads" style="@style/NavItem">
-        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:contentDescription="@null" android:src="@drawable/ic_download" app:tint="@color/nav_item_tint"  android:duplicateParentState="true" />
-        <TextView style="@style/NavLabel" android:text="@string/nav_downloads" android:duplicateParentState="true" />
-        <View android:layout_width="40dp" android:layout_height="3dp" android:layout_marginTop="4dp" />
+        <ImageView android:layout_width="@dimen/home_nav_icon" android:layout_height="@dimen/home_nav_icon" android:contentDescription="@null" android:src="@drawable/img_nav_downloads" />
+        <TextView style="@style/NavLabel" android:text="@string/nav_downloads" />
+        <View android:layout_width="36dp" android:layout_height="3dp" android:layout_marginTop="3dp" />
     </LinearLayout>
 
     <LinearLayout android:id="@+id/navProfile" style="@style/NavItem">
-        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:contentDescription="@null" android:src="@drawable/ic_person" app:tint="@color/nav_item_tint"  android:duplicateParentState="true" />
-        <TextView style="@style/NavLabel" android:text="@string/nav_profile" android:duplicateParentState="true" />
-        <View android:layout_width="40dp" android:layout_height="3dp" android:layout_marginTop="4dp" />
+        <ImageView android:layout_width="@dimen/home_nav_icon" android:layout_height="@dimen/home_nav_icon" android:contentDescription="@null" android:src="@drawable/img_nav_profile" />
+        <TextView style="@style/NavLabel" android:text="@string/nav_profile" />
+        <View android:layout_width="36dp" android:layout_height="3dp" android:layout_marginTop="3dp" />
     </LinearLayout>
 </LinearLayout>

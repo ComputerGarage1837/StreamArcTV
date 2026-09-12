@@ -28,7 +28,6 @@ import com.streamarc.tv.data.Stream
 import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.databinding.ActivityBrowseBinding
 import com.streamarc.tv.databinding.ItemCategoryBinding
-import com.streamarc.tv.databinding.ItemChannelBinding
 import com.streamarc.tv.databinding.ItemStreamBinding
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -51,7 +50,6 @@ class BrowseActivity : AppCompatActivity() {
     private val isLive: Boolean get() = kind == ContentKind.LIVE
 
     private val categoryAdapter = CategoryAdapter { cat -> selectCategory(cat) }
-    private val channelAdapter by lazy { ChannelAdapter() }
     private val streamAdapter = StreamAdapter({ s -> play(s) }, { s -> showItemMenu(s) })
 
     private var allStreams: List<Stream> = emptyList()
@@ -64,6 +62,7 @@ class BrowseActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         b = ActivityBrowseBinding.inflate(layoutInflater)
         setContentView(b.root)
+        Edge.pad(b.root)
         prefs = Prefs(this)
         service = Service.valueOf(intent.getStringExtra(EXTRA_SERVICE) ?: Service.LIVE.name)
 
@@ -96,8 +95,22 @@ class BrowseActivity : AppCompatActivity() {
             b.txtPanelNow.text = ""
             b.txtPanelDesc.text = getString(R.string.hold_ok_hint)
             b.txtPanelUpcoming.text = ""
-            b.listStreams.layoutManager = LinearLayoutManager(this)
-            b.listStreams.adapter = channelAdapter
+            b.listStreams.visibility = View.GONE
+            b.epgGrid.visibility = View.VISIBLE
+            b.epgGrid.listener = object : EpgGridView.Listener {
+                override fun onFocusChanged(channel: Stream, programme: EpgProgramme?) {
+                    showChannelDetails(channel, channel.streamId?.let { EpgCache.peek(service, it) }, programme)
+                }
+                override fun onChannelClick(channel: Stream) = play(channel)
+                override fun onChannelLongClick(channel: Stream) = showItemMenu(channel)
+                override fun onNeedEpg(channel: Stream) {
+                    val id = channel.streamId ?: return
+                    lifecycleScope.launch {
+                        val list = EpgCache.get(service, account, id)
+                        b.epgGrid.setEpg(id, list)
+                    }
+                }
+            }
         } else {
             b.panelEpg.visibility = View.GONE
             streamAdapter.grid = true
@@ -179,7 +192,13 @@ class BrowseActivity : AppCompatActivity() {
         var list = if (favoritesMode) allStreams.filter { favs.contains(it.id) } else allStreams
         if (q.isNotEmpty()) list = list.filter { it.name?.contains(q, ignoreCase = true) == true }
 
-        if (isLive) channelAdapter.submit(list, favs) else streamAdapter.submit(list, favs)
+        if (isLive) {
+            b.epgGrid.favorites = favs
+            b.epgGrid.setChannels(list)
+            if (list.isNotEmpty() && currentFocus == null) b.epgGrid.requestFocus()
+        } else {
+            streamAdapter.submit(list, favs)
+        }
 
         b.txtEmpty.text = if (favoritesMode && favs.isEmpty()) getString(R.string.no_favorites_yet) else getString(R.string.nothing_here)
         b.txtEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
@@ -224,12 +243,18 @@ class BrowseActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun showChannelDetails(stream: Stream, programmes: List<EpgProgramme>?) {
+    private fun showChannelDetails(stream: Stream, programmes: List<EpgProgramme>?, focused: EpgProgramme? = null) {
         if (!isLive) return
         b.txtPanelChannel.text = stream.name ?: ""
+        Glide.with(b.imgPanelLogo)
+            .load(stream.icon?.takeIf { it.isNotBlank() })
+            .placeholder(R.drawable.ic_placeholder)
+            .error(R.drawable.ic_placeholder)
+            .fitCenter()
+            .into(b.imgPanelLogo)
         val now = System.currentTimeMillis() / 1000
         val list = programmes.orEmpty()
-        val current = list.firstOrNull { it.isOnNow(now) } ?: list.firstOrNull { it.end > now }
+        val current = focused ?: list.firstOrNull { it.isOnNow(now) } ?: list.firstOrNull { it.end > now }
         if (current == null) {
             b.txtPanelNow.text = if (programmes == null) getString(R.string.loading_guide) else getString(R.string.no_programme_info)
             b.txtPanelDesc.text = getString(R.string.hold_ok_hint)
@@ -238,8 +263,9 @@ class BrowseActivity : AppCompatActivity() {
         }
         b.txtPanelNow.text = "${Format.timeRange(current.start, current.end)}   ${current.title}"
         b.txtPanelDesc.text = current.description.ifBlank { getString(R.string.hold_ok_hint) }
-        b.txtPanelUpcoming.text = list.filter { it.start >= current.end }.take(3)
-            .joinToString("\n") { "${Format.time(it.start)}  ${it.title}" }
+        b.txtPanelUpcoming.text = list.filter { it.start >= current.end }.take(2)
+            .joinToString("   ·   ") { "${Format.time(it.start)}  ${it.title}" }
+            .let { if (it.isBlank()) "" else getString(R.string.next_fmt, it) }
     }
 
     private fun setLoading(loading: Boolean) {
@@ -277,81 +303,6 @@ class BrowseActivity : AppCompatActivity() {
             holder.vb.txtName.text = c.name ?: "—"
             holder.vb.root.isSelected = c.id == selectedId
             holder.vb.root.setOnClickListener { onClick(c) }
-        }
-    }
-
-    /** Live TV guide rows with now/next programme information. */
-    private inner class ChannelAdapter : RecyclerView.Adapter<ChannelVH>() {
-
-        private var items: List<Stream> = emptyList()
-        private var favs: Set<String> = emptySet()
-
-        fun submit(list: List<Stream>, favorites: Set<String>) { items = list; favs = favorites; notifyDataSetChanged() }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChannelVH =
-            ChannelVH(ItemChannelBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-
-        override fun getItemCount() = items.size
-
-        override fun onBindViewHolder(holder: ChannelVH, position: Int) {
-            val s = items[position]
-            val id = s.streamId
-            holder.streamId = id
-            holder.vb.txtName.text = (if (favs.contains(id)) "★ " else "") + (s.name ?: "—")
-            Glide.with(holder.vb.imgIcon)
-                .load(s.icon?.takeIf { it.isNotBlank() })
-                .placeholder(R.drawable.ic_placeholder)
-                .error(R.drawable.ic_placeholder)
-                .fitCenter()
-                .into(holder.vb.imgIcon)
-            holder.vb.root.setOnClickListener { play(s) }
-            holder.vb.root.setOnLongClickListener { showItemMenu(s); true }
-            holder.vb.root.setOnFocusChangeListener { _, hasFocus ->
-                if (hasFocus) showChannelDetails(s, id?.let { EpgCache.peek(service, it) })
-            }
-
-            holder.epgJob?.cancel()
-            holder.epgJob = null
-            val cached = id?.let { EpgCache.peek(service, it) }
-            if (cached != null) {
-                bindEpg(holder, cached)
-            } else {
-                bindEpg(holder, null)
-                if (id != null) {
-                    holder.epgJob = lifecycleScope.launch {
-                        val list = EpgCache.get(service, account, id)
-                        if (holder.streamId == id) {
-                            bindEpg(holder, list)
-                            if (holder.vb.root.hasFocus()) showChannelDetails(s, list)
-                        }
-                    }
-                }
-            }
-        }
-
-        override fun onViewRecycled(holder: ChannelVH) {
-            holder.epgJob?.cancel()
-            holder.epgJob = null
-        }
-
-        private fun bindEpg(holder: ChannelVH, programmes: List<EpgProgramme>?) {
-            val now = System.currentTimeMillis() / 1000
-            val list = programmes.orEmpty()
-            val current = list.firstOrNull { it.isOnNow(now) } ?: list.firstOrNull { it.end > now }
-            if (current == null) {
-                holder.vb.txtNow.text = if (programmes == null) getString(R.string.loading_guide) else getString(R.string.no_programme_info)
-                holder.vb.progressNow.progress = 0
-                holder.vb.txtNext.text = ""
-                holder.vb.txtNext.visibility = View.GONE
-                return
-            }
-            holder.vb.txtNow.text = "${Format.time(current.start)}  ${current.title}"
-            holder.vb.progressNow.progress = current.progress(now)
-            val next = list.firstOrNull { it.start >= current.end }
-            holder.vb.txtNext.visibility = View.VISIBLE
-            holder.vb.txtNext.text = if (next != null) {
-                getString(R.string.next_fmt, "${Format.time(next.start)}  ${next.title}")
-            } else ""
         }
     }
 
@@ -404,10 +355,3 @@ class BrowseActivity : AppCompatActivity() {
             Intent(ctx, BrowseActivity::class.java).putExtra(EXTRA_SERVICE, service.name)
     }
 }
-
-/** View holder for a guide row; kept at file level because inner classes cannot nest plain classes. */
-private class ChannelVH(val vb: ItemChannelBinding) : RecyclerView.ViewHolder(vb.root) {
-    var epgJob: Job? = null
-    var streamId: String? = null
-}
-

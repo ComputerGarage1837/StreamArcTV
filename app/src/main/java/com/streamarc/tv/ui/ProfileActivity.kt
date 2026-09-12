@@ -21,6 +21,7 @@ class ProfileActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         b = ActivityProfileBinding.inflate(layoutInflater)
         setContentView(b.root)
+        Edge.pad(b.root)
         prefs = Prefs(this)
         service = Service.valueOf(intent.getStringExtra(EXTRA_SERVICE) ?: Service.LIVE.name)
 
