@@ -21,7 +21,10 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.TransferListener
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -72,8 +75,8 @@ class PlayerActivity : AppCompatActivity() {
     private var behindNow = false
 
     // Diagnostics shown under the spinner while buffering.
-    private var bytesLoaded = 0L
-    private var loadsStarted = 0
+    @Volatile private var bytesLoaded = 0L
+    @Volatile private var loadsStarted = 0
     private var lastLoadError: String? = null
     private var bufferingSince = 0L
 
@@ -167,11 +170,21 @@ class PlayerActivity : AppCompatActivity() {
         val chosen = BufferLevel.from(prefs.bufferLevel)
         val level = if (chosen.onDisk && !isLive) BufferLevel.MAX else chosen
 
+        // Any idle keep-alive connection to the provider (a paused download, say) still counts as
+        // a stream on most panels; drop them so this stream gets the slot.
+        Thread { try { XtreamApi.client.connectionPool.evictAll() } catch (_: Exception) {} }.start()
+
         val httpFactory = DefaultHttpDataSource.Factory()
             .setUserAgent(XtreamApi.USER_AGENT)
             .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(15_000)
             .setReadTimeoutMs(20_000)
+            .setTransferListener(object : TransferListener {
+                override fun onTransferInitializing(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) {}
+                override fun onTransferStart(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) { loadsStarted++ }
+                override fun onBytesTransferred(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean, bytesTransferred: Int) { bytesLoaded += bytesTransferred }
+                override fun onTransferEnd(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) {}
+            })
 
         val mediaSources = DefaultMediaSourceFactory(this)
             .setDataSourceFactory(DefaultDataSource.Factory(this, httpFactory))
@@ -201,17 +214,7 @@ class PlayerActivity : AppCompatActivity() {
         b.playerView.player = p
         bytesLoaded = 0L; loadsStarted = 0; lastLoadError = null; bufferingSince = SystemClock.elapsedRealtime()
         p.addAnalyticsListener(object : AnalyticsListener {
-            override fun onLoadStarted(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData) {
-                loadsStarted++
-            }
-            override fun onLoadCompleted(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData) {
-                bytesLoaded += loadEventInfo.bytesLoaded
-            }
-            override fun onLoadCanceled(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData) {
-                bytesLoaded += loadEventInfo.bytesLoaded
-            }
             override fun onLoadError(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData, error: IOException, wasCanceled: Boolean) {
-                bytesLoaded += loadEventInfo.bytesLoaded
                 lastLoadError = describeIo(error)
             }
         })

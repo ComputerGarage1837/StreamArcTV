@@ -3,6 +3,16 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.42 — 2026-09-12
+
+### Fixed
+- Movies and episodes could sit on "0 B received": a download paused for playback still held
+  its connection open in the app's keep-alive pool, and the provider counted it as your one
+  allowed stream, so the player's request was left waiting. Paused downloads now close their
+  connection outright and the player drops any idle provider connections before it asks for a
+  stream.
+- The "received" figure under the spinner now counts live instead of only when a file finished.
+
 ## v1.0.41 — 2026-09-12
 
 ### Changed
