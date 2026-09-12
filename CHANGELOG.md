@@ -3,6 +3,12 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.40 — 2026-09-12
+
+### Changed
+- Playback starts, and resumes after a stall, as soon as one second of video is ready on every
+  buffer level. The buffer keeps filling ahead while you watch.
+
 ## v1.0.39 — 2026-09-12
 
 ### Fixed
