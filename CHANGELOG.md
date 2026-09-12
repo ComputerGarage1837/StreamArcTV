@@ -13,6 +13,10 @@ version is shown to users inside the app when an update is available.
   decoder is not producing a picture rather than spinning forever.
 - The line under the spinner now also names the video format, resolution and decoder in use and
   whether a picture has been produced.
+- When the device's hardware decoder never draws a frame (emulators such as BlueStacks, some
+  boxes), the player automatically reopens the title with the software decoder.
+- The Video on Demand home was blank on an upright phone: the rows area was sized for the side
+  rail and collapsed to nothing once the navigation became a row of tabs.
 
 ## v1.0.42 — 2026-09-12
 

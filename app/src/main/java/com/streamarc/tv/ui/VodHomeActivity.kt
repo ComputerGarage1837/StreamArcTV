@@ -146,6 +146,13 @@ class VodHomeActivity : AppCompatActivity() {
             if (land) (96 * d).toInt() else ViewGroup.LayoutParams.MATCH_PARENT,
             if (land) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply { topMargin = (6 * d).toInt() }
+        // The content box takes the leftover space along the body's axis: width beside the
+        // rail, height under the tab row.
+        b.content.layoutParams = LinearLayout.LayoutParams(
+            if (land) 0 else ViewGroup.LayoutParams.MATCH_PARENT,
+            if (land) ViewGroup.LayoutParams.MATCH_PARENT else 0,
+            1f
+        )
         for (i in 0 until b.nav.childCount) {
             val item = b.nav.getChildAt(i)
             item.layoutParams = LinearLayout.LayoutParams(
