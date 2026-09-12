@@ -111,9 +111,10 @@
     <string name="record">Record</string>
     <string name="record_menu">Record…</string>
     <string name="record_fmt">Record %1$s</string>
-    <string name="record_start">Start</string>
-    <string name="record_duration">Duration</string>
-    <string name="record_now">Now</string>
+    <string name="record_start_time">Start</string>
+    <string name="record_end_time">End</string>
+    <string name="notice_recording_fmt">● Recording now: %1$s, until %2$s</string>
+    <string name="notice_scheduled_fmt">○ Scheduled: %1$s, %2$s – %3$s</string>
     <string name="recording">Recording</string>
     <string name="downloading">Downloading</string>
     <string name="recording_started_fmt">Recording %1$s.</string>

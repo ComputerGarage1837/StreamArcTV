@@ -3,6 +3,16 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.19 — 2026-09-12
+
+### Changed
+- Recording is set by start and end clock times, to the minute (for example 7:00 PM to 8:00 PM).
+  A start time already past means tomorrow; an end before the start rolls into the next day.
+- The Recordings screen shows a notice at the top with what is recording now and what is
+  scheduled, ahead of finished recordings.
+- Portrait phones: the Movies / Series / Downloads tabs sit on their own full-width row instead
+  of being squeezed into the top bar.
+
 ## v1.0.18 — 2026-09-12
 
 ### Added

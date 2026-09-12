@@ -71,10 +71,32 @@ class TransfersActivity : AppCompatActivity() {
     }
 
     private fun refresh(keepScroll: Boolean = false) {
-        val items = TransferStore.get(this).all().filter { it.type == type }.sortedByDescending { it.createdAt }
+        val all = TransferStore.get(this).all().filter { it.type == type }
+        val rank = { j: TransferJob -> when (j.state) { TransferState.RUNNING -> 0; TransferState.QUEUED -> 1; TransferState.SCHEDULED -> 2; else -> 3 } }
+        val items = all.sortedWith(compareBy<TransferJob> { rank(it) }.thenBy { if (it.state == TransferState.SCHEDULED) it.startAt else -it.createdAt })
         adapter.submit(items, keepScroll)
+        renderNotice(all)
         b.txtEmpty.text = getString(if (type == TransferType.RECORDING) R.string.recordings_empty else R.string.downloads_empty)
         b.txtEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+    }
+
+    /** Recordings only: what is recording right now and what is scheduled, above the list. */
+    private fun renderNotice(all: List<TransferJob>) {
+        if (type != TransferType.RECORDING) { b.txtNotice.visibility = View.GONE; return }
+        val running = all.filter { it.state == TransferState.RUNNING }
+        val scheduled = all.filter { it.state == TransferState.SCHEDULED }.sortedBy { it.startAt }
+        if (running.isEmpty() && scheduled.isEmpty()) { b.txtNotice.visibility = View.GONE; return }
+        val day = java.text.SimpleDateFormat("EEE MMM d", java.util.Locale.getDefault())
+        val today = day.format(java.util.Date())
+        fun whenText(ms: Long): String {
+            val d = day.format(java.util.Date(ms))
+            return if (d == today) Format.time(ms / 1000) else "$d ${Format.time(ms / 1000)}"
+        }
+        val lines = ArrayList<String>()
+        for (j in running) lines.add(getString(R.string.notice_recording_fmt, j.title, whenText(j.endAt)))
+        for (j in scheduled) lines.add(getString(R.string.notice_scheduled_fmt, j.title, whenText(j.startAt), whenText(j.endAt)))
+        b.txtNotice.text = lines.joinToString("\n")
+        b.txtNotice.visibility = View.VISIBLE
     }
 
     private fun play(j: TransferJob) {
