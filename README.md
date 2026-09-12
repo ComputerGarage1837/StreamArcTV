@@ -52,9 +52,10 @@ Repository secrets required (Settings → Secrets and variables → Actions):
 
 | Secret | Value |
 | --- | --- |
-| `KEYSTORE_BASE64` | `base64 -w0 streamarctv-release.jks` of the **original** release keystore |
-| `KEYSTORE_PASSWORD`, `KEY_PASSWORD` | the keystore / key password |
-| `KEY_ALIAS` | the key alias |
+| `KEYSTORE_BASE64` | `base64 -w0 streamarctv-release.jks` of the release keystore |
+| `KEYSTORE_PASSWORD` | the keystore password |
+
+Optional: `KEY_ALIAS` (defaults to `streamarctv`) and `KEY_PASSWORD` (defaults to the keystore password).
 
 To ship a version:
 
