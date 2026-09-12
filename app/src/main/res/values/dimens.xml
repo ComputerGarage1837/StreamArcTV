@@ -16,6 +16,9 @@
     <dimen name="home_cards_top">22dp</dimen>
 
     <!-- Live preview box in the guide panel -->
+    <dimen name="category_width">220dp</dimen>
+    <!-- Live TV: the guide grid wants every pixel, so the category column is slim -->
+    <dimen name="category_width_live">140dp</dimen>
     <dimen name="preview_w">144dp</dimen>
     <dimen name="preview_h">81dp</dimen>
     <dimen name="vod_hero_height">300dp</dimen>

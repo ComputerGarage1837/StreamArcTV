@@ -276,6 +276,10 @@ class BrowseActivity : AppCompatActivity() {
         } else {
             b.listCategoriesTop.visibility = View.GONE
             b.listCategories.visibility = View.VISIBLE
+            // Live TV keeps the column slim; long names ellipsize and the guide gets the width.
+            b.listCategories.layoutParams = b.listCategories.layoutParams.apply {
+                width = resources.getDimensionPixelSize(if (isLive) R.dimen.category_width_live else R.dimen.category_width)
+            }
             b.listCategories.layoutManager = LinearLayoutManager(this)
             b.listCategories.adapter = categoryAdapter
         }
