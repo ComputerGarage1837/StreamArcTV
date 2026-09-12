@@ -94,16 +94,6 @@
                             android:layout_height="4dp"
                             android:background="@drawable/hero_accent_bar" />
 
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:orientation="horizontal">
-                            <View android:layout_width="9dp" android:layout_height="9dp" android:background="@drawable/dot_active" />
-                            <View android:layout_width="9dp" android:layout_height="9dp" android:layout_marginStart="7dp" android:background="@drawable/dot_inactive" />
-                            <View android:layout_width="9dp" android:layout_height="9dp" android:layout_marginStart="7dp" android:background="@drawable/dot_inactive" />
-                            <View android:layout_width="9dp" android:layout_height="9dp" android:layout_marginStart="7dp" android:background="@drawable/dot_inactive" />
-                        </LinearLayout>
                     </LinearLayout>
 
                     <TextView
