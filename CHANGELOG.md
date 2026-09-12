@@ -3,6 +3,15 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.26 — 2026-09-12
+
+### Changed
+- Movies and Series list every category the provider attaches to its items, even ones the
+  provider's category list leaves out, and items that belong to several categories appear in
+  each of them.
+- Settings → Category diagnostics shows what the provider returns (categories listed, items,
+  category ids used but not listed) to help track down missing categories.
+
 ## v1.0.25 — 2026-09-12
 
 ### Fixed

@@ -50,12 +50,17 @@ data class Stream(
     @SerializedName("cover") val cover: String?,
     val plot: String?,
     @SerializedName("category_id") val categoryId: String?,
+    @SerializedName("category_ids") val categoryIds: List<String>?,
     @SerializedName("container_extension") val containerExtension: String?,
     @SerializedName("epg_channel_id") val epgChannelId: String?,
     @SerializedName("num") val number: String?,
     val rating: String?,
     val added: String?
 ) {
+    /** Every category this item belongs to (some panels send a list as well as the single id). */
+    val allCategoryIds: List<String>
+        get() = (listOfNotNull(categoryId) + categoryIds.orEmpty()).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+
     /** Stream id for live/movies, series id for series. */
     val id: String? get() = streamId ?: seriesId
     val image: String? get() = icon?.takeIf { it.isNotBlank() } ?: cover?.takeIf { it.isNotBlank() }

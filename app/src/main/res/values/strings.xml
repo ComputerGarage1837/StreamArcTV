@@ -141,6 +141,10 @@
     <string name="guide_filling_fmt">Loading guide: %1$d / %2$d channels</string>
     <string name="chosen_category">Chosen category</string>
     <string name="sign_in_live_first">Sign in to Live TV first.</string>
+    <string name="sign_in_vod_first">Sign in to Video on Demand first.</string>
+    <string name="category_diagnostics">Category diagnostics</string>
+    <string name="diagnostics_running">Checking the provider\'s categories…</string>
+    <string name="category_num_fmt">Category %1$s</string>
     <string name="delete_download_confirm_fmt">Delete %1$s from this device?</string>
     <string name="search_where">Search in</string>
     <string name="layout_question_title">How are you using Stream Arc TV?</string>

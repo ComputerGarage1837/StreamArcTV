@@ -43,6 +43,7 @@ class SettingsActivity : AppCompatActivity() {
         renderLiveFormat()
         b.rowLayout.setOnClickListener { pickLayout() }
         renderLayout()
+        b.rowDiagnostics.setOnClickListener { runDiagnostics() }
         b.rowLiveCategories.setOnClickListener { pickLiveCategories() }
         b.rowDefaultCategory.setOnClickListener { pickDefaultCategory() }
         renderLiveCategories()
@@ -89,6 +90,43 @@ class SettingsActivity : AppCompatActivity() {
                 d.dismiss()
             }
             .show()
+    }
+
+    // ---- Diagnostics -------------------------------------------------------
+
+    /** Compares the panel's category lists with the categories actually attached to items. */
+    private fun runDiagnostics() {
+        val account = prefs.account(Service.VOD)
+        if (account == null) { Toast.makeText(this, R.string.sign_in_vod_first, Toast.LENGTH_SHORT).show(); return }
+        val progress = AlertDialog.Builder(this).setMessage(R.string.diagnostics_running).setCancelable(false).show()
+        lifecycleScope.launch {
+            val report = StringBuilder()
+            for (kind in listOf(ContentKind.MOVIE, ContentKind.SERIES)) {
+                try {
+                    val cats = XtreamApi.categories(Service.VOD, account, kind)
+                    val items = com.streamarc.tv.data.CatalogCache.get(Service.VOD, account, kind)
+                    val listed = cats.mapNotNull { it.id }.toSet()
+                    val used = items.flatMap { it.allCategoryIds }.toSet()
+                    val missing = used - listed
+                    val emptyCats = listed - used
+                    report.append(if (kind == ContentKind.MOVIE) "MOVIES\n" else "\nSERIES\n")
+                    report.append("Categories listed by panel: ${cats.size}\n")
+                    report.append("Items in catalogue: ${items.size}\n")
+                    report.append("Category ids used by items: ${used.size}\n")
+                    report.append("Used but not listed: ${missing.size}${if (missing.isEmpty()) "" else "  (" + missing.take(12).joinToString(", ") + ")"}\n")
+                    report.append("Listed but empty: ${emptyCats.size}\n")
+                    report.append("Names: " + cats.take(40).joinToString(", ") { it.name ?: "?" } + (if (cats.size > 40) " …" else "") + "\n")
+                } catch (e: Exception) {
+                    report.append("${kind.name}: ${e.message}\n")
+                }
+            }
+            progress.dismiss()
+            AlertDialog.Builder(this@SettingsActivity)
+                .setTitle(R.string.category_diagnostics)
+                .setMessage(report.toString())
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
     }
 
     // ---- Live TV categories ---------------------------------------------
