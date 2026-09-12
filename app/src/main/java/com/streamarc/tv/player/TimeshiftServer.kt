@@ -76,7 +76,7 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
         val buf = ByteArray(64 * 1024)
         while (!closed) {
             try {
-                val req = Request.Builder().url(upstream).header("User-Agent", XtreamApi.USER_AGENT).build()
+                val req = Request.Builder().url(upstream).header("User-Agent", XtreamApi.USER_AGENT).header("Connection", "close").build()
                 val c = client.newCall(req).also { call = it }
                 c.execute().use { resp ->
                     if (!resp.isSuccessful) throw IOException("HTTP ${resp.code}")
@@ -231,6 +231,7 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
     fun close() {
         closed = true
         try { call?.cancel() } catch (_: Exception) {}
+        try { client.connectionPool.evictAll() } catch (_: Exception) {}
         try { socket.close() } catch (_: IOException) {}
         synchronized(lock) { lock.notifyAll() }
         Thread({ cleanup(dir) }, "timeshift-clean").start()

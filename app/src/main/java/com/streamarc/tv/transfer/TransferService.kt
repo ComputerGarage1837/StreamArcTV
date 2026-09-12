@@ -131,10 +131,11 @@ class TransferService : Service() {
                         .readTimeout(60, TimeUnit.SECONDS)
                         .callTimeout(0, TimeUnit.MILLISECONDS)
                         .build()
-                    val rb = Request.Builder().url(job.url).header("User-Agent", XtreamApi.USER_AGENT)
+                    val rb = Request.Builder().url(job.url).header("User-Agent", XtreamApi.USER_AGENT).header("Connection", "close")
                     val resuming = job.type == TransferType.DOWNLOAD && done > 0 && target != null
                     if (resuming) rb.header("Range", "bytes=$done-")
-                    client.newCall(rb.build()).execute().use { resp ->
+                    val call = client.newCall(rb.build())
+                    call.execute().use { resp ->
                         if (!resp.isSuccessful) throw HttpException(resp.code)
                         val body = resp.body ?: throw IllegalStateException("Empty response")
                         var out: Folders.Target? = null
@@ -164,7 +165,13 @@ class TransferService : Service() {
                         var lastFlushBytes = done
                         while (scope.isActive && running.containsKey(id)) {
                             if (job.type == TransferType.RECORDING && System.currentTimeMillis() >= job.endAt) break
-                            if (job.type == TransferType.DOWNLOAD && playbackActive) throw PausedForPlayback()
+                            if (job.type == TransferType.DOWNLOAD && playbackActive) {
+                                // Close the socket for real (not back into the keep-alive pool), so the
+                                // provider frees this account's stream slot for the player.
+                                call.cancel()
+                                XtreamApi.client.connectionPool.evictAll()
+                                throw PausedForPlayback()
+                            }
                             val n = input.read(buf)
                             if (n < 0) break
                             out.stream.write(buf, 0, n)
@@ -185,6 +192,7 @@ class TransferService : Service() {
                         if (job.type == TransferType.DOWNLOAD && total > 0 && done < total && running.containsKey(id) && scope.isActive)
                             throw IllegalStateException("Connection closed early")
                     }
+                    XtreamApi.client.connectionPool.evictAll()   // the provider's slot is free the moment we finish
                     if (!running.containsKey(id)) return   // cancelled
                     store.update(id) { it.state = TransferState.DONE; it.error = null }
                     notifyDone(job, true, null)
@@ -192,6 +200,7 @@ class TransferService : Service() {
                 } catch (e: PausedForPlayback) {
                     continue   // back to the top of the loop, which waits and then resumes with a Range request
                 } catch (e: Exception) {
+                    if (playbackActive && job.type == TransferType.DOWNLOAD) continue   // the cancel above surfaces as an IOException
                     if (!running.containsKey(id) || !scope.isActive) return
                     attempt++
                     if (attempt >= MAX_ATTEMPTS) throw e
@@ -217,6 +226,7 @@ class TransferService : Service() {
         } finally {
             live.remove(id)
             try { target?.stream?.close() } catch (_: Exception) {}
+            try { XtreamApi.client.connectionPool.evictAll() } catch (_: Exception) {}
         }
     }
 
