@@ -25,7 +25,7 @@ class SeriesActivity : AppCompatActivity() {
 
     private lateinit var b: ActivitySeriesBinding
     private lateinit var service: Service
-    private val adapter = EpisodeAdapter { ep -> play(ep) }
+    private val adapter = EpisodeAdapter({ ep -> play(ep) }, { ep -> askDownload(ep) })
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +69,19 @@ class SeriesActivity : AppCompatActivity() {
         }
     }
 
+    private fun askDownload(ep: Episode) {
+        val account = Prefs(this).account(service) ?: return
+        val url = try { XtreamApi.episodeUrl(service, account, ep) } catch (e: Exception) { return }
+        val title = "${b.txtTitle.text} S${ep.season}E${ep.number} ${ep.title}"
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(ep.title)
+            .setItems(arrayOf(getString(R.string.play), getString(R.string.download))) { _, which ->
+                if (which == 0) play(ep) else DownloadDialogs.askAndStart(this, title, getString(R.string.series), url, ep.containerExtension)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun play(ep: Episode) {
         val account = Prefs(this).account(service) ?: return
         val url = try {
@@ -80,7 +93,7 @@ class SeriesActivity : AppCompatActivity() {
         startActivity(PlayerActivity.intent(this, url, title, false))
     }
 
-    private class EpisodeAdapter(val onClick: (Episode) -> Unit) : RecyclerView.Adapter<EpisodeAdapter.VH>() {
+    private class EpisodeAdapter(val onClick: (Episode) -> Unit, val onLongClick: (Episode) -> Unit) : RecyclerView.Adapter<EpisodeAdapter.VH>() {
         private var items: List<Episode> = emptyList()
 
         class VH(val vb: ItemEpisodeBinding) : RecyclerView.ViewHolder(vb.root)
@@ -103,6 +116,7 @@ class SeriesActivity : AppCompatActivity() {
             holder.vb.txtInfo.text = info
             holder.vb.txtInfo.visibility = if (info.isBlank()) View.GONE else View.VISIBLE
             holder.vb.row.setOnClickListener { onClick(ep) }
+            holder.vb.row.setOnLongClickListener { onLongClick(ep); true }
         }
     }
 

@@ -29,6 +29,7 @@ import com.streamarc.tv.data.Stream
 import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.databinding.ActivityBrowseBinding
 import com.streamarc.tv.databinding.ItemCategoryBinding
+import com.streamarc.tv.databinding.ItemCategoryChipBinding
 import com.streamarc.tv.databinding.ItemStreamBinding
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -82,8 +83,7 @@ class BrowseActivity : AppCompatActivity() {
         b.btnBack.setOnClickListener { finish() }
         b.btnProfile.setOnClickListener { startActivity(ProfileActivity.intent(this, service)) }
 
-        b.listCategories.layoutManager = LinearLayoutManager(this)
-        b.listCategories.adapter = categoryAdapter
+        applyCategoryLayout()
 
         if (service.kind != ContentKind.LIVE) {
             b.tabs.visibility = View.VISIBLE
@@ -144,9 +144,33 @@ class BrowseActivity : AppCompatActivity() {
         if (!prefs.isSignedIn(service)) finish()
     }
 
+    /** Portrait phones get a horizontal chip row so the content gets the full width. */
+    private fun compactCategories(): Boolean =
+        resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT &&
+            resources.configuration.smallestScreenWidthDp < 600
+
+    private fun applyCategoryLayout() {
+        val compact = compactCategories()
+        categoryAdapter.chips = compact
+        b.listCategories.adapter = null
+        b.listCategoriesTop.adapter = null
+        if (compact) {
+            b.listCategories.visibility = View.GONE
+            b.listCategoriesTop.visibility = View.VISIBLE
+            b.listCategoriesTop.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+            b.listCategoriesTop.adapter = categoryAdapter
+        } else {
+            b.listCategoriesTop.visibility = View.GONE
+            b.listCategories.visibility = View.VISIBLE
+            b.listCategories.layoutManager = LinearLayoutManager(this)
+            b.listCategories.adapter = categoryAdapter
+        }
+    }
+
     /** Rotation is handled in place (see the manifest) so the category and guide position survive. */
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
+        applyCategoryLayout()
         if (!isLive) {
             streamAdapter.columns = resources.getInteger(R.integer.poster_columns)
             (b.listStreams.layoutManager as? GridLayoutManager)?.spanCount = streamAdapter.columns
@@ -275,9 +299,11 @@ class BrowseActivity : AppCompatActivity() {
         val isFav = prefs.isFavorite(service, kind, id)
         val favLabel = getString(if (isFav) R.string.remove_from_favorites else R.string.add_to_favorites)
         val first = getString(if (kind == ContentKind.SERIES) R.string.open else R.string.play)
+        val entries = mutableListOf(first, favLabel)
+        if (kind == ContentKind.MOVIE) entries.add(getString(R.string.download))
         AlertDialog.Builder(this)
             .setTitle(stream.name ?: "")
-            .setItems(arrayOf(first, favLabel)) { _, which ->
+            .setItems(entries.toTypedArray()) { _, which ->
                 when (which) {
                     0 -> play(stream)
                     1 -> {
@@ -285,6 +311,13 @@ class BrowseActivity : AppCompatActivity() {
                         val msg = if (nowFav) R.string.added_to_favorites_fmt else R.string.removed_from_favorites_fmt
                         Toast.makeText(this, getString(msg, stream.name ?: ""), Toast.LENGTH_SHORT).show()
                         applyFilter()
+                    }
+                    2 -> {
+                        val url = try { XtreamApi.streamUrl(service, account, stream, prefs.liveFormat) } catch (e: Exception) {
+                            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show(); return@setItems
+                        }
+                        DownloadDialogs.askAndStart(this, stream.name ?: "Movie", getString(R.string.movies), url,
+                            stream.containerExtension?.takeIf { it.isNotBlank() } ?: "mp4")
                     }
                 }
             }
@@ -353,23 +386,32 @@ class BrowseActivity : AppCompatActivity() {
         RecyclerView.Adapter<CategoryAdapter.VH>() {
 
         private var items: List<Category> = emptyList()
+        var chips: Boolean = false
         var selectedId: String? = null
             set(value) { field = value; notifyDataSetChanged() }
 
-        class VH(val vb: ItemCategoryBinding) : RecyclerView.ViewHolder(vb.root)
+        class VH(val root: View, val txtName: android.widget.TextView) : RecyclerView.ViewHolder(root)
 
         fun submit(list: List<Category>) { items = list; notifyDataSetChanged() }
 
+        override fun getItemViewType(position: Int) = if (chips) 1 else 0
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
-            VH(ItemCategoryBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            if (viewType == 1) {
+                val vb = ItemCategoryChipBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+                VH(vb.root, vb.txtName)
+            } else {
+                val vb = ItemCategoryBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+                VH(vb.root, vb.txtName)
+            }
 
         override fun getItemCount() = items.size
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val c = items[position]
-            holder.vb.txtName.text = c.name ?: "—"
-            holder.vb.root.isSelected = c.id == selectedId
-            holder.vb.root.setOnClickListener { onClick(c) }
+            holder.txtName.text = c.name ?: "—"
+            holder.root.isSelected = c.id == selectedId
+            holder.root.setOnClickListener { onClick(c) }
         }
     }
 

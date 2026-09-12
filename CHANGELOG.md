@@ -3,6 +3,17 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.17 — 2026-09-12
+
+### Added
+- Downloads: hold OK on a movie or an episode and choose Download. You pick where to save it
+  (inside the app, or the device's Downloads folder), and the Downloads section on the home screen
+  lists every download with progress, Play and Delete.
+
+### Changed
+- Phones held upright: the category list becomes a row of chips above the content, so movie and
+  series posters use the full width and are no longer narrow.
+
 ## v1.0.16 — 2026-09-12
 
 ### Changed
