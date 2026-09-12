@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.27 — 2026-09-12
+
+### Added
+- Genre categories for Series (and Movies when the provider supplies genres): Comedy, Action,
+  Drama and so on are built from each title's genre information and listed ahead of the
+  provider's own groups, so a provider that only offers A–Z groups still gets a proper genre list.
+
 ## v1.0.26 — 2026-09-12
 
 ### Changed

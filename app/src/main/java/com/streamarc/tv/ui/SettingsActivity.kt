@@ -115,6 +115,9 @@ class SettingsActivity : AppCompatActivity() {
                     report.append("Category ids used by items: ${used.size}\n")
                     report.append("Used but not listed: ${missing.size}${if (missing.isEmpty()) "" else "  (" + missing.take(12).joinToString(", ") + ")"}\n")
                     report.append("Listed but empty: ${emptyCats.size}\n")
+                    val withGenre = items.count { it.genres.isNotEmpty() }
+                    val genreNames = items.flatMap { it.genres }.groupingBy { it }.eachCount().filter { it.value >= 3 }.keys.sorted()
+                    report.append("Items with a genre: $withGenre → ${genreNames.size} genre groups\n")
                     report.append("Names: " + cats.take(40).joinToString(", ") { it.name ?: "?" } + (if (cats.size > 40) " …" else "") + "\n")
                 } catch (e: Exception) {
                     report.append("${kind.name}: ${e.message}\n")

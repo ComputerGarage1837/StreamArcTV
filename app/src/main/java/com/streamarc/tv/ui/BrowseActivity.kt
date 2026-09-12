@@ -296,6 +296,16 @@ class BrowseActivity : AppCompatActivity() {
                     val known = cats.mapNotNull { it.id }.toSet()
                     val extra = catalogue.flatMap { it.allCategoryIds }.filter { it !in known }.distinct()
                     if (extra.isNotEmpty()) cats = cats + extra.map { Category(it, getString(R.string.category_num_fmt, it)) }
+                    // Genre categories built from each item's genre field, ahead of the provider's own
+                    // (often just A–Z) groups. Only genres with a few titles, and not duplicating a
+                    // provider category of the same name.
+                    val providerNames = cats.mapNotNull { it.name?.trim()?.lowercase() }.toSet()
+                    val counts = HashMap<String, Int>()
+                    for (item in catalogue) for (g in item.genres) counts[g] = (counts[g] ?: 0) + 1
+                    val genres = counts.filter { it.value >= 3 && it.key.lowercase() !in providerNames }
+                        .keys.sortedBy { it.lowercase() }
+                        .map { Category(GENRE_PREFIX + it, it) }
+                    cats = genres + cats
                 }
                 val all = if (isLive) {
                     listOf(
@@ -357,6 +367,10 @@ class BrowseActivity : AppCompatActivity() {
                     when {
                         recentMode -> CatalogCache.recentlyAdded(all)
                         key == null -> all
+                        key.startsWith(GENRE_PREFIX) -> {
+                            val g = key.removePrefix(GENRE_PREFIX)
+                            all.filter { item -> item.genres.any { it.equals(g, ignoreCase = true) } }
+                        }
                         else -> all.filter { key in it.allCategoryIds }
                     }
                 }
@@ -663,6 +677,7 @@ class BrowseActivity : AppCompatActivity() {
         private const val EXTRA_SERVICE = "service"
         private const val FAV_ID = Prefs.CATEGORY_FAVORITES
         private const val RECENT_ID = "__recent__"
+        private const val GENRE_PREFIX = "__genre__:"
         fun intent(ctx: Context, service: Service): Intent =
             Intent(ctx, BrowseActivity::class.java).putExtra(EXTRA_SERVICE, service.name)
     }
