@@ -3,6 +3,23 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.33 — 2026-09-12
+
+### Added
+- Settings → Playback → **Live TV buffer**: Small, Normal, Large, Very large or Huge (up to 10
+  minutes ahead). Bigger buffers ride out patchy connections and let you pause for longer. Huge
+  buffers are capped to what the device's memory can safely hold.
+- Pause on live TV now keeps your place: the app keeps filling the buffer while paused and play
+  resumes exactly where you stopped, without creeping or snapping back to live. The top-right
+  badge shows LIVE or how far behind you are; select it to jump back to live.
+- The buffering spinner now shows how many seconds are ready, and dropped live connections
+  reconnect on their own (up to four tries) before showing the Retry button.
+
+### Changed
+- Live playback starts slightly behind the live edge so there is always video ready ahead, uses
+  faster MPEG-TS start-up, hardware-decoder fallback, more download retries and network wake
+  locks so the stream does not stall when the device dozes.
+
 ## v1.0.32 — 2026-09-12
 
 ### Changed

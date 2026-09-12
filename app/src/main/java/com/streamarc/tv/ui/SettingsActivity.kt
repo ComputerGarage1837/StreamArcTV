@@ -12,6 +12,7 @@ import com.streamarc.tv.R
 import androidx.lifecycle.lifecycleScope
 import com.streamarc.tv.data.Category
 import com.streamarc.tv.data.ContentKind
+import com.streamarc.tv.data.BufferLevel
 import com.streamarc.tv.data.Prefs
 import com.streamarc.tv.data.XtreamApi
 import kotlinx.coroutines.launch
@@ -41,6 +42,8 @@ class SettingsActivity : AppCompatActivity() {
 
         b.rowLiveFormat.setOnClickListener { pickLiveFormat() }
         renderLiveFormat()
+        b.rowBuffer.setOnClickListener { pickBuffer() }
+        renderBuffer()
         b.rowLayout.setOnClickListener { pickLayout() }
         renderLayout()
         b.rowDiagnostics.setOnClickListener { runDiagnostics() }
@@ -91,6 +94,29 @@ class SettingsActivity : AppCompatActivity() {
                 prefs.liveFormat = if (which == 1) "ts" else "m3u8"
                 renderLiveFormat()
                 d.dismiss()
+            }
+            .show()
+    }
+
+    private fun bufferLabels(): Array<String> = resources.getStringArray(R.array.buffer_levels)
+
+    private fun renderBuffer() {
+        val idx = BufferLevel.entries.indexOf(BufferLevel.from(prefs.bufferLevel))
+        b.txtBufferValue.text = bufferLabels()[idx].substringBefore(" (")
+    }
+
+    private fun pickBuffer() {
+        val current = BufferLevel.entries.indexOf(BufferLevel.from(prefs.bufferLevel))
+        AlertDialog.Builder(this)
+            .setTitle(R.string.live_buffer)
+            .setSingleChoiceItems(bufferLabels(), current) { d, which ->
+                prefs.bufferLevel = BufferLevel.entries[which].key
+                renderBuffer()
+                d.dismiss()
+            }
+            .setNeutralButton(R.string.buffer_help_title) { _, _ ->
+                AlertDialog.Builder(this).setTitle(R.string.buffer_help_title)
+                    .setMessage(R.string.buffer_help).setPositiveButton(android.R.string.ok, null).show()
             }
             .show()
     }
