@@ -3,6 +3,12 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.25 — 2026-09-12
+
+### Fixed
+- With a remote, the focused Movies / Series / Downloads tab (and category chip) is now solid
+  white with dark text, so it is obvious which one is highlighted; the active one stays cyan.
+
 ## v1.0.24 — 2026-09-12
 
 ### Added
