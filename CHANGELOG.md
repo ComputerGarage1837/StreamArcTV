@@ -3,6 +3,14 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.45 — 2026-09-12
+
+### Changed
+- When a title uses a format this device has no decoder for (for example HEVC 10-bit video or
+  Dolby Digital Plus audio on an emulator), the player now says so within seconds, naming the
+  format, with a "Try anyway" button, instead of buffering forever. If only the audio is
+  unsupported the video still plays and a short notice explains why there is no sound.
+
 ## v1.0.44 — 2026-09-12
 
 ### Added
