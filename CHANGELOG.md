@@ -3,6 +3,12 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.23 — 2026-09-12
+
+### Changed
+- The TV guide shows about two hours across the screen instead of four, so programme titles have
+  room to be read. Scroll right for later times.
+
 ## v1.0.22 — 2026-09-12
 
 ### Changed
