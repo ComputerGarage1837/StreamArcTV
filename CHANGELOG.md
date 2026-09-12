@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.36 — 2026-09-12
+
+### Changed
+- The playback buffer now defaults to Huge (10 minutes ahead) on every device. It is still capped
+  to half of the memory Android gives the app, so smaller boxes automatically get as much as
+  they can hold. Anyone who already picked a size keeps their choice.
+
 ## v1.0.35 — 2026-09-12
 
 ### Fixed

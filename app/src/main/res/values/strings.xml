@@ -61,7 +61,7 @@
         <item>Normal (1 min ahead)</item>
         <item>Large (2 min ahead, pause up to 2 min)</item>
         <item>Very large (5 min ahead, pause up to 5 min)</item>
-        <item>Huge (10 min ahead, pause up to 10 min)</item>
+        <item>Huge (10 min ahead, pause up to 10 min) – default</item>
         <item>20 min (written to device storage)</item>
         <item>30 min (written to device storage)</item>
         <item>1 hour (written to device storage)</item>
