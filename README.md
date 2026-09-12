@@ -62,11 +62,13 @@ To ship a version:
 1. Bump `VERSION_NAME` in `gradle.properties` (the version code is `major*10000 + minor*100 + patch`
    and must exceed the `versionCode` in `release/update.json`).
 2. Add a `## vX.Y.Z — date` section to `CHANGELOG.md`; it becomes the release notes shown in the app.
-3. Commit, push to `main`, then push the tag `vX.Y.Z`.
+3. Commit and push to `main` (or merge a pull request).
 
-The workflow builds the signed APK, publishes the GitHub release with `Stream-Arc-TV-X.Y.Z.apk`
-attached, and then commits the matching `release/update.json` (with SHA-256 and size) to `main`.
-Pushes to `main` and pull requests build an unsigned APK as a check only.
+When `main` carries a `VERSION_NAME` that has no GitHub release yet, the workflow builds the signed
+APK, creates the `vX.Y.Z` tag and release with `Stream-Arc-TV-X.Y.Z.apk` attached, and then commits
+the matching `release/update.json` (with SHA-256 and size) to `main`. Pushing a `v*` tag by hand or
+running the workflow manually does the same. Pull requests and pushes that don't bump the version
+only build the APK as a check.
 
 ## Update format
 
