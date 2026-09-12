@@ -40,6 +40,7 @@ import kotlinx.coroutines.launch
  * list details the focused channel. Holding OK on any item opens a context
  * menu with Play and Add/Remove favorites.
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class BrowseActivity : AppCompatActivity() {
 
     private lateinit var b: ActivityBrowseBinding
@@ -62,6 +63,10 @@ class BrowseActivity : AppCompatActivity() {
     private var favoritesMode = false
     private var guideReady = false
     private var prefetchJob: Job? = null
+
+    /** Small live preview in the guide panel. */
+    private var preview: androidx.media3.exoplayer.ExoPlayer? = null
+    private var previewStream: Stream? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -113,7 +118,10 @@ class BrowseActivity : AppCompatActivity() {
                 override fun onFocusChanged(channel: Stream, programme: EpgProgramme?) {
                     showChannelDetails(channel, channel.streamId?.let { EpgCache.peek(service, it) }, programme)
                 }
-                override fun onChannelClick(channel: Stream) = play(channel)
+                override fun onChannelClick(channel: Stream) {
+                    if (previewStream?.streamId != null && previewStream?.streamId == channel.streamId) play(channel)
+                    else startPreview(channel)
+                }
                 override fun onChannelLongClick(channel: Stream) = showItemMenu(channel)
                 override fun onNeedEpg(channel: Stream) {
                     val id = channel.streamId ?: return
@@ -144,6 +152,59 @@ class BrowseActivity : AppCompatActivity() {
         super.onResume()
         // If the user signed out from the profile screen, leave.
         if (!prefs.isSignedIn(service)) finish()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (isLive) previewStream?.let { startPreview(it) }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        releasePreview()
+    }
+
+    private fun startPreview(stream: Stream) {
+        val url = try { XtreamApi.streamUrl(service, account, stream, prefs.liveFormat) } catch (_: Exception) { return }
+        previewStream = stream
+        val player = preview ?: buildPreviewPlayer().also { preview = it }
+        b.previewPlayer.player = player
+        b.previewPlayer.visibility = View.VISIBLE
+        b.imgPanelLogo.visibility = View.GONE
+        b.txtPreviewHint.visibility = View.VISIBLE
+        player.setMediaItem(androidx.media3.common.MediaItem.fromUri(url))
+        player.playWhenReady = true
+        player.prepare()
+    }
+
+    private fun buildPreviewPlayer(): androidx.media3.exoplayer.ExoPlayer {
+        val http = androidx.media3.datasource.DefaultHttpDataSource.Factory()
+            .setUserAgent(XtreamApi.USER_AGENT)
+            .setAllowCrossProtocolRedirects(true)
+            .setConnectTimeoutMs(20_000)
+            .setReadTimeoutMs(30_000)
+        return androidx.media3.exoplayer.ExoPlayer.Builder(this)
+            .setMediaSourceFactory(
+                androidx.media3.exoplayer.source.DefaultMediaSourceFactory(this)
+                    .setDataSourceFactory(androidx.media3.datasource.DefaultDataSource.Factory(this, http))
+            )
+            .build()
+            .also { p ->
+                p.addListener(object : androidx.media3.common.Player.Listener {
+                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                        Toast.makeText(this@BrowseActivity, "Preview failed: ${error.errorCodeName}", Toast.LENGTH_SHORT).show()
+                    }
+                })
+            }
+    }
+
+    private fun releasePreview() {
+        b.previewPlayer.player = null
+        preview?.release()
+        preview = null
+        b.previewPlayer.visibility = View.GONE
+        b.txtPreviewHint.visibility = View.GONE
+        b.imgPanelLogo.visibility = View.VISIBLE
     }
 
     /** Portrait phones get a horizontal chip row so the content gets the full width. */

@@ -14,4 +14,8 @@
     <dimen name="home_hero_subtitle">15sp</dimen>
     <dimen name="home_hero_top">28dp</dimen>
     <dimen name="home_cards_top">22dp</dimen>
+
+    <!-- Live preview box in the guide panel -->
+    <dimen name="preview_w">144dp</dimen>
+    <dimen name="preview_h">81dp</dimen>
 </resources>
