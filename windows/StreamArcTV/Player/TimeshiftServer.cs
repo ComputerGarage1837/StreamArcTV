@@ -59,7 +59,7 @@ public sealed class TimeshiftServer
 
     private static readonly HttpClient Client = new(new SocketsHttpHandler
     {
-        AllowAutoRedirect = true,
+        AllowAutoRedirect = false,   // followed by hand, see HttpRedirects
         ConnectTimeout = TimeSpan.FromSeconds(15),
         PooledConnectionIdleTimeout = TimeSpan.FromSeconds(2),
     })
@@ -101,7 +101,7 @@ public sealed class TimeshiftServer
                 var req = new HttpRequestMessage(HttpMethod.Get, _upstream);
                 req.Headers.UserAgent.ParseAdd(XtreamApi.USER_AGENT);
                 req.Headers.ConnectionClose = true;
-                using var resp = Client.Send(req, HttpCompletionOption.ResponseHeadersRead, _cts.Token);
+                using var resp = HttpRedirects.Send(Client, req, HttpCompletionOption.ResponseHeadersRead, _cts.Token);
                 if (!resp.IsSuccessStatusCode) throw new IOException($"HTTP {(int)resp.StatusCode}");
                 using var input = resp.Content.ReadAsStream(_cts.Token);
                 while (!_closed)

@@ -153,7 +153,7 @@ public static class TransferService
                     var resuming = job.Type == TransferType.DOWNLOAD && done > 0 && target != null;
                     if (resuming) req.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(done, null);
                     using var pauseCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    using var resp = await Client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, pauseCts.Token);
+                    using var resp = await HttpRedirects.SendAsync(Client, req, HttpCompletionOption.ResponseHeadersRead, pauseCts.Token);
                     if (!resp.IsSuccessStatusCode)
                     {
                         // Capture exactly what the provider answered so the reason is in the log and the list.
@@ -281,7 +281,7 @@ public static class TransferService
     /// Streaming client with no overall timeout (reads are watched individually above).
     private static readonly HttpClient Client = new(new SocketsHttpHandler
     {
-        AllowAutoRedirect = true,
+        AllowAutoRedirect = false,   // followed by hand, see HttpRedirects
         ConnectTimeout = TimeSpan.FromSeconds(20),
         PooledConnectionIdleTimeout = TimeSpan.FromSeconds(2),
     })

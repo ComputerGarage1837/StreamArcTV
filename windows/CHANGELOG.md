@@ -3,6 +3,14 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.0.4 — 2026-09-13
+
+### Fixed
+- Downloads (and storage-buffer live playback) failed with "Provider error (HTTP 302 Found)".
+  The provider answers a movie or episode address with a redirect to its file server, often from
+  an https:// address to a plain http:// one, which Windows networking refuses to follow on its
+  own. The app now follows those redirects itself, carrying its headers and resume position along.
+
 ## v1.0.3 — 2026-09-13
 
 ### Fixed
