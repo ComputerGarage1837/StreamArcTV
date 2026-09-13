@@ -196,41 +196,76 @@ public partial class VodHomePage : AppPage
 
     // ---- Rows -------------------------------------------------------------------
 
-    private void Render()
+    private record RowPlan(string Title, List<Card> Cards, Action? SeeAll);
+    private int _renderSerial;
+
+    /// Plans the rows on a worker thread (sorting and filtering thousands of titles), then adds
+    /// them to the screen one at a time so the window never freezes while the home fills in.
+    private async void Render()
     {
         if (_dead) return;
+        var serial = ++_renderSerial;
+        var movies = _movies; var series = _series; var next = _nextEpisodes;
+        var favMovies = _prefs.Favorites(_service, ContentKind.MOVIE);
+        var favSeries = _prefs.Favorites(_service, ContentKind.SERIES);
+        var plan = await Task.Run(() =>
+        {
+            var rows = new List<RowPlan>();
+            var cont = WatchProgress.ContinueWatching().Select(kv => ContinueCard(kv.Key, kv.Entry)).ToList();
+            if (cont.Count > 0) rows.Add(new RowPlan("Continue watching", cont, null));
+            if (next.Count > 0) rows.Add(new RowPlan("Next episodes", next, null));
+
+            var movieById = movies.Where(m => m.Id != null).GroupBy(m => m.Id!).ToDictionary(g => g.Key, g => g.First());
+            var seriesById = series.Where(s => s.Id != null).GroupBy(s => s.Id!).ToDictionary(g => g.Key, g => g.First());
+            var myList = favMovies.Where(movieById.ContainsKey).Select(id => MovieCard(movieById[id]))
+                .Concat(favSeries.Where(seriesById.ContainsKey).Select(id => SeriesCard(seriesById[id]))).ToList();
+            if (myList.Count > 0) rows.Add(new RowPlan("My List", myList, null));
+
+            if (movies.Count > 0) rows.Add(new RowPlan("New movies", CatalogCache.RecentlyAdded(movies, 30).Select(MovieCard).ToList(),
+                () => Nav.Push(new BrowsePage(_service, ContentKind.MOVIE, BrowsePage.RECENT_ID))));
+            if (series.Count > 0) rows.Add(new RowPlan("New series", CatalogCache.RecentlyAdded(series, 30).Select(SeriesCard).ToList(),
+                () => Nav.Push(new BrowsePage(_service, ContentKind.SERIES, BrowsePage.RECENT_ID))));
+
+            foreach (var g in TopGenres(movies, 8))
+            {
+                var genre = g;
+                var items = CatalogCache.RecentlyAdded(movies.Where(m => m.Genres.Any(x => string.Equals(x, genre, StringComparison.OrdinalIgnoreCase))), 30);
+                rows.Add(new RowPlan($"{genre} movies", items.Select(MovieCard).ToList(), () => Nav.Push(new BrowsePage(_service, ContentKind.MOVIE, BrowsePage.GENRE_PREFIX + genre))));
+            }
+            foreach (var g in TopGenres(series, 5))
+            {
+                var genre = g;
+                var items = CatalogCache.RecentlyAdded(series.Where(s => s.Genres.Any(x => string.Equals(x, genre, StringComparison.OrdinalIgnoreCase))), 30);
+                rows.Add(new RowPlan($"{genre} series", items.Select(SeriesCard).ToList(), () => Nav.Push(new BrowsePage(_service, ContentKind.SERIES, BrowsePage.GENRE_PREFIX + genre))));
+            }
+            return rows;
+        });
+        if (serial != _renderSerial || Finished || _dead) return;
+
         Rows.Children.Clear();
         _heroView = null;
         if (_featured.Count > 0) { _heroView = BuildHero(); Rows.Children.Add(_heroView); BindHero(); }
-
-        var cont = WatchProgress.ContinueWatching().Select(kv => ContinueCard(kv.Key, kv.Entry)).ToList();
-        if (cont.Count > 0) AddRow("Continue watching", cont, null);
-        if (_nextEpisodes.Count > 0) AddRow("Next episodes", _nextEpisodes, null);
-
-        var movieById = _movies.Where(m => m.Id != null).GroupBy(m => m.Id!).ToDictionary(g => g.Key, g => g.First());
-        var seriesById = _series.Where(s => s.Id != null).GroupBy(s => s.Id!).ToDictionary(g => g.Key, g => g.First());
-        var myList = _prefs.Favorites(_service, ContentKind.MOVIE).Where(movieById.ContainsKey).Select(id => MovieCard(movieById[id]))
-            .Concat(_prefs.Favorites(_service, ContentKind.SERIES).Where(seriesById.ContainsKey).Select(id => SeriesCard(seriesById[id]))).ToList();
-        if (myList.Count > 0) AddRow("My List", myList, null);
-
-        if (_movies.Count > 0) AddRow("New movies", CatalogCache.RecentlyAdded(_movies, 30).Select(MovieCard).ToList(),
-            () => Nav.Push(new BrowsePage(_service, ContentKind.MOVIE, BrowsePage.RECENT_ID)));
-        if (_series.Count > 0) AddRow("New series", CatalogCache.RecentlyAdded(_series, 30).Select(SeriesCard).ToList(),
-            () => Nav.Push(new BrowsePage(_service, ContentKind.SERIES, BrowsePage.RECENT_ID)));
-
-        foreach (var g in TopGenres(_movies, 8))
+        // One row per pass through the dispatcher: the first rows appear at once and input stays responsive.
+        var queue = new Queue<RowPlan>(plan);
+        void AddNext()
         {
-            var genre = g;
-            var items = CatalogCache.RecentlyAdded(_movies.Where(m => m.Genres.Any(x => string.Equals(x, genre, StringComparison.OrdinalIgnoreCase))), 30);
-            AddRow($"{genre} movies", items.Select(MovieCard).ToList(), () => Nav.Push(new BrowsePage(_service, ContentKind.MOVIE, BrowsePage.GENRE_PREFIX + genre)));
+            if (serial != _renderSerial || Finished || queue.Count == 0) { LazyImages.Sweep(); return; }
+            var r = queue.Dequeue();
+            AddRow(r.Title, r.Cards, r.SeeAll);
+            Dispatcher.BeginInvoke(AddNext, DispatcherPriority.Background);
         }
-        foreach (var g in TopGenres(_series, 5))
+        AddNext();
+    }
+
+    /// Lets the mouse wheel scroll the page even when the pointer is over a horizontal row or the banner.
+    private void ForwardWheel(UIElement element)
+    {
+        element.PreviewMouseWheel += (_, e) =>
         {
-            var genre = g;
-            var items = CatalogCache.RecentlyAdded(_series.Where(s => s.Genres.Any(x => string.Equals(x, genre, StringComparison.OrdinalIgnoreCase))), 30);
-            AddRow($"{genre} series", items.Select(SeriesCard).ToList(), () => Nav.Push(new BrowsePage(_service, ContentKind.SERIES, BrowsePage.GENRE_PREFIX + genre)));
-        }
-        Dispatcher.BeginInvoke(LazyImages.Sweep, DispatcherPriority.Background);
+            if (e.Handled) return;
+            e.Handled = true;
+            RowsScroll.ScrollToVerticalOffset(RowsScroll.VerticalOffset - e.Delta);
+        };
     }
 
     private static List<string> TopGenres(List<Data.Stream> items, int n)
@@ -303,6 +338,7 @@ public partial class VodHomePage : AppPage
         grid.Children.Add(text);
         root.Child = grid;
         root.Tag = new HeroParts(backdrop, poster, title, meta, plot, play, list, dots, text);
+        ForwardWheel(root);
         return root;
     }
 
@@ -390,6 +426,7 @@ public partial class VodHomePage : AppPage
         var cardH = _land ? 180.0 : 150.0;
         foreach (var c in cards) strip.Children.Add(CardView(c, cardW, cardH));
         scroll.Content = strip;
+        ForwardWheel(scroll);
         scroll.ScrollChanged += (_, _) => LazyImages.Sweep();
         // Keep the focused card in view as the keyboard moves along the row.
         strip.AddHandler(GotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler((_, e) =>

@@ -83,7 +83,16 @@ public static class XmltvParser
     {
         public Dictionary<string, List<EpgProgramme>> ById { get; }
         public Dictionary<string, string> IdByName { get; }
+        private Dictionary<string, string>? _lowerIds;
         public Guide(Dictionary<string, List<EpgProgramme>> byId, Dictionary<string, string> idByName) { ById = byId; IdByName = idByName; }
+
+        /// Case-insensitive id lookup through a lazily built index (no scans per guide row).
+        public List<EpgProgramme>? ByIdIgnoreCase(string id)
+        {
+            if (ById.TryGetValue(id, out var l)) return l;
+            _lowerIds ??= ById.Keys.GroupBy(k => k.ToLowerInvariant()).ToDictionary(g => g.Key, g => g.First());
+            return _lowerIds.TryGetValue(id.ToLowerInvariant(), out var real) && ById.TryGetValue(real, out var pl) ? pl : null;
+        }
     }
 
     public static Guide Parse(System.IO.Stream input, long from, long to)
@@ -227,9 +236,8 @@ public static class EpgCache
         var id = epgChannelId?.Trim();
         if (!string.IsNullOrEmpty(id))
         {
-            if (g.ById.TryGetValue(id, out var l)) return l;
-            var ci = g.ById.FirstOrDefault(kv => string.Equals(kv.Key, id, StringComparison.OrdinalIgnoreCase));
-            if (ci.Value != null) return ci.Value;
+            var l = g.ByIdIgnoreCase(id);
+            if (l != null) return l;
         }
         if (channelName == null) return null;
         var name = XmltvParser.Normalize(channelName);
@@ -257,7 +265,7 @@ public static class EpgCache
         try
         {
             lock (Guides) if (Guides.ContainsKey(s)) return true;
-            var disk = await Task.Run(() => ReadDisk(s));
+            var disk = await Task.Run(() => ReadDisk(s)).ConfigureAwait(false);
             if (disk != null)
             {
                 lock (Guides) Guides[s] = disk.Value;
@@ -280,7 +288,7 @@ public static class EpgCache
         var to = from + 50 * 3600;      // two days so a disk copy still covers the grid later
         try
         {
-            var guide = await XtreamApi.FullGuide(s, account, from, to, onProgress);
+            var guide = await XtreamApi.FullGuide(s, account, from, to, onProgress).ConfigureAwait(false);
             XmltvParser.Guide? current;
             lock (Guides) current = Guides.TryGetValue(s, out var c) ? c.Guide : null;
             if (guide.ById.Count == 0) throw new InvalidOperationException("Empty guide");
@@ -292,7 +300,7 @@ public static class EpgCache
             }
             var at = Format.NowMs;
             lock (Guides) { Guides[s] = (at, guide); GuideFailedAt.Remove(s); }
-            await Task.Run(() => WriteDisk(s, at, guide));
+            _ = Task.Run(() => WriteDisk(s, at, guide));
             return true;
         }
         catch (XtreamApi.GuideTooLarge)

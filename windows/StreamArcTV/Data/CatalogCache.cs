@@ -40,17 +40,17 @@ public static class CatalogCache
         {
             lock (Lists) if (Lists.TryGetValue(k, out var e2)) return e2.Items;
             // Disk copy first: instant, then refreshed behind the scenes if stale.
-            var disk = await Task.Run(() => ReadDisk(k));
+            var disk = await Task.Run(() => ReadDisk(k)).ConfigureAwait(false);
             if (disk != null)
             {
                 lock (Lists) Lists[k] = disk.Value;
                 if (Format.NowMs - disk.Value.At > TTL_MS) RefreshInBackground(s, account, kind);
                 return disk.Value.Items;
             }
-            var all = await XtreamApi.Streams(s, account, null, kind);
+            var all = await XtreamApi.Streams(s, account, null, kind).ConfigureAwait(false);
             var now = Format.NowMs;
             lock (Lists) Lists[k] = (now, all);
-            await Task.Run(() => WriteDisk(k, now, all));
+            _ = Task.Run(() => WriteDisk(k, now, all));
             return all;
         }
         finally { Mutex.Release(); }
@@ -114,7 +114,7 @@ public static class CatalogCache
 
     /// Newest first by the panel's "added" timestamp; items without one go last.
     public static List<Stream> RecentlyAdded(IEnumerable<Stream> all, int limit = 300) =>
-        all.OrderByDescending(s => long.TryParse(s.Added?.Trim(), out var a) ? a : 0L).Take(limit).ToList();
+        all.OrderByDescending(s => s.AddedEpoch).Take(limit).ToList();
 }
 
 /// Episode lists per series, kept for half an hour so the VOD home and the player don't refetch them.

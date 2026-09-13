@@ -3,6 +3,17 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.0.2 — 2026-09-13
+
+### Fixed
+- The Video on Demand home could not be scrolled with the mouse wheel: each row's own horizontal
+  scroller swallowed the wheel. The wheel now scrolls the page wherever the pointer is.
+- Lag and freezes while loading: the catalogue (thousands of titles) was parsed, sorted and
+  filtered on the window's own thread, and the Video on Demand home built all of its rows in one
+  go. Parsing and filtering now run in the background, parsed fields are remembered instead of
+  re-read on every use, guide lookups use an index, and the home adds its rows one at a time so
+  the window stays responsive while it fills in.
+
 ## v1.0.1 — 2026-09-13
 
 ### Changed

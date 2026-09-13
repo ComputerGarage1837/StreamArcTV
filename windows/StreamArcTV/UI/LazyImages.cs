@@ -12,7 +12,7 @@ namespace StreamArcTV.UI;
 public static class LazyImages
 {
     private static readonly List<(Image Img, string Url, int Width)> Pending = new();
-    private static readonly DispatcherTimer Timer = new() { Interval = TimeSpan.FromMilliseconds(250) };
+    private static readonly DispatcherTimer Timer = new() { Interval = TimeSpan.FromMilliseconds(400) };
     private static bool _started;
 
     public static void Register(Image img, string? url, int decodeWidth = 480)

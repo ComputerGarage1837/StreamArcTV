@@ -93,19 +93,28 @@ public class Stream
     [JsonPropertyName("rating")] public JsonElement? RatingRaw { get; set; }
     [JsonPropertyName("added")] public JsonElement? AddedRaw { get; set; }
 
-    [JsonIgnore] public string? Name => NameRaw.Str();
-    [JsonIgnore] public string? StreamId => StreamIdRaw.Str();
-    [JsonIgnore] public string? SeriesId => SeriesIdRaw.Str();
-    [JsonIgnore] public string? Icon => IconRaw.Str();
-    [JsonIgnore] public string? Cover => CoverRaw.Str();
+    // The raw JSON is parsed once per field and remembered: these are read thousands of times while filtering.
+    private string? _name, _streamId, _seriesId, _icon, _cover, _genre, _categoryId, _added;
+    private bool _nameSet, _streamIdSet, _seriesIdSet, _iconSet, _coverSet, _genreSet, _categoryIdSet, _addedSet;
+    private List<string>? _genres, _allCategoryIds;
+    private long? _addedEpoch;
+
+    [JsonIgnore] public string? Name { get { if (!_nameSet) { _name = NameRaw.Str(); _nameSet = true; } return _name; } }
+    [JsonIgnore] public string? StreamId { get { if (!_streamIdSet) { _streamId = StreamIdRaw.Str(); _streamIdSet = true; } return _streamId; } }
+    [JsonIgnore] public string? SeriesId { get { if (!_seriesIdSet) { _seriesId = SeriesIdRaw.Str(); _seriesIdSet = true; } return _seriesId; } }
+    [JsonIgnore] public string? Icon { get { if (!_iconSet) { _icon = IconRaw.Str(); _iconSet = true; } return _icon; } }
+    [JsonIgnore] public string? Cover { get { if (!_coverSet) { _cover = CoverRaw.Str(); _coverSet = true; } return _cover; } }
     [JsonIgnore] public string? Plot => PlotRaw.Str();
-    [JsonIgnore] public string? Genre => GenreRaw.Str();
-    [JsonIgnore] public string? CategoryId => CategoryIdRaw.Str();
+    [JsonIgnore] public string? Genre { get { if (!_genreSet) { _genre = GenreRaw.Str(); _genreSet = true; } return _genre; } }
+    [JsonIgnore] public string? CategoryId { get { if (!_categoryIdSet) { _categoryId = CategoryIdRaw.Str(); _categoryIdSet = true; } return _categoryId; } }
     [JsonIgnore] public string? ContainerExtension => ContainerExtensionRaw.Str();
     [JsonIgnore] public string? EpgChannelId => EpgChannelIdRaw.Str();
     [JsonIgnore] public string? Number => NumberRaw.Str();
     [JsonIgnore] public string? Rating => RatingRaw.Str();
-    [JsonIgnore] public string? Added => AddedRaw.Str();
+    [JsonIgnore] public string? Added { get { if (!_addedSet) { _added = AddedRaw.Str(); _addedSet = true; } return _added; } }
+
+    /// The panel's "added" timestamp as a number (0 when missing), for sorting.
+    [JsonIgnore] public long AddedEpoch => _addedEpoch ??= long.TryParse(Added?.Trim(), out var a) ? a : 0L;
 
     [JsonIgnore]
     public List<string> CategoryIds
@@ -119,7 +128,7 @@ public class Stream
 
     /// Genre names from the panel's free-text genre field ("Comedy, Drama" → [Comedy, Drama]).
     [JsonIgnore]
-    public List<string> Genres =>
+    public List<string> Genres => _genres ??=
         (Genre ?? "").Split(new[] { ',', '/', '|', ';' }).Select(s => s.Trim())
             .Where(s => s.Length >= 2 && s.Length <= 30).Distinct().ToList();
 
@@ -129,10 +138,11 @@ public class Stream
     {
         get
         {
+            if (_allCategoryIds != null) return _allCategoryIds;
             var l = new List<string>();
             if (CategoryId != null) l.Add(CategoryId);
             l.AddRange(CategoryIds);
-            return l.Select(s => s.Trim()).Where(s => s.Length > 0).Distinct().ToList();
+            return _allCategoryIds = l.Select(s => s.Trim()).Where(s => s.Length > 0).Distinct().ToList();
         }
     }
 

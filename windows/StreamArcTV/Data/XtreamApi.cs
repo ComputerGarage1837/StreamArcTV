@@ -38,7 +38,7 @@ public static class XtreamApi
 
     public static async Task<UserInfo> Login(Service service, string username, string password)
     {
-        var body = await Get(ApiUrl(service, username, password));
+        var body = await Get(ApiUrl(service, username, password)).ConfigureAwait(false);
         LoginResponse? resp;
         try { resp = JsonSerializer.Deserialize<LoginResponse>(body, Json.Options); }
         catch (JsonException) { throw new ApiException("Unexpected response from server"); }
@@ -60,8 +60,8 @@ public static class XtreamApi
             ContentKind.MOVIE => "get_vod_categories",
             _ => "get_series_categories"
         };
-        var body = await Get(ApiUrl(service, account.Username, account.Password, action));
-        return ParseList<Category>(body);
+        var body = await Get(ApiUrl(service, account.Username, account.Password, action)).ConfigureAwait(false);
+        return await Task.Run(() => ParseList<Category>(body)).ConfigureAwait(false);
     }
 
     public static async Task<List<Stream>> Streams(Service service, Account account, string? categoryId, ContentKind? kindOverride = null)
@@ -74,15 +74,15 @@ public static class XtreamApi
             _ => "get_series"
         };
         var extra = categoryId != null ? new Dictionary<string, string> { ["category_id"] = categoryId } : null;
-        var body = await Get(ApiUrl(service, account.Username, account.Password, action, extra));
-        return ParseList<Stream>(body);
+        var body = await Get(ApiUrl(service, account.Username, account.Password, action, extra)).ConfigureAwait(false);
+        return await Task.Run(() => ParseList<Stream>(body)).ConfigureAwait(false);
     }
 
     /// Episodes of a series grouped by season (`get_series_info`).
     public static async Task<List<Episode>> SeriesInfo(Service service, Account account, string seriesId)
     {
         var body = await Get(ApiUrl(service, account.Username, account.Password, "get_series_info",
-            new Dictionary<string, string> { ["series_id"] = seriesId }));
+            new Dictionary<string, string> { ["series_id"] = seriesId })).ConfigureAwait(false);
         JsonDocument doc;
         try { doc = JsonDocument.Parse(body); } catch { throw new ApiException("Unexpected response from server"); }
         using (doc)
@@ -143,14 +143,14 @@ public static class XtreamApi
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(30));
-            using var resp = await Client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+            using var resp = await Client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode) throw new ApiException($"Guide download failed (HTTP {(int)resp.StatusCode})");
             var total = resp.Content.Headers.ContentLength ?? -1;
-            await using var raw = await resp.Content.ReadAsStreamAsync(cts.Token);
+            await using var raw = await resp.Content.ReadAsStreamAsync(cts.Token).ConfigureAwait(false);
             var counting = new CountingStream(raw, total, onProgress);
             var gzip = resp.Content.Headers.ContentEncoding.Any(e => e.Contains("gzip", StringComparison.OrdinalIgnoreCase));
             await using System.IO.Stream input = gzip ? new GZipStream(counting, CompressionMode.Decompress) : counting;
-            var guide = await Task.Run(() => XmltvParser.Parse(input, fromEpoch, toEpoch), cts.Token);
+            var guide = await Task.Run(() => XmltvParser.Parse(input, fromEpoch, toEpoch), cts.Token).ConfigureAwait(false);
             counting.Finish();
             return guide;
         }
@@ -217,7 +217,7 @@ public static class XtreamApi
     public static async Task<List<EpgProgramme>> ShortEpg(Service service, Account account, string streamId, int limit = 48)
     {
         var body = await Get(ApiUrl(service, account.Username, account.Password, "get_short_epg",
-            new Dictionary<string, string> { ["stream_id"] = streamId, ["limit"] = limit.ToString() }));
+            new Dictionary<string, string> { ["stream_id"] = streamId, ["limit"] = limit.ToString() })).ConfigureAwait(false);
         return EpgParser.Parse(body);
     }
 
@@ -274,8 +274,8 @@ public static class XtreamApi
         req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
         try
         {
-            using var resp = await Client.SendAsync(req);
-            var text = await resp.Content.ReadAsStringAsync();
+            using var resp = await Client.SendAsync(req).ConfigureAwait(false);
+            var text = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode)
             {
                 if (resp.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)

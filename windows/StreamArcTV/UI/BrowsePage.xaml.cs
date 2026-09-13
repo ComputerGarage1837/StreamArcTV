@@ -294,7 +294,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
             List<Category> all;
             if (IsLive)
                 all = new List<Category> { new(FAV_ID, "★ Favorites"), new(null, "All") }.Concat(cats).ToList();
-            else if (cached != null) { _augmented = true; all = BuildVodCategories(cats, cached); }
+            else if (cached != null) { _augmented = true; all = await Task.Run(() => BuildVodCategories(cats, cached)); }
             else
                 all = new List<Category> { new(FAV_ID, "★ Favorites"), new(RECENT_ID, "Recently added"), new(null, "All") }.Concat(cats).ToList();
             _categories = all;
@@ -355,11 +355,14 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
     }
 
     /// Called once the catalogue is available: adds genre / extra groups without losing the selection.
-    private void AugmentCategories(List<Data.Stream> catalogue)
+    private async void AugmentCategories(List<Data.Stream> catalogue)
     {
         if (IsLive || _augmented) return;
         _augmented = true;
-        _categories = BuildVodCategories(_providerCategories, catalogue);
+        var provider = _providerCategories;
+        var built = await Task.Run(() => BuildVodCategories(provider, catalogue));
+        if (Finished) return;
+        _categories = built;
         RenderCategories();
         SetSelectedCategory(_selectedId);
     }
@@ -392,14 +395,17 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
                 var all = await CatalogCache.Get(_service, _account, _kind);
                 if (serial != _loadSerial) return;
                 AugmentCategories(all);
-                if (recentMode) list = CatalogCache.RecentlyAdded(all);
-                else if (key == null) list = all;
-                else if (key.StartsWith(GENRE_PREFIX))
+                list = await Task.Run(() =>
                 {
-                    var g = key[GENRE_PREFIX.Length..];
-                    list = all.Where(item => item.Genres.Any(x => string.Equals(x, g, StringComparison.OrdinalIgnoreCase))).ToList();
-                }
-                else list = all.Where(item => item.AllCategoryIds.Contains(key)).ToList();
+                    if (recentMode) return CatalogCache.RecentlyAdded(all);
+                    if (key == null) return all;
+                    if (key.StartsWith(GENRE_PREFIX))
+                    {
+                        var g = key[GENRE_PREFIX.Length..];
+                        return all.Where(item => item.Genres.Any(x => string.Equals(x, g, StringComparison.OrdinalIgnoreCase))).ToList();
+                    }
+                    return all.Where(item => item.AllCategoryIds.Contains(key)).ToList();
+                });
             }
             if (serial != _loadSerial) return;
             _allStreams = list;
