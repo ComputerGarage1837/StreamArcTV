@@ -142,6 +142,35 @@ object Folders {
         } catch (_: Exception) { false }
     }
 
+    /**
+     * "Show Name - S01E05 - Episode Title". Provider episode titles usually repeat the show name
+     * and the episode code, sometimes with release tags; those are stripped, and if nothing
+     * meaningful is left the file is just "Show Name - S01E05".
+     */
+    fun episodeFileName(series: String, season: Int, episode: Int, episodeTitle: String?): String {
+        val show = cleanTitle(series)
+        val code = "S%02dE%02d".format(season, episode)
+        var ep = episodeTitle.orEmpty()
+        ep = ep.replace(series, "", ignoreCase = true).replace(show, "", ignoreCase = true)
+        ep = ep.replace(Regex("(?i)\\bS\\d{1,2}\\s*E\\d{1,3}\\b"), "")
+            .replace(Regex("(?i)\\b\\d{1,2}x\\d{1,3}\\b"), "")
+            .replace(Regex("(?i)\\bseason\\s*\\d+\\b"), "")
+            .replace(Regex("(?i)\\bepisode\\s*\\d+\\b"), "")
+        ep = cleanTitle(ep).trim(' ', '-', '–', ':', '.', '_', '|')
+        return if (ep.isBlank() || ep.length > 70) "$show - $code" else "$show - $code - $ep"
+    }
+
+    /** Movie names minus provider tags such as [4K], (MULTI-SUB), 1080p, HEVC. */
+    fun movieFileName(name: String): String = cleanTitle(name)
+
+    private fun cleanTitle(s: String): String = s
+        .replace(Regex("\\[[^\\]]*]"), " ")                                   // [4K], [EN]
+        .replace(Regex("(?i)\\((?:multi|sub|dub|eng|hd|uhd|4k|hdr)[^)]*\\)"), " ")  // (MULTI-SUB)
+        .replace(Regex("(?i)\\b(2160p|1080p|720p|480p|4k|uhd|hdr10?|hevc|x26[45]|h\\.?26[45]|web-?dl|webrip|bluray|hdtv)\\b"), " ")
+        .replace(Regex("\\s*[-–|:]\\s*$"), "")
+        .replace(Regex("\\s+"), " ")
+        .trim(' ', '-', '–', '|')
+
     fun safeName(name: String): String =
         name.replace(Regex("[\\\\/:*?\"<>|\\x00-\\x1F]"), " ").replace(Regex("\\s+"), " ").trim().take(120).ifBlank { "video" }
 }

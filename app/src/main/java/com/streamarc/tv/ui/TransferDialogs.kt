@@ -21,7 +21,7 @@ import java.util.Locale
 import java.util.UUID
 
 /** One thing to download: title for the list, URL and file extension. */
-data class DownloadItem(val title: String, val subtitle: String, val url: String, val ext: String)
+data class DownloadItem(val title: String, val subtitle: String, val url: String, val ext: String, val fileBase: String? = null)
 
 object TransferDialogs {
 
@@ -69,7 +69,7 @@ object TransferDialogs {
                 title = it.title,
                 subtitle = it.subtitle,
                 url = it.url,
-                fileName = Folders.safeName(it.title) + "." + it.ext.ifBlank { "mp4" },
+                fileName = Folders.safeName(it.fileBase ?: it.title) + "." + it.ext.ifBlank { "mp4" },
                 folder = folder,
                 startAt = 0, endAt = 0,
                 createdAt = System.currentTimeMillis()

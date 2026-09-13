@@ -79,7 +79,9 @@ class SeriesActivity : AppCompatActivity() {
     private fun item(ep: Episode): DownloadItem? {
         val account = Prefs(this).account(service) ?: return null
         val url = try { XtreamApi.episodeUrl(service, account, ep) } catch (_: Exception) { return null }
-        return DownloadItem("${b.txtTitle.text} S${ep.season}E${ep.number} ${ep.title}", b.txtTitle.text.toString(), url, ep.containerExtension)
+        val show = b.txtTitle.text.toString()
+        return DownloadItem("$show S${ep.season}E${ep.number} ${ep.title}", show, url, ep.containerExtension,
+            fileBase = com.streamarc.tv.transfer.Folders.episodeFileName(show, ep.season, ep.number, ep.title))
     }
 
     override fun onResume() {

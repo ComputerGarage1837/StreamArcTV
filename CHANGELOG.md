@@ -3,6 +3,14 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.50 — 2026-09-13
+
+### Changed
+- Downloaded files get clean names: episodes are saved as "Show Name - S01E05 - Episode Title"
+  (or just "Show Name - S01E05" when the provider's episode title only repeats the show and the
+  code), and movies drop provider tags such as [4K], (MULTI-SUB), 1080p or HEVC. Titles inside
+  the app are unchanged.
+
 ## v1.0.49 — 2026-09-13
 
 ### Changed
