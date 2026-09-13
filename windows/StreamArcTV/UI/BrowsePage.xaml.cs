@@ -536,7 +536,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         try { url = XtreamApi.StreamUrl(_service, _account, stream, _prefs.LiveFormat); }
         catch (Exception e) { Dialogs.Toast(e.Message); return; }
         var ext = string.IsNullOrWhiteSpace(stream.ContainerExtension) ? "mp4" : stream.ContainerExtension!;
-        TransferDialogs.Download(new[] { new DownloadItem(stream.Name ?? "Movie", "Movies", url, ext) });
+        TransferDialogs.Download(new[] { new DownloadItem(Names.Movie(stream.Name ?? "Movie"), "Movies", url, ext) });
     }
 
     private async void DownloadSeries(Data.Stream stream)
@@ -550,7 +550,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         if (episodes.Count == 0) { Dialogs.Toast("No episodes found."); return; }
         var r = Dialogs.Alert(name, $"Download all {episodes.Count} episodes?", "Download all", "Cancel");
         if (r != DialogResultKind.Positive) return;
-        var items = episodes.Select(ep => new DownloadItem($"{name} S{ep.Season}E{ep.Number} {ep.Title}", name, XtreamApi.EpisodeUrl(_service, _account, ep), ep.ContainerExtension)).ToList();
+        var items = episodes.Select(ep => new DownloadItem(Names.Episode(name, ep.Season, ep.Number, ep.Title), name, XtreamApi.EpisodeUrl(_service, _account, ep), ep.ContainerExtension)).ToList();
         TransferDialogs.Download(items);
     }
 

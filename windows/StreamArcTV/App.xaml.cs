@@ -46,6 +46,7 @@ public partial class App : Application
         Task.Run(Player.TimeshiftServer.Cleanup);
         Tray.Init();
         TransferService.RescheduleAll();
+        TransferService.RenameCompleted();
 
         Window = new MainWindow();
         if (StartInTray)

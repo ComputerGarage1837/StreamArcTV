@@ -59,7 +59,10 @@ public static class TransferDialogs
                 Folders.SafeName(it.Title) + "." + (string.IsNullOrWhiteSpace(it.Ext) ? "mp4" : it.Ext), folder, 0, 0);
             TransferService.Enqueue(job);
         }
-        Dialogs.Toast(items.Count == 1 ? $"Downloading {items[0].Title}." : $"Downloading {items.Count} items.");
+        var what = items.Count == 1 ? items[0].Title : $"{items.Count} items";
+        if (Nav.Current is TransfersPage) { Dialogs.Toast($"Downloading {what}."); return; }
+        var r = Dialogs.Alert("Download started", $"{what} added to Downloads.\n\nGo to the Downloads page to watch its progress, or stay here and keep browsing.", "Go to Downloads", "Stay here");
+        if (r == DialogResultKind.Positive) Nav.Push(new TransfersPage(TransferType.DOWNLOAD));
     }
 
     /// Start and end clock times (to the minute), then folder and schedule.

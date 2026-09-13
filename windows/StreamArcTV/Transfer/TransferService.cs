@@ -72,6 +72,43 @@ public static class TransferService
     }
 
     /// Re-arms scheduled recordings on start-up: missed ones fail, due ones start, later ones are scheduled.
+    /// Renames the files of downloads completed by earlier versions ("Show S1E2 Title.mp4") to the
+    /// clear form ("Show - S01E02 - Title.mp4") and updates their entries. Runs once, in the background.
+    public static void RenameCompleted()
+    {
+        if (Prefs.Instance.DownloadsRenamed) return;
+        Task.Run(() =>
+        {
+            var renamed = 0;
+            foreach (var job in Store.All())
+            {
+                if (job.Type != TransferType.DOWNLOAD || job.State != TransferState.DONE) continue;
+                var title = Names.Upgrade(job.Title);
+                if (title == null || title == job.Title) continue;
+                var ext = Path.GetExtension(job.FileName);
+                var fileName = Folders.SafeName(title) + ext;
+                var newPath = job.FileUri;
+                try
+                {
+                    if (job.FileUri != null && File.Exists(job.FileUri))
+                    {
+                        newPath = Path.Combine(Path.GetDirectoryName(job.FileUri)!, fileName);
+                        if (!string.Equals(newPath, job.FileUri, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (File.Exists(newPath)) File.Delete(newPath);
+                            File.Move(job.FileUri, newPath);
+                        }
+                    }
+                }
+                catch (Exception e) { AppLog.W("Transfer", $"rename '{job.FileName}' failed: {e.Message}"); continue; }
+                Store.Update(job.Id, j => { j.Title = title; j.FileName = fileName; j.FileUri = newPath; });
+                renamed++;
+            }
+            if (renamed > 0) AppLog.I("Transfer", $"renamed {renamed} completed download(s) to the clear form");
+            Prefs.Instance.DownloadsRenamed = true;
+        });
+    }
+
     public static void RescheduleAll()
     {
         var now = Format.NowMs;

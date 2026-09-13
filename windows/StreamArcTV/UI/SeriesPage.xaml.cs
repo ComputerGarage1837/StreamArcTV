@@ -111,7 +111,7 @@ public partial class SeriesPage : AppPage
         if (account == null) return null;
         string url;
         try { url = XtreamApi.EpisodeUrl(_service, account, ep); } catch { return null; }
-        return new DownloadItem($"{_title} S{ep.Season}E{ep.Number} {ep.Title}", _title, url, ep.ContainerExtension);
+        return new DownloadItem(Names.Episode(_title, ep.Season, ep.Number, ep.Title), _title, url, ep.ContainerExtension);
     }
 
     private void AskDownload(Episode ep)

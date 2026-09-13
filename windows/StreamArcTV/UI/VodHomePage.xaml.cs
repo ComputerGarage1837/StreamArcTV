@@ -562,7 +562,7 @@ public partial class VodHomePage : AppPage
             {
                 string url;
                 try { url = XtreamApi.StreamUrl(_service, _account, s, _prefs.LiveFormat); } catch { return; }
-                TransferDialogs.Download(new[] { new DownloadItem(s.Name ?? "Movie", "Movies", url, s.ContainerExtension ?? "mp4") });
+                TransferDialogs.Download(new[] { new DownloadItem(Names.Movie(s.Name ?? "Movie"), "Movies", url, s.ContainerExtension ?? "mp4") });
                 break;
             }
             case 3: WatchProgress.SetWatched(key!, !WatchProgress.IsWatched(key!)); Render(); break;

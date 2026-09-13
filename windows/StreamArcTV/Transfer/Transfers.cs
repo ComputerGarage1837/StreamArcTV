@@ -84,6 +84,36 @@ public class TransferStore
     private static void Save(List<TransferJob> list) => Data.Prefs.SetBlob("transfers", JsonSerializer.Serialize(list, Opts));
 }
 
+/// <summary>
+/// Clear names for downloaded files: "Show - S01E02 - Episode title" for episodes (season and
+/// episode always two digits, "S01E01", never "S1E1") and the plain title for movies.
+/// </summary>
+public static class Names
+{
+    private static readonly Regex OldEpisode = new(@"^(?<show>.+?)\s+S(?<s>\d{1,3})E(?<e>\d{1,4})\s*(?<title>.*)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    public static string Episode(string show, int season, int number, string? title)
+    {
+        var code = $"S{Math.Max(0, season):00}E{Math.Max(0, number):00}";
+        var t = (title ?? "").Trim();
+        // Providers often repeat the show name or the episode code in the episode title.
+        if (t.StartsWith(show, StringComparison.OrdinalIgnoreCase)) t = t[show.Length..].TrimStart(' ', '-', ':', '·');
+        t = Regex.Replace(t, @"^S?\d{1,3}\s*[Ex]\s*\d{1,4}\s*[-:·]?\s*", "", RegexOptions.IgnoreCase).Trim();
+        return string.IsNullOrWhiteSpace(t) || string.Equals(t, code, StringComparison.OrdinalIgnoreCase) ? $"{show} - {code}" : $"{show} - {code} - {t}";
+    }
+
+    public static string Movie(string name) => name.Trim();
+
+    /// Rewrites a title from an earlier version ("Show S1E2 Title") into the clear form; null when it is not one.
+    public static string? Upgrade(string oldTitle)
+    {
+        var m = OldEpisode.Match(oldTitle.Trim());
+        if (!m.Success) return null;
+        if (!int.TryParse(m.Groups["s"].Value, out var s) || !int.TryParse(m.Groups["e"].Value, out var e)) return null;
+        return Episode(m.Groups["show"].Value.Trim(), s, e, m.Groups["title"].Value);
+    }
+}
+
 /// Folder handling for user-picked folders and the app's own directory.
 public static class Folders
 {

@@ -240,6 +240,9 @@ public sealed class Prefs
     /// Set synchronously by the crash handler; the home screen offers the log on the next start.
     public bool Crashed { get => GetBool("crashed", false); set => PutBool("crashed", value); }
 
+    /// Set once the files of earlier downloads have been renamed to the clear "Show - S01E01 - Title" form.
+    public bool DownloadsRenamed { get => GetBool("downloads_renamed_v2", false); set => PutBool("downloads_renamed_v2", value); }
+
     /// Multi-view: number of tiles (2 or 4) and the channel id in each slot ("" = empty).
     public int MultiviewTiles { get => GetInt("multiview_tiles", 4); set => PutInt("multiview_tiles", value); }
 

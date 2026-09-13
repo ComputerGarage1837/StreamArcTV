@@ -3,6 +3,15 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.2 — 2026-09-13
+
+### Changed
+- After you queue a download, the app asks whether to go to the Downloads page or stay where you
+  are (a short notice instead when you are already on Downloads).
+- Downloaded files get clear names: movies are named by their title, and episodes are named
+  "Show - S01E02 - Episode title" with the season and episode always two digits (never "S1E2").
+  Downloads completed by earlier versions are renamed to this form the next time the app starts.
+
 ## v1.1.1 — 2026-09-13
 
 ### Fixed
