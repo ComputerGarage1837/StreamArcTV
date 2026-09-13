@@ -126,13 +126,16 @@ public static class Dialogs
     {
         var h = new ProgressHandle();
         var d = new DialogWindow(title, false);
-        var panel = new StackPanel { Margin = new Thickness(4, 8, 4, 0) };
+        // Fixed width and a fixed-height text line: the window sizes itself to its content, and
+        // a size that follows the changing "12.3 MB of 105 MB" text makes the box pulse.
+        var panel = new StackPanel { Margin = new Thickness(4, 8, 4, 0), Width = 420 };
         var bar = new ProgressBar { IsIndeterminate = true, Maximum = 1000, Height = 8, Style = Ui.Res<Style>("ThinProgress") };
-        var txt = new TextBlock { Text = text, Margin = new Thickness(0, 10, 0, 0), Foreground = Ui.Brush("TextMutedBrush"), FontSize = 14, TextWrapping = TextWrapping.Wrap };
+        var txt = new TextBlock { Text = text, Margin = new Thickness(0, 10, 0, 0), Foreground = Ui.Brush("TextMutedBrush"), FontSize = 14, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis, Height = 20 };
         panel.Children.Add(bar); panel.Children.Add(txt);
         d.SetContent(panel);
         d.SetButtons(null, onCancel != null ? "Cancel" : null, null);
         d.AllowClose = false;
+        d.Loaded += (_, _) => { d.SizeToContent = SizeToContent.Manual; d.Width = d.ActualWidth; d.Height = d.ActualHeight; };
         d.Closed += (_, _) => { if (d.Result == DialogResultKind.Negative) onCancel?.Invoke(); };
         h.Window = d; h.Bar = bar; h.Text = txt;
         d.Owner = Owner;

@@ -3,6 +3,12 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.3 — 2026-09-13
+
+### Fixed
+- The box around the download / update progress bar changed size with every progress update,
+  pulsing as the "x MB of y MB" text changed. Progress dialogs now keep a fixed size.
+
 ## v1.1.2 — 2026-09-13
 
 ### Changed
