@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.51 — 2026-09-13
+
+### Fixed
+- The Downloads and Recordings lists did not update while open; progress only changed after
+  leaving and reopening the screen. The refresh loop was cancelling itself the moment the screen
+  opened. It now runs for as long as the screen is in front, twice a second.
+
 ## v1.0.50 — 2026-09-13
 
 ### Changed

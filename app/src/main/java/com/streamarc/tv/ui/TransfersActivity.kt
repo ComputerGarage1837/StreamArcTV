@@ -11,6 +11,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.streamarc.tv.R
@@ -57,10 +58,17 @@ class TransfersActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         refresh()
+    }
+
+    init {
+        // Live progress: refresh twice a second for as long as the screen is in front.
+        // (repeatOnLifecycle starts once RESUMED is actually reached and stops on pause.)
         lifecycleScope.launch {
-            while (isActive && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                delay(500)
-                refresh(keepScroll = true)
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (isActive) {
+                    delay(500)
+                    refresh(keepScroll = true)
+                }
             }
         }
     }
