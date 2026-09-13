@@ -1,0 +1,23 @@
+<ui:AppPage xmlns="https://github.com/avaloniaui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:ui="using:StreamArcTV.UI"
+            x:Class="StreamArcTV.UI.VodHomePage">
+    <Grid RowDefinitions="Auto,*">
+        <ui:HomeHeader x:Name="Header" Margin="14,8,14,0" />
+        <Grid x:Name="Body" Grid.Row="1" RowDefinitions="Auto,*">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="96" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel x:Name="NavRail" Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Margin="6,6,6,0" />
+            <UniformGrid x:Name="NavTabs" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Rows="1" Margin="6,6,6,0" IsVisible="False" />
+            <Panel x:Name="ContentBox" Grid.Row="1" Grid.Column="1">
+                <ScrollViewer x:Name="RowsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="0,0,0,24">
+                    <StackPanel x:Name="Rows" />
+                </ScrollViewer>
+                <ui:Spinner x:Name="Progress" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock x:Name="TxtError" Foreground="{StaticResource DangerBrush}" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" TextWrapping="Wrap" IsVisible="False" />
+            </Panel>
+        </Grid>
+    </Grid>
+</ui:AppPage>

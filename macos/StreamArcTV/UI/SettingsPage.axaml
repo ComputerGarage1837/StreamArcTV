@@ -1,0 +1,110 @@
+<ui:AppPage xmlns="https://github.com/avaloniaui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:ui="using:StreamArcTV.UI"
+            x:Class="StreamArcTV.UI.SettingsPage"
+            Background="{StaticResource HomeGradientBrush}">
+    <ScrollViewer x:Name="Scroll" VerticalScrollBarVisibility="Auto" Focusable="False">
+        <Grid Margin="20" RowDefinitions="Auto,Auto">
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="BtnBack" Classes="squareicon" ToolTip.Tip="Back">
+                    <Path Data="{StaticResource IconBack}" Fill="{StaticResource TextBrush}" Width="22" Height="22" Stretch="Uniform" />
+                </Button>
+                <TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="14,0,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" MaxWidth="640" HorizontalAlignment="Left" MinWidth="480" Margin="0,8,0,0">
+                <!-- Updates -->
+                <TextBlock Text="UPDATES" Classes="section" />
+                <ui:SwitchRow x:Name="SwitchAutoUpdate" Text="Check for updates on launch" />
+                <Button x:Name="BtnCheckUpdates" Content="Check for updates now" Classes="settingsrow left" />
+                <TextBlock x:Name="TxtSkipped" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="16,0" />
+                <Button x:Name="BtnClearSkipped" Content="Stop skipping this version" Classes="settingsrow left" Margin="0,6,0,6" IsVisible="False" />
+
+                <!-- Playback -->
+                <TextBlock Text="PLAYBACK" Classes="section" />
+                <Button x:Name="RowLiveFormat" Classes="settingsrow">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Live stream format" Foreground="{StaticResource TextBrush}" />
+                        <TextBlock x:Name="TxtLiveFormatValue" Grid.Column="1" Foreground="{StaticResource AccentBrush}" />
+                    </Grid>
+                </Button>
+                <ui:SwitchRow x:Name="SwitchAutoPlayNext" Text="Auto-play the next episode" />
+                <Button x:Name="RowSubtitles" Classes="settingsrow">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Subtitles" Foreground="{StaticResource TextBrush}" />
+                        <TextBlock x:Name="TxtSubtitlesValue" Grid.Column="1" Foreground="{StaticResource AccentBrush}" />
+                    </Grid>
+                </Button>
+                <Button x:Name="RowBuffer" Classes="settingsrow">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Playback buffer (live TV &amp; VOD)" Foreground="{StaticResource TextBrush}" />
+                        <TextBlock x:Name="TxtBufferValue" Grid.Column="1" Foreground="{StaticResource AccentBrush}" />
+                    </Grid>
+                </Button>
+
+                <!-- Live TV -->
+                <TextBlock Text="LIVE TV" Classes="section" />
+                <Button x:Name="RowLiveCategories" Classes="settingsrow">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Categories shown" Foreground="{StaticResource TextBrush}" />
+                        <TextBlock x:Name="TxtLiveCategoriesValue" Grid.Column="1" Foreground="{StaticResource AccentBrush}" />
+                    </Grid>
+                </Button>
+                <Button x:Name="RowGuideMode" Classes="settingsrow">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="TV guide source" Foreground="{StaticResource TextBrush}" />
+                        <TextBlock x:Name="TxtGuideModeValue" Grid.Column="1" Foreground="{StaticResource AccentBrush}" />
+                    </Grid>
+                </Button>
+                <Button x:Name="RowDefaultCategory" Classes="settingsrow">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Default category" Foreground="{StaticResource TextBrush}" />
+                        <TextBlock x:Name="TxtDefaultCategoryValue" Grid.Column="1" Foreground="{StaticResource AccentBrush}" MaxWidth="220" TextTrimming="CharacterEllipsis" Margin="12,0,0,0" />
+                    </Grid>
+                </Button>
+
+                <!-- Display -->
+                <TextBlock Text="DISPLAY" Classes="section" />
+                <Button x:Name="RowLayout" Classes="settingsrow">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Display layout" Foreground="{StaticResource TextBrush}" />
+                        <TextBlock x:Name="TxtLayoutValue" Grid.Column="1" Foreground="{StaticResource AccentBrush}" />
+                    </Grid>
+                </Button>
+                <Button x:Name="RowDiagnostics" Content="Category diagnostics" Classes="settingsrow left" />
+                <Button x:Name="RowLogs" Content="Export logs" Classes="settingsrow left" />
+
+                <!-- Storage -->
+                <TextBlock Text="STORAGE" Classes="section" />
+                <ui:SwitchRow x:Name="SwitchWifiOnly" Text="Download only on Wi-Fi / Ethernet" />
+                <ui:SwitchRow x:Name="SwitchDeleteWatched" Text="Delete downloads after watching" />
+                <Button x:Name="RowDownloadFolder" Classes="settingsrow">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Text="Download folder" Foreground="{StaticResource TextBrush}" />
+                        <TextBlock x:Name="TxtDownloadFolderValue" Grid.Column="1" Foreground="{StaticResource AccentBrush}" FontSize="14" TextAlignment="Right" TextTrimming="CharacterEllipsis" Margin="12,0,0,0" />
+                    </Grid>
+                </Button>
+                <Button x:Name="RowRecordingFolder" Classes="settingsrow">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Text="Recordings folder" Foreground="{StaticResource TextBrush}" />
+                        <TextBlock x:Name="TxtRecordingFolderValue" Grid.Column="1" Foreground="{StaticResource AccentBrush}" FontSize="14" TextAlignment="Right" TextTrimming="CharacterEllipsis" Margin="12,0,0,0" />
+                    </Grid>
+                </Button>
+
+                <!-- Accounts -->
+                <TextBlock Text="ACCOUNTS" Classes="section" />
+                <Button x:Name="BtnLogoutLive" Classes="settingsrow left" />
+                <Button x:Name="BtnLogoutVod" Classes="settingsrow left" />
+
+                <!-- About -->
+                <TextBlock Text="ABOUT" Classes="section" />
+                <Button x:Name="RowGithub" Classes="settingsrow left">
+                    <StackPanel>
+                        <TextBlock Text="View releases &amp; changelog on GitHub" Foreground="{StaticResource TextBrush}" />
+                        <TextBlock x:Name="TxtRepo" Foreground="{StaticResource AccentBrush}" FontSize="13" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Button>
+                <TextBlock x:Name="TxtVersion" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="16,10,16,0" />
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</ui:AppPage>

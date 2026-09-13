@@ -1,0 +1,24 @@
+<ui:AppPage xmlns="https://github.com/avaloniaui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:ui="using:StreamArcTV.UI"
+            x:Class="StreamArcTV.UI.LoginPage"
+            Background="{StaticResource HomeGradientBrush}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+        <StackPanel Margin="24" HorizontalAlignment="Center">
+            <Image Source="avares://StreamArcTV/Assets/logo_wordmark.png" Width="260" Height="80" Stretch="Uniform" Margin="0,12,0,0" />
+            <Border Classes="card" Width="480" Padding="24" Margin="0,24,0,0">
+                <StackPanel>
+                    <TextBlock x:Name="TxtTitle" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
+                    <TextBlock Text="Server" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,6,0,0" />
+                    <TextBlock x:Name="TxtServer" FontSize="14" Foreground="{StaticResource AccentBrush}" />
+                    <TextBox x:Name="InputUsername" Watermark="Username" Margin="0,20,0,0" />
+                    <TextBox x:Name="InputPassword" Watermark="Password" PasswordChar="•" Margin="0,12,0,0" />
+                    <TextBlock x:Name="TxtError" Foreground="{StaticResource DangerBrush}" FontSize="14" TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="False" />
+                    <ui:Spinner x:Name="Progress" HorizontalAlignment="Center" Margin="0,12,0,0" IsVisible="False" />
+                    <Button x:Name="BtnSignIn" Content="Sign in" Classes="primary" HorizontalAlignment="Stretch" Margin="0,20,0,0" />
+                    <Button x:Name="BtnCancel" Content="Cancel" Classes="secondary" HorizontalAlignment="Stretch" Margin="0,10,0,0" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</ui:AppPage>

@@ -1,0 +1,183 @@
+name: macOS Build & Release
+
+on:
+  push:
+    branches: [main]
+    paths: ["macos/**", ".github/workflows/macos.yml"]
+    tags: ["macos-v*"]
+  pull_request:
+    paths: ["macos/**", ".github/workflows/macos.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: macos-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build macOS app
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/macos-v* ]]; then
+            echo "name=${GITHUB_REF#refs/tags/macos-v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=$(sed -n 's/.*<Version>\(.*\)<\/Version>.*/\1/p' macos/Directory.Build.props | head -n1)" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A release is published when a macos-v* tag is pushed, or when a push to main
+      # (or a manual run) carries a version that has no release yet.
+      - name: Decide whether to publish a release
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.ver.outputs.name }}
+        run: |
+          publish=false
+          if [[ "$GITHUB_REF" == refs/tags/macos-v* ]]; then
+            publish=true
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]] || { [[ "$GITHUB_EVENT_NAME" == "push" ]] && [[ "$GITHUB_REF" == "refs/heads/main" ]]; }; then
+            if gh release view "macos-v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "Release macos-v$V already exists; building only."
+            else
+              publish=true
+            fi
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "Publish release macos-v$V: $publish"
+
+      - name: Cache the VLC disk image
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/streamarc-vlc
+          key: vlc-3.0.21-universal-dmg
+
+      - name: Build app bundles (Apple silicon and Intel)
+        env:
+          V: ${{ steps.ver.outputs.name }}
+        run: |
+          export GitHubRepo="${GITHUB_REPOSITORY}"
+          for arch in arm64 x64; do
+            rid=osx-$arch
+            dotnet publish macos/StreamArcTV/StreamArcTV.csproj -c Release -r "$rid" --self-contained true \
+              -p:Version="$V" -p:GitHubRepo="${GITHUB_REPOSITORY}" -p:DebugType=none -p:DebugSymbols=false \
+              -o "out/publish-$arch"
+            macos/bundle/make-app.sh "$V" "$arch" "out/$arch" "out/publish-$arch"
+          done
+
+      - name: Collect package details
+        id: pkg
+        env:
+          V: ${{ steps.ver.outputs.name }}
+        run: |
+          for arch in arm64 x64; do
+            for kind in dmg zip; do
+              f="out/$arch/Stream-Arc-TV-${V}-macOS-${arch}.${kind}"
+              cp "$f" .
+              echo "${arch}_${kind}_name=$(basename "$f")" >> "$GITHUB_OUTPUT"
+              echo "${arch}_${kind}_sha256=$(shasum -a 256 "$f" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+              echo "${arch}_${kind}_size=$(stat -f%z "$f")" >> "$GITHUB_OUTPUT"
+            done
+          done
+          ls -la *.dmg *.zip
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Stream-Arc-TV-macOS-${{ steps.ver.outputs.name }}
+          path: |
+            *.dmg
+            *.zip
+
+      - name: Extract changelog for this version
+        if: steps.rel.outputs.publish == 'true'
+        run: |
+          V="${{ steps.ver.outputs.name }}"
+          awk -v v="$V" '
+            /^## / { if (found) exit; if (index($0, "v" v) > 0) { found=1; next } }
+            found { print }
+          ' macos/CHANGELOG.md > RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then echo "Stream Arc TV for macOS v$V" > RELEASE_NOTES.md; fi
+          echo "---- release notes ----"; cat RELEASE_NOTES.md
+
+      - name: Publish GitHub release
+        if: steps.rel.outputs.publish == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: macos-v${{ steps.ver.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          name: Stream Arc TV for macOS ${{ steps.ver.outputs.name }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            *.dmg
+            *.zip
+          fail_on_unmatched_files: true
+
+      # The in-app updater reads release/update-macos.json from main, so publish the
+      # feed only after the release and its assets exist.
+      - name: Update release feed on main
+        if: steps.rel.outputs.publish == 'true'
+        env:
+          VERSION_NAME: ${{ steps.ver.outputs.name }}
+          A_DMG: ${{ steps.pkg.outputs.arm64_dmg_name }}
+          A_DMG_SHA: ${{ steps.pkg.outputs.arm64_dmg_sha256 }}
+          A_DMG_SIZE: ${{ steps.pkg.outputs.arm64_dmg_size }}
+          A_ZIP: ${{ steps.pkg.outputs.arm64_zip_name }}
+          A_ZIP_SHA: ${{ steps.pkg.outputs.arm64_zip_sha256 }}
+          A_ZIP_SIZE: ${{ steps.pkg.outputs.arm64_zip_size }}
+          X_DMG: ${{ steps.pkg.outputs.x64_dmg_name }}
+          X_DMG_SHA: ${{ steps.pkg.outputs.x64_dmg_sha256 }}
+          X_DMG_SIZE: ${{ steps.pkg.outputs.x64_dmg_size }}
+          X_ZIP: ${{ steps.pkg.outputs.x64_zip_name }}
+          X_ZIP_SHA: ${{ steps.pkg.outputs.x64_zip_sha256 }}
+          X_ZIP_SIZE: ${{ steps.pkg.outputs.x64_zip_size }}
+        run: |
+          set -euo pipefail
+          IFS=. read -r MAJ MIN PAT <<< "$VERSION_NAME"
+          CODE=$(( ${MAJ%%[^0-9]*} * 10000 + ${MIN%%[^0-9]*} * 100 + ${PAT%%[^0-9]*} ))
+          git fetch origin main
+          git checkout -B main origin/main
+          CURRENT=$(python3 -c "import json;print(json.load(open('release/update-macos.json'))['versionCode'])")
+          if [ "$CODE" -le "$CURRENT" ]; then
+            echo "::error::versionCode $CODE is not newer than the feed's $CURRENT; not updating release/update-macos.json."
+            exit 1
+          fi
+          cat > release/update-macos.json <<JSON
+          {
+            "schemaVersion": 1,
+            "packageName": "com.computergarage.streamarctv.macos",
+            "versionName": "$VERSION_NAME",
+            "versionCode": $CODE,
+            "arm64": {
+              "dmg": { "assetName": "$A_DMG", "sha256": "$A_DMG_SHA", "sizeBytes": $A_DMG_SIZE },
+              "zip": { "assetName": "$A_ZIP", "sha256": "$A_ZIP_SHA", "sizeBytes": $A_ZIP_SIZE }
+            },
+            "x64": {
+              "dmg": { "assetName": "$X_DMG", "sha256": "$X_DMG_SHA", "sizeBytes": $X_DMG_SIZE },
+              "zip": { "assetName": "$X_ZIP", "sha256": "$X_ZIP_SHA", "sizeBytes": $X_ZIP_SIZE }
+            }
+          }
+          JSON
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release/update-macos.json
+          git commit -m "Publish Stream Arc TV for macOS $VERSION_NAME update feed"
+          for i in 1 2 3 4; do
+            if git push origin main; then exit 0; fi
+            echo "push rejected; rebasing and retrying ($i)"
+            git fetch origin main && git rebase origin/main
+          done
+          exit 1

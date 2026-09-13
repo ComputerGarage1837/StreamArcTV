@@ -1,0 +1,105 @@
+<ui:AppPage xmlns="https://github.com/avaloniaui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:ui="using:StreamArcTV.UI"
+            xmlns:vlc="using:LibVLCSharp.Avalonia"
+            x:Class="StreamArcTV.UI.BrowsePage">
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+        <!-- Top bar -->
+        <Grid x:Name="TopBar" Margin="12,10,12,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="0.8*" />
+                <ColumnDefinition Width="1.2*" MinWidth="110" MaxWidth="360" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button x:Name="BtnBack" Classes="squareicon" ToolTip.Tip="Back">
+                <Path Data="{StaticResource IconBack}" Fill="{StaticResource TextBrush}" Width="22" Height="22" Stretch="Uniform" />
+            </Button>
+            <TextBlock x:Name="TxtTitle" Grid.Column="1" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="14,0,0,0" />
+            <StackPanel x:Name="Tabs" Grid.Column="2" Orientation="Horizontal" Margin="14,0,0,0" VerticalAlignment="Center" IsVisible="False">
+                <Button x:Name="BtnTabMovies" Content="Movies" Classes="tab" />
+                <Button x:Name="BtnTabSeries" Content="Series" Classes="tab" Margin="6,0,0,0" />
+                <Button x:Name="BtnTabDownloads" Content="Downloads" Classes="tab" Margin="6,0,0,0" />
+            </StackPanel>
+            <TextBlock x:Name="TxtCategory" Grid.Column="3" FontSize="14" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
+            <TextBox x:Name="InputSearch" Grid.Column="4" Watermark="Search…" Height="40" MinHeight="40" Padding="12,0" Margin="0,0,10,0" VerticalContentAlignment="Center" />
+            <Button x:Name="BtnMulti" Grid.Column="5" Classes="squareicon" Margin="0,0,6,0" ToolTip.Tip="Multi-view" IsVisible="False">
+                <Path Data="{StaticResource IconMulti}" Fill="{StaticResource TextBrush}" Width="20" Height="20" Stretch="Uniform" />
+            </Button>
+            <Button x:Name="BtnProfile" Grid.Column="6" Classes="squareicon" ToolTip.Tip="Profile">
+                <Path Data="{StaticResource IconProfile}" Fill="{StaticResource TextBrush}" Width="22" Height="22" Stretch="Uniform" />
+            </Button>
+        </Grid>
+
+        <!-- Narrow windows: the Movies / Series / Downloads tabs move here from the top bar -->
+        <UniformGrid x:Name="TabsRow" Grid.Row="1" Rows="1" Margin="12,0,12,8" IsVisible="False" />
+
+        <!-- Narrow windows: the category list becomes a row of chips -->
+        <ScrollViewer x:Name="ChipsScroll" Grid.Row="2" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Margin="12,0,4,8" IsVisible="False" Focusable="False">
+            <StackPanel x:Name="ChipsRow" Orientation="Horizontal" />
+        </ScrollViewer>
+
+        <Grid x:Name="BodyGrid" Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <ScrollViewer x:Name="CategoryScroll" VerticalScrollBarVisibility="Auto" Focusable="False" Padding="8,0,4,16">
+                <StackPanel x:Name="CategoryList" />
+            </ScrollViewer>
+
+            <Grid Grid.Column="1" RowDefinitions="Auto,*">
+
+                <!-- EPG detail panel (live TV only): the focused programme -->
+                <Border x:Name="PanelEpg" Classes="panel" Margin="8,0,12,8" Padding="12,10,16,10" IsVisible="False">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <Panel x:Name="PreviewBox" Width="144" Height="81" Background="#000000" VerticalAlignment="Center">
+                            <Image x:Name="ImgPanelLogo" Stretch="Uniform" Margin="6" />
+                            <vlc:VideoView x:Name="PreviewPlayer" IsVisible="False">
+                                <Border VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Background="#99000000" x:Name="PreviewHint" IsVisible="False">
+                                    <TextBlock Text="Enter again for full screen" FontSize="10" Foreground="{StaticResource TextBrush}" HorizontalAlignment="Center" Margin="0,2" />
+                                </Border>
+                            </vlc:VideoView>
+                        </Panel>
+                        <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="TxtPanelChannel" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="TxtPanelNow" FontSize="13" Foreground="{StaticResource PurpleBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                            <TextBlock x:Name="TxtPanelDesc" FontSize="13" Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxLines="2" Margin="0,4,0,0" />
+                            <TextBlock x:Name="TxtPanelUpcoming" FontSize="12" Foreground="{StaticResource TextMutedBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                            <Grid x:Name="GuideLoading" Margin="0,6,0,0" IsVisible="False" ColumnDefinitions="*,Auto">
+                                <ui:ThinProgress x:Name="ProgressGuide" Height="6" IsIndeterminate="True" VerticalAlignment="Center" />
+                                <TextBlock x:Name="TxtGuideLoading" Grid.Column="1" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <ui:EpgGridView x:Name="EpgGrid" Grid.Row="1" Margin="8,0,12,12" IsVisible="False" />
+
+                <ScrollViewer x:Name="ListScroll" Grid.Row="1" Margin="8,0,12,0" Padding="0,0,0,16" VerticalScrollBarVisibility="Auto" Focusable="False">
+                    <ItemsControl x:Name="ListStreams">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <ui:PosterRowView />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <ui:Spinner x:Name="Progress" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" />
+                <TextBlock x:Name="TxtEmpty" Grid.Row="1" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="480" IsVisible="False" />
+                <TextBlock x:Name="TxtError" Grid.Row="1" Foreground="{StaticResource DangerBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="24" IsVisible="False" />
+            </Grid>
+        </Grid>
+    </Grid>
+</ui:AppPage>

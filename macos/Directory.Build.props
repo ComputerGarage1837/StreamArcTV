@@ -1,0 +1,14 @@
+<Project>
+  <!--
+    Stream Arc TV for macOS: product settings shared by every project in this folder.
+    VERSION drives the version code (major*10000 + minor*100 + patch), which must always be higher
+    than the versionCode in release/update-macos.json. The server addresses are the same two
+    Xtream Codes services as the Android and Windows apps; override with -p:LiveUrl=... if needed.
+  -->
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <GitHubRepo Condition="'$(GitHubRepo)' == ''">ComputerGarage1837/StreamArcTV</GitHubRepo>
+    <LiveUrl Condition="'$(LiveUrl)' == ''">https://mediahere.ca/</LiveUrl>
+    <VodUrl Condition="'$(VodUrl)' == ''">https://onlypuds.fans:2083/</VodUrl>
+  </PropertyGroup>
+</Project>

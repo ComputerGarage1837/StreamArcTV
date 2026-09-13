@@ -24,6 +24,13 @@ lives in [`windows/`](windows/). See [`windows/README.md`](windows/README.md) fo
 build and release steps; its releases are tagged `windows-v…` and its update feed is
 `release/update-windows.json`.
 
+## macOS
+
+A macOS edition with the same interface and features (Avalonia on .NET 8, playback through LibVLC,
+Apple silicon and Intel) lives in [`macos/`](macos/). See [`macos/README.md`](macos/README.md) for
+the install, build and release steps; its releases are tagged `macos-v…` and its update feed is
+`release/update-macos.json`.
+
 ## Install
 
 1. Download the latest `Stream-Arc-TV-<version>.apk` from the [Releases](../../releases) page.

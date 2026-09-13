@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="StreamArcTV.UI.HomeHeader"
+             Focusable="False">
+    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+        <Image x:Name="ImgLogo" Source="avares://StreamArcTV/Assets/ic_logo_mark.png" Width="46" Height="46" Stretch="Uniform" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+            <TextBlock x:Name="TxtBrand" FontSize="22" FontWeight="Black" Foreground="{StaticResource TextBrush}" />
+            <TextBlock Text="Good Entertainment Lives Here" FontSize="12" Foreground="#94A3B8" />
+        </StackPanel>
+        <StackPanel Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Button x:Name="BtnUpdate" Classes="roundimage" Width="44" Height="44" ToolTip.Tip="Update">
+                <Image Source="avares://StreamArcTV/Assets/img_btn_update.png" Stretch="Uniform" />
+            </Button>
+            <TextBlock Text="Update" FontSize="11" Foreground="{StaticResource TextBrush}" HorizontalAlignment="Center" Margin="0,3,0,0" />
+        </StackPanel>
+        <StackPanel Grid.Column="3" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="14,0,0,0">
+            <Button x:Name="BtnSettings" Classes="roundimage" Width="44" Height="44" ToolTip.Tip="Settings">
+                <Image Source="avares://StreamArcTV/Assets/img_btn_settings.png" Stretch="Uniform" />
+            </Button>
+            <TextBlock Text="Settings" FontSize="11" Foreground="{StaticResource TextBrush}" HorizontalAlignment="Center" Margin="0,3,0,0" />
+        </StackPanel>
+        <TextBlock x:Name="TxtClock" Grid.Column="4" Margin="20,0,0,0" FontSize="15" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" IsVisible="False" />
+    </Grid>
+</UserControl>

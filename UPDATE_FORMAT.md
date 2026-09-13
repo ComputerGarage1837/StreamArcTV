@@ -34,3 +34,11 @@ version code must increase with every release.
 The Windows app uses the same schema in `release/update-windows.json` with `setup` (the installer,
 optional) and `zip` (the portable folder) entries (`assetName`, `sha256`, `sizeBytes`) in place of `apk`, `packageName` `com.computergarage.streamarctv.windows`, and
 release tags of the form `windows-v<versionName>`. See `windows/README.md`.
+
+## macOS
+
+The macOS app uses the same schema in `release/update-macos.json` with an `arm64` and an `x64`
+section, each holding `dmg` (the disk image, for installing by hand) and `zip` (used by the in-app
+updater) entries (`assetName`, `sha256`, `sizeBytes`), `packageName`
+`com.computergarage.streamarctv.macos`, and release tags of the form `macos-v<versionName>`.
+See `macos/README.md`.

@@ -1,0 +1,27 @@
+<ui:AppPage xmlns="https://github.com/avaloniaui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:ui="using:StreamArcTV.UI"
+            x:Class="StreamArcTV.UI.TransfersPage">
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+        <Grid Margin="12" ColumnDefinitions="Auto,*,Auto">
+            <Button x:Name="BtnBack" Classes="squareicon" ToolTip.Tip="Back">
+                <Path Data="{StaticResource IconBack}" Fill="{StaticResource TextBrush}" Width="22" Height="22" Stretch="Uniform" />
+            </Button>
+            <TextBlock x:Name="TxtTitle" Grid.Column="1" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="14,0,0,0" />
+            <Button x:Name="BtnDeleteAll" Grid.Column="2" Content="Delete all" Classes="danger" MinHeight="40" Padding="18,4" IsVisible="False" />
+        </Grid>
+        <Button x:Name="RowFolder" Grid.Row="1" Classes="settingsrow" Margin="12,0,12,0" MaxWidth="760" HorizontalAlignment="Left" MinWidth="500">
+            <Grid ColumnDefinitions="Auto,*">
+                <TextBlock Text="Save to" Foreground="{StaticResource TextBrush}" FontSize="15" />
+                <TextBlock x:Name="TxtFolder" Grid.Column="1" Foreground="{StaticResource AccentBrush}" FontSize="14" TextAlignment="Right" TextTrimming="CharacterEllipsis" Margin="12,0,0,0" />
+            </Grid>
+        </Button>
+        <Border x:Name="NoticeBox" Grid.Row="2" Classes="panel" Padding="12" Margin="12,6,12,0" MaxWidth="760" HorizontalAlignment="Left" MinWidth="500" IsVisible="False">
+            <TextBlock x:Name="TxtNotice" Foreground="{StaticResource TextBrush}" FontSize="13" LineHeight="20" TextWrapping="Wrap" />
+        </Border>
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" Focusable="False" Padding="12,6,12,16" MaxWidth="784" HorizontalAlignment="Left">
+            <StackPanel x:Name="List" MinWidth="500" />
+        </ScrollViewer>
+        <TextBlock x:Name="TxtEmpty" Grid.Row="3" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" TextAlignment="Center" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" />
+    </Grid>
+</ui:AppPage>

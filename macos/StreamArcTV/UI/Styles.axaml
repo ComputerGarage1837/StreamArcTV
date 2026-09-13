@@ -1,0 +1,701 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="using:StreamArcTV.UI">
+
+    <Styles.Resources>
+        <ResourceDictionary>
+            <!-- Colors (same palette as the Android app's colors.xml) -->
+            <Color x:Key="BgColor">#0A1628</Color>
+            <Color x:Key="SurfaceColor">#132A4F</Color>
+            <Color x:Key="SurfaceFocusedColor">#1B3A6B</Color>
+            <Color x:Key="OutlineColor">#1E3A5F</Color>
+            <Color x:Key="AccentColor">#22D3EE</Color>
+            <Color x:Key="TextColor">#F8FAFC</Color>
+            <Color x:Key="TextMutedColor">#94A3B8</Color>
+            <Color x:Key="DangerColor">#F87171</Color>
+            <Color x:Key="PurpleColor">#A78BFA</Color>
+
+            <SolidColorBrush x:Key="BgBrush" Color="#0A1628" />
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#132A4F" />
+            <SolidColorBrush x:Key="SurfaceFocusedBrush" Color="#1B3A6B" />
+            <SolidColorBrush x:Key="OutlineBrush" Color="#1E3A5F" />
+            <SolidColorBrush x:Key="AccentBrush" Color="#22D3EE" />
+            <SolidColorBrush x:Key="AccentDarkBrush" Color="#7C3AED" />
+            <SolidColorBrush x:Key="TextBrush" Color="#F8FAFC" />
+            <SolidColorBrush x:Key="TextMutedBrush" Color="#94A3B8" />
+            <SolidColorBrush x:Key="DangerBrush" Color="#F87171" />
+            <SolidColorBrush x:Key="PurpleBrush" Color="#A78BFA" />
+            <SolidColorBrush x:Key="InputBgBrush" Color="#0D1F3C" />
+            <SolidColorBrush x:Key="PanelBrush" Color="#0F2140" />
+            <SolidColorBrush x:Key="WhiteBrush" Color="#F8FAFC" />
+            <SolidColorBrush x:Key="ToastBrush" Color="#E6132A4F" />
+            <SolidColorBrush x:Key="PosterBgBrush" Color="#0C1F3B" />
+            <SolidColorBrush x:Key="SoftTextBrush" Color="#CBD5E1" />
+
+            <LinearGradientBrush x:Key="HomeGradientBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Color="#0A1628" Offset="0" />
+                <GradientStop Color="#0F2140" Offset="1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="HeroScrimBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Color="#00000000" Offset="0" />
+                <GradientStop Color="#260A1628" Offset="0.5" />
+                <GradientStop Color="#CC0A1628" Offset="1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="HeroAccentBarBrush" StartPoint="0%,0%" EndPoint="100%,0%">
+                <GradientStop Color="#A855F7" Offset="0" />
+                <GradientStop Color="#3B82F6" Offset="1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="VodHeroScrimHBrush" StartPoint="0%,0%" EndPoint="100%,0%">
+                <GradientStop Color="#E60A1628" Offset="0" />
+                <GradientStop Color="#800A1628" Offset="0.5" />
+                <GradientStop Color="#1A0A1628" Offset="1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="VodHeroScrimVBrush" StartPoint="0%,100%" EndPoint="0%,0%">
+                <GradientStop Color="#F00A1628" Offset="0" />
+                <GradientStop Color="#330A1628" Offset="0.5" />
+                <GradientStop Color="#000A1628" Offset="1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="ControllerScrimBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Color="#00000000" Offset="0" />
+                <GradientStop Color="#CC000000" Offset="1" />
+            </LinearGradientBrush>
+
+            <!-- Icons (paths from the Android vector drawables) -->
+            <StreamGeometry x:Key="IconBack">M20,11H7.83l5.59,-5.59L12,4l-8,8l8,8l1.41,-1.41L7.83,13H20V11z</StreamGeometry>
+            <StreamGeometry x:Key="IconProfile">M12,12c2.21,0 4,-1.79 4,-4s-1.79,-4 -4,-4s-4,1.79 -4,4S9.79,12 12,12zM12,14c-2.67,0 -8,1.34 -8,4v2h16v-2C20,15.34 14.67,14 12,14z</StreamGeometry>
+            <StreamGeometry x:Key="IconMulti">M3,4h8v7H3zM13,4h8v7h-8zM3,13h8v7H3zM13,13h8v7h-8z</StreamGeometry>
+            <StreamGeometry x:Key="IconVod">M18,4l2,4h-3l-2,-4h-2l2,4h-3l-2,-4H8l2,4H7L5,4H4C2.9,4 2,4.9 2,6v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V4H18zM10,17v-6l5,3L10,17z</StreamGeometry>
+            <StreamGeometry x:Key="IconUpdate">M12,4V1L8,5l4,4V6c3.31,0 6,2.69 6,6c0,1.01 -0.25,1.97 -0.7,2.8l1.46,1.46C19.54,15.03 20,13.57 20,12C20,7.58 16.42,4 12,4zM12,18c-3.31,0 -6,-2.69 -6,-6c0,-1.01 0.25,-1.97 0.7,-2.8L5.24,7.74C4.46,8.97 4,10.43 4,12c0,4.42 3.58,8 8,8v3l4,-4l-4,-4V18z</StreamGeometry>
+            <StreamGeometry x:Key="IconLive">M21,3H3C1.9,3 1,3.9 1,5v12c0,1.1 0.9,2 2,2h5v2h8v-2h5c1.1,0 2,-0.9 2,-2V5C23,3.9 22.1,3 21,3zM21,17H3V5h18V17zM10,7v8l5,-4L10,7z</StreamGeometry>
+            <StreamGeometry x:Key="IconRecRing">M12,3 A9,9 0 1 0 12.01,3 Z</StreamGeometry>
+            <StreamGeometry x:Key="IconRecDot">M12,7.5 A4.5,4.5 0 1 0 12.01,7.5 Z</StreamGeometry>
+            <StreamGeometry x:Key="IconPlay">M8,5v14l11,-7z</StreamGeometry>
+            <StreamGeometry x:Key="IconPause">M6,19h4V5H6v14zM14,5v14h4V5h-4z</StreamGeometry>
+            <StreamGeometry x:Key="IconCc">M19,4H5C3.89,4 3,4.9 3,6v12c0,1.1 0.89,2 2,2h14c1.1,0 2,-0.9 2,-2V6C21,4.9 20.1,4 19,4zM19,18H5V6h14V18zM11,10H9.5v-0.5h-2v3h2V12H11v1c0,0.55 -0.45,1 -1,1H7c-0.55,0 -1,-0.45 -1,-1v-4c0,-0.55 0.45,-1 1,-1h3c0.55,0 1,0.45 1,1V10zM18,10h-1.5v-0.5h-2v3h2V12H18v1c0,0.55 -0.45,1 -1,1h-3c-0.55,0 -1,-0.45 -1,-1v-4c0,-0.55 0.45,-1 1,-1h3c0.55,0 1,0.45 1,1V10z</StreamGeometry>
+            <StreamGeometry x:Key="IconFullscreen">M7,14H5v5h5v-2H7v-3zM5,10h2V7h3V5H5v5zM17,17h-3v2h5v-5h-2v3zM14,5v2h3v3h2V5h-5z</StreamGeometry>
+
+            <DrawingImage x:Key="PlaceholderImage">
+                <DrawingGroup>
+                    <GeometryDrawing Brush="#0D1F3C" Geometry="M0,0h96v96h-96z" />
+                    <GeometryDrawing Brush="#3B5A85" Geometry="M69,27H27c-2.2,0 -4,1.8 -4,4v24c0,2.2 1.8,4 4,4h10v4h22v-4h10c2.2,0 4,-1.8 4,-4V31C73,28.8 71.2,27 69,27zM69,55H27V31h42V55zM44,35v16l10,-8L44,35z" />
+                </DrawingGroup>
+            </DrawingImage>
+
+            <x:Double x:Key="ScrollBarThickness">8</x:Double>
+            <x:Double x:Key="ScrollBarThumbThickness">6</x:Double>
+
+            <!-- Base button look: rounded, no chrome. Colors come from the class styles below. -->
+            <ControlTheme x:Key="{x:Type Button}" TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="FontSize" Value="15" />
+                <Setter Property="MinHeight" Value="44" />
+                <Setter Property="Padding" Value="16,4" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="FocusAdorner" Value="{x:Null}" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Foreground="{TemplateBinding Foreground}" RecognizesAccessKey="False" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+
+            <!-- Round buttons (header Update / Settings, player controller) -->
+            <ControlTheme x:Key="RoundButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Panel>
+                            <Ellipse Fill="{TemplateBinding Background}" Stroke="{TemplateBinding BorderBrush}" StrokeThickness="{Binding BorderThickness.Top, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" Margin="{TemplateBinding Padding}"
+                                              HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Foreground="{TemplateBinding Foreground}" />
+                        </Panel>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+
+            <!-- FocusCard: stream items (posters, rows), category rows, chips, nav items, tiles -->
+            <ControlTheme x:Key="{x:Type ui:FocusCard}" TargetType="ui:FocusCard">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="FocusAdorner" Value="{x:Null}" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <!-- No dotted focus rectangles anywhere: every control draws its own focus state. -->
+    <Style Selector=":is(Control)">
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+    </Style>
+    <Style Selector="TextBlock.section">
+        <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="0,20,0,8" />
+    </Style>
+
+    <!-- ===== Buttons ===== -->
+    <Style Selector="Button:focus">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+        <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Button:pointerover">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.selected">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button:disabled">
+        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+        <Setter Property="Opacity" Value="0.6" />
+    </Style>
+
+    <Style Selector="Button.primary">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource BgBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="3" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="MinHeight" Value="48" />
+        <Setter Property="Padding" Value="20,6" />
+    </Style>
+    <Style Selector="Button.primary:focus">
+        <Setter Property="Background" Value="#7DF5E5" />
+        <Setter Property="BorderBrush" Value="#FFFFFF" />
+        <Setter Property="BorderThickness" Value="3" />
+    </Style>
+    <Style Selector="Button.primary:pointerover">
+        <Setter Property="Background" Value="#7DF5E5" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.primary:pointerover:focus">
+        <Setter Property="BorderBrush" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="Button.primary:pressed">
+        <Setter Property="Background" Value="#22C55E" />
+    </Style>
+    <Style Selector="Button.primary:disabled">
+        <Setter Property="Background" Value="#3A5EEAD4" />
+        <Setter Property="Foreground" Value="#80F8FAFC" />
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+
+    <Style Selector="Button.danger">
+        <Setter Property="Background" Value="{StaticResource DangerBrush}" />
+        <Setter Property="Foreground" Value="#FFFFFF" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="3" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="MinHeight" Value="48" />
+        <Setter Property="Padding" Value="20,6" />
+    </Style>
+    <Style Selector="Button.danger:focus">
+        <Setter Property="Background" Value="#FCA5A5" />
+        <Setter Property="BorderBrush" Value="#FFFFFF" />
+        <Setter Property="BorderThickness" Value="3" />
+    </Style>
+    <Style Selector="Button.danger:pointerover">
+        <Setter Property="Background" Value="#FCA5A5" />
+    </Style>
+
+    <Style Selector="Button.squareicon">
+        <Setter Property="Width" Value="44" />
+        <Setter Property="Height" Value="44" />
+        <Setter Property="MinHeight" Value="44" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="Button.secondary">
+        <Setter Property="MinHeight" Value="52" />
+        <Setter Property="FontSize" Value="16" />
+    </Style>
+    <Style Selector="Button.small">
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="14,2" />
+        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+    </Style>
+    <Style Selector="Button.small:focus">
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    </Style>
+    <Style Selector="Button.small:pointerover">
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    </Style>
+    <Style Selector="Button.small.selected">
+        <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    </Style>
+
+    <Style Selector="Button.tab">
+        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="FontSize" Value="13.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Padding" Value="16,2" />
+    </Style>
+    <Style Selector="Button.tab.selected">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource BgBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.tab:focus">
+        <Setter Property="Background" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource BgBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.tab:pointerover">
+        <Setter Property="Background" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource BgBrush}" />
+    </Style>
+
+    <Style Selector="Button.dialog">
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+    <Style Selector="Button.dialogprimary">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource BgBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Padding" Value="20,4" />
+    </Style>
+    <Style Selector="Button.dialogprimary:focus">
+        <Setter Property="Background" Value="#7DF5E5" />
+        <Setter Property="BorderBrush" Value="#FFFFFF" />
+        <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Button.dialogprimary:pointerover">
+        <Setter Property="Background" Value="#7DF5E5" />
+    </Style>
+
+    <Style Selector="Button.listrow">
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="MinHeight" Value="46" />
+        <Setter Property="Margin" Value="0,0,0,6" />
+        <Setter Property="FontSize" Value="15" />
+    </Style>
+    <Style Selector="Button.settingsrow">
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="Padding" Value="16,14" />
+        <Setter Property="Margin" Value="0,0,0,6" />
+        <Setter Property="FontSize" Value="15.5" />
+        <Setter Property="MinHeight" Value="52" />
+    </Style>
+    <Style Selector="Button.settingsrow.left">
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+    </Style>
+
+    <Style Selector="Button.roundimage">
+        <Setter Property="Theme" Value="{StaticResource RoundButton}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="Padding" Value="2" />
+        <Setter Property="MinHeight" Value="0" />
+    </Style>
+    <Style Selector="Button.roundimage:focus">
+        <Setter Property="Background" Value="#1FFFFFFF" />
+        <Setter Property="BorderBrush" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Button.roundimage:pointerover">
+        <Setter Property="Background" Value="#1FFFFFFF" />
+        <Setter Property="BorderBrush" Value="{StaticResource WhiteBrush}" />
+    </Style>
+
+    <!-- Player controller buttons: circular, translucent -->
+    <Style Selector="Button.player">
+        <Setter Property="Theme" Value="{StaticResource RoundButton}" />
+        <Setter Property="Background" Value="#22FFFFFF" />
+        <Setter Property="BorderBrush" Value="#33FFFFFF" />
+        <Setter Property="BorderThickness" Value="1.5" />
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="Button.player:focus">
+        <Setter Property="Background" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource BgBrush}" />
+        <Setter Property="BorderBrush" Value="#33FFFFFF" />
+        <Setter Property="BorderThickness" Value="1.5" />
+    </Style>
+    <Style Selector="Button.player:pointerover">
+        <Setter Property="Background" Value="#55FFFFFF" />
+        <Setter Property="BorderBrush" Value="#33FFFFFF" />
+    </Style>
+    <Style Selector="Button.player:pointerover:focus">
+        <Setter Property="Background" Value="{StaticResource WhiteBrush}" />
+    </Style>
+
+    <!-- Live badge (bg_live_status): red = live, amber = behind live, white = focused -->
+    <Style Selector="Button.livebadge">
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="Background" Value="#CC7F1D1D" />
+        <Setter Property="BorderBrush" Value="#F87171" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="MinHeight" Value="0" />
+    </Style>
+    <Style Selector="Button.livebadge.selected">
+        <Setter Property="Background" Value="#CC92400E" />
+        <Setter Property="BorderBrush" Value="#F59E0B" />
+    </Style>
+    <Style Selector="Button.livebadge:pointerover">
+        <Setter Property="Background" Value="#CC7F1D1D" />
+        <Setter Property="BorderBrush" Value="#F87171" />
+    </Style>
+    <Style Selector="Button.livebadge.selected:pointerover">
+        <Setter Property="Background" Value="#CC92400E" />
+        <Setter Property="BorderBrush" Value="#F59E0B" />
+    </Style>
+    <Style Selector="Button.livebadge:focus">
+        <Setter Property="Background" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource BgBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <!-- Player seek buttons (bg_seek_button) -->
+    <Style Selector="Button.seek">
+        <Setter Property="CornerRadius" Value="24" />
+        <Setter Property="Background" Value="#B3000000" />
+        <Setter Property="BorderBrush" Value="#66FFFFFF" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Padding" Value="16,12" />
+    </Style>
+    <Style Selector="Button.seek:focus">
+        <Setter Property="Background" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource BgBrush}" />
+        <Setter Property="BorderBrush" Value="#66FFFFFF" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.seek:pointerover">
+        <Setter Property="Background" Value="#CC000000" />
+        <Setter Property="BorderBrush" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="Button.seek:pressed">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    </Style>
+
+    <!-- ===== FocusCards ===== -->
+    <Style Selector="ui|FocusCard.stream">
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="Margin" Value="4" />
+    </Style>
+    <Style Selector="ui|FocusCard.stream:selected">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="ui|FocusCard.stream:pointerover">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="ui|FocusCard.stream:focus">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+        <Setter Property="BorderThickness" Value="3" />
+    </Style>
+
+    <Style Selector="ui|FocusCard.category">
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="10,10,8,10" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+    <Style Selector="ui|FocusCard.category:selected">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="ui|FocusCard.category:pointerover">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+    </Style>
+    <Style Selector="ui|FocusCard.category:focus">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+        <Setter Property="BorderThickness" Value="2" />
+    </Style>
+
+    <Style Selector="ui|FocusCard.chip">
+        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="Padding" Value="14,7" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+    </Style>
+    <Style Selector="ui|FocusCard.chip:selected">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource BgBrush}" />
+    </Style>
+    <Style Selector="ui|FocusCard.chip:pointerover">
+        <Setter Property="Background" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource BgBrush}" />
+    </Style>
+    <Style Selector="ui|FocusCard.chip:focus">
+        <Setter Property="Background" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource BgBrush}" />
+    </Style>
+
+    <!-- Home bottom bar items -->
+    <Style Selector="ui|FocusCard.nav">
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="8,8,8,6" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ui|FocusCard.nav:focus">
+        <Setter Property="Background" Value="#26FFFFFF" />
+    </Style>
+    <Style Selector="ui|FocusCard.nav:pointerover">
+        <Setter Property="Background" Value="#26FFFFFF" />
+    </Style>
+
+    <!-- VOD home side-rail items -->
+    <Style Selector="ui|FocusCard.vodnav">
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="Padding" Value="6,10,6,8" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ui|FocusCard.vodnav:selected">
+        <Setter Property="Background" Value="#332B4C8A" />
+        <Setter Property="BorderBrush" Value="#7C3AED" />
+    </Style>
+    <Style Selector="ui|FocusCard.vodnav:pointerover">
+        <Setter Property="Background" Value="#33FFFFFF" />
+    </Style>
+    <Style Selector="ui|FocusCard.vodnav:focus">
+        <Setter Property="Background" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource BgBrush}" />
+    </Style>
+
+    <!-- Home big cards: transparent with a white focus ring -->
+    <Style Selector="ui|FocusCard.home">
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="BorderThickness" Value="3" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+    </Style>
+    <Style Selector="ui|FocusCard.home:focus">
+        <Setter Property="Background" Value="#14FFFFFF" />
+        <Setter Property="BorderBrush" Value="{StaticResource WhiteBrush}" />
+    </Style>
+    <Style Selector="ui|FocusCard.home:pointerover">
+        <Setter Property="Background" Value="#14FFFFFF" />
+        <Setter Property="BorderBrush" Value="{StaticResource WhiteBrush}" />
+    </Style>
+
+    <!-- Multi-view tile -->
+    <Style Selector="ui|FocusCard.tile">
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="Background" Value="#000000" />
+        <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="BorderThickness" Value="3" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="ui|FocusCard.tile:selected">
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="ui|FocusCard.tile:focus">
+        <Setter Property="BorderBrush" Value="{StaticResource WhiteBrush}" />
+    </Style>
+
+    <!-- Radio / check rows in dialogs, and the switch rows in Settings -->
+    <Style Selector="ui|FocusCard.choice">
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="10,9" />
+    </Style>
+    <Style Selector="ui|FocusCard.choice:pointerover">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+    </Style>
+    <Style Selector="ui|FocusCard.choice:focus">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="ui|FocusCard.switch">
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="Padding" Value="16,14" />
+        <Setter Property="Margin" Value="0,0,0,6" />
+        <Setter Property="MinHeight" Value="52" />
+    </Style>
+    <Style Selector="ui|FocusCard.switch:pointerover">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+    </Style>
+    <Style Selector="ui|FocusCard.switch:focus">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+        <Setter Property="BorderThickness" Value="2" />
+    </Style>
+
+    <!-- Static panel look (bg_panel / bg_row) -->
+    <Style Selector="Border.panel">
+        <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="14" />
+    </Style>
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="14" />
+    </Style>
+
+    <!-- Text input -->
+    <Style Selector="TextBox">
+        <Setter Property="Background" Value="{StaticResource InputBgBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+        <Setter Property="CaretBrush" Value="{StaticResource AccentBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="12,10" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="MinHeight" Value="44" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="SelectionBrush" Value="#5522D3EE" />
+    </Style>
+    <Style Selector="TextBox:pointerover /template/ Border#border">
+        <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="Background" Value="{StaticResource InputBgBrush}" />
+    </Style>
+    <Style Selector="TextBox:focus /template/ Border#border">
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="Background" Value="{StaticResource InputBgBrush}" />
+    </Style>
+
+    <!-- Lists and drop-downs in dialogs -->
+    <Style Selector="ListBox">
+        <Setter Property="Background" Value="{StaticResource InputBgBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    </Style>
+    <Style Selector="ListBoxItem">
+        <Setter Property="Padding" Value="10,7" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    </Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected:focus /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected:focus">
+        <Setter Property="Foreground" Value="{StaticResource BgBrush}" />
+    </Style>
+    <Style Selector="ComboBox">
+        <Setter Property="Background" Value="{StaticResource InputBgBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="MinHeight" Value="40" />
+    </Style>
+    <Style Selector="ComboBox:focus /template/ Border#border">
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="ComboBoxItem">
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+        <Setter Property="Padding" Value="10,6" />
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+    </Style>
+    <Style Selector="ComboBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource SurfaceFocusedBrush}" />
+    </Style>
+
+    <!-- Scrollbars: slim and dark -->
+    <Style Selector="ScrollBar /template/ Border">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ScrollBar /template/ RepeatButton.repeat">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="ScrollBar /template/ Thumb#thumb">
+        <Setter Property="Background" Value="#553B5A85" />
+    </Style>
+    <Style Selector="ScrollBar /template/ Thumb#thumb:pointerover">
+        <Setter Property="Background" Value="#883B5A85" />
+    </Style>
+
+    <!-- Seek slider -->
+    <Style Selector="Slider.seek">
+        <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="MinHeight" Value="22" />
+    </Style>
+    <Style Selector="Slider.seek /template/ Border#TrackBackground">
+        <Setter Property="Background" Value="#55FFFFFF" />
+        <Setter Property="Height" Value="4" />
+        <Setter Property="CornerRadius" Value="2" />
+    </Style>
+    <Style Selector="Slider.seek /template/ Thumb#thumb">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Width" Value="14" />
+        <Setter Property="Height" Value="14" />
+        <Setter Property="CornerRadius" Value="7" />
+    </Style>
+
+    <!-- Tooltips -->
+    <Style Selector="ToolTip">
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="CornerRadius" Value="8" />
+    </Style>
+</Styles>

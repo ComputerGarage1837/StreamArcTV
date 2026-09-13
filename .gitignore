@@ -31,3 +31,9 @@ windows/**/bin/
 windows/**/obj/
 windows/**/*.user
 .vs/
+
+# macOS (.NET / Avalonia) build output
+macos/**/bin/
+macos/**/obj/
+macos/**/*.user
+*.dmg

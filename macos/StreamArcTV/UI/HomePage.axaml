@@ -1,0 +1,90 @@
+<ui:AppPage xmlns="https://github.com/avaloniaui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:ui="using:StreamArcTV.UI"
+            x:Class="StreamArcTV.UI.HomePage">
+    <Panel>
+        <!-- Scenery backdrop: the wide image on TV / landscape, the portrait one on a phone held upright -->
+        <Image x:Name="ImgBackdrop" Source="avares://StreamArcTV/Assets/bg_hero.jpg" Stretch="UniformToFill" />
+        <Grid RowDefinitions="45*,55*">
+            <Rectangle x:Name="ScrimTop" Grid.Row="0" Fill="Transparent" />
+            <Rectangle x:Name="Scrim" Grid.Row="1" Fill="{StaticResource HeroScrimBrush}" />
+        </Grid>
+
+        <!-- TV / tablet layout -->
+        <Grid x:Name="TvLayout" Margin="40,18,40,14" RowDefinitions="Auto,*,Auto,Auto">
+            <ui:HomeHeader x:Name="HeaderTv" Grid.Row="0" />
+            <TextBlock x:Name="TxtVersionTv" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,0,0" FontSize="10" Foreground="#64748B" />
+
+            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Left">
+                <TextBlock Text="More&#10;Than Watching" FontSize="40" FontWeight="Black" LineHeight="44" Foreground="{StaticResource TextBrush}" />
+                <TextBlock Text="Live Channels. On Demand. Anytime.&#10;All in One Place." FontSize="16" Foreground="#E2E8F0" Margin="0,8,0,0" />
+                <Border Width="64" Height="4" CornerRadius="2" Background="{StaticResource HeroAccentBarBrush}" HorizontalAlignment="Left" Margin="0,12,0,0" />
+                <TextBlock Text="E N T E R T A I N M E N T   W I T H O U T   L I M I T S" FontSize="11" Foreground="#CBD5E1" Margin="0,8,0,0" />
+            </StackPanel>
+
+            <Grid Grid.Row="2" Margin="0,0,0,12" ColumnDefinitions="*,24,*">
+                <ui:FocusCard x:Name="BtnLiveTv" Grid.Column="0" Classes="home">
+                    <Panel>
+                        <Image Source="avares://StreamArcTV/Assets/img_card_live.png" Stretch="Uniform" />
+                        <Grid ColumnDefinitions="30*,70*">
+                            <TextBlock x:Name="TxtLiveStatusTv" Grid.Column="1" Text="Not signed in" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Bottom" Margin="0,0,0,12" />
+                        </Grid>
+                    </Panel>
+                </ui:FocusCard>
+                <ui:FocusCard x:Name="BtnVodTv" Grid.Column="2" Classes="home">
+                    <Panel>
+                        <Image Source="avares://StreamArcTV/Assets/img_card_vod.png" Stretch="Uniform" />
+                        <Grid ColumnDefinitions="30*,70*">
+                            <TextBlock x:Name="TxtVodStatusTv" Grid.Column="1" Text="Not signed in" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Bottom" Margin="0,0,0,12" />
+                        </Grid>
+                    </Panel>
+                </ui:FocusCard>
+            </Grid>
+
+            <ContentControl x:Name="NavHostTv" Grid.Row="3" Focusable="False" />
+        </Grid>
+
+        <!-- Phone layout -->
+        <Grid x:Name="PhoneLayout" Margin="16,8,16,10" IsVisible="False" RowDefinitions="*,Auto">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                <StackPanel>
+                    <ui:HomeHeader x:Name="HeaderPhone" />
+                    <TextBlock x:Name="TxtHeroPhone" Text="More&#10;Than Watching" FontSize="34" FontWeight="Black" LineHeight="36" Foreground="{StaticResource TextBrush}" Margin="0,28,0,0" />
+                    <TextBlock Text="Live Channels. On Demand. Anytime.&#10;All in One Place." FontSize="15" Foreground="#E2E8F0" Margin="0,8,0,0" />
+                    <Grid Margin="0,12,0,0" ColumnDefinitions="*,Auto">
+                        <Border Height="4" CornerRadius="2" Background="{StaticResource HeroAccentBarBrush}" VerticalAlignment="Center" MaxWidth="200" HorizontalAlignment="Left" />
+                        <TextBlock Grid.Column="1" Text="Entertainment&#10;Without Limits" FontSize="11" Foreground="#CBD5E1" TextAlignment="Right" Margin="16,0,0,0" />
+                    </Grid>
+                    <Grid x:Name="PhoneCards" Margin="0,22,0,12" ColumnDefinitions="*,12,*">
+                        <ui:FocusCard x:Name="BtnLivePhone" Grid.Column="0" Classes="home">
+                            <Panel>
+                                <Image Source="avares://StreamArcTV/Assets/card_tall_live.png" Stretch="Uniform" />
+                                <StackPanel VerticalAlignment="Top" Margin="0,26,0,0">
+                                    <Image Source="avares://StreamArcTV/Assets/img_live_tv.png" Width="72" Height="72" Stretch="Uniform" />
+                                    <TextBlock Text="Live TV" FontSize="19" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" HorizontalAlignment="Center" Margin="0,14,0,0" />
+                                    <TextBlock Text="Watch Channels Live" FontSize="12" Foreground="#BFDBFE" HorizontalAlignment="Center" />
+                                    <TextBlock x:Name="TxtLiveStatusPhone" Text="Not signed in" FontSize="11" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                                </StackPanel>
+                                <Image Source="avares://StreamArcTV/Assets/img_btn_next_live.png" Width="48" Height="48" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,18" />
+                            </Panel>
+                        </ui:FocusCard>
+                        <ui:FocusCard x:Name="BtnVodPhone" Grid.Column="2" Classes="home">
+                            <Panel>
+                                <Image Source="avares://StreamArcTV/Assets/card_tall_vod.png" Stretch="Uniform" />
+                                <StackPanel VerticalAlignment="Top" Margin="0,26,0,0">
+                                    <Image Source="avares://StreamArcTV/Assets/img_vod.png" Width="72" Height="72" Stretch="Uniform" />
+                                    <TextBlock Text="Video on Demand" FontSize="19" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" HorizontalAlignment="Center" Margin="0,14,0,0" />
+                                    <TextBlock Text="Movies. Series. More." FontSize="12" Foreground="#DDD6FE" HorizontalAlignment="Center" />
+                                    <TextBlock x:Name="TxtVodStatusPhone" Text="Not signed in" FontSize="11" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                                </StackPanel>
+                                <Image Source="avares://StreamArcTV/Assets/img_btn_next_vod.png" Width="48" Height="48" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,18" />
+                            </Panel>
+                        </ui:FocusCard>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+            <TextBlock x:Name="TxtVersionPhone" Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Bottom" FontSize="10" Foreground="#64748B" />
+            <ContentControl x:Name="NavHostPhone" Grid.Row="1" Focusable="False" />
+        </Grid>
+    </Panel>
+</ui:AppPage>
