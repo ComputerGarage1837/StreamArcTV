@@ -3,6 +3,15 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.0.1 — 2026-09-13
+
+### Changed
+- Signing in to Video on Demand now opens the streaming-service style home (featured banner,
+  Continue watching, My List, new titles and genre rows) straight away instead of the grid browser.
+- When the provider refuses a download, the Downloads list and the log now show the provider's
+  exact reply (status, reason and message) instead of just "Provider error (HTTP …)". HTTP 401 and
+  503 are treated as "too many streams open" like 403 / 429 / 458, and retried automatically.
+
 ## v1.0.0 — 2026-09-13
 
 ### Added

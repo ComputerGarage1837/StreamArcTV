@@ -154,7 +154,20 @@ public static class TransferService
                     if (resuming) req.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(done, null);
                     using var pauseCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                     using var resp = await Client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, pauseCts.Token);
-                    if (!resp.IsSuccessStatusCode) throw new HttpException((int)resp.StatusCode);
+                    if (!resp.IsSuccessStatusCode)
+                    {
+                        // Capture exactly what the provider answered so the reason is in the log and the list.
+                        string detail = "";
+                        try
+                        {
+                            var body = await resp.Content.ReadAsStringAsync(ct);
+                            detail = System.Text.RegularExpressions.Regex.Replace(body, "<[^>]+>", " ").Trim();
+                            if (detail.Length > 160) detail = detail[..160] + "…";
+                        }
+                        catch { }
+                        AppLog.W("Transfer", $"'{job.Title}' HTTP {(int)resp.StatusCode} {resp.ReasonPhrase} for {AppLog.SafeUrl(job.Url)} · {detail}");
+                        throw new HttpException((int)resp.StatusCode, resp.ReasonPhrase, detail);
+                    }
                     var code = (int)resp.StatusCode;
                     Folders.Target? outT = null;
                     if (resuming && code == 206)
@@ -297,14 +310,21 @@ public static class TransferService
         catch { return false; }
     }
 
-    private class HttpException : Exception { public int Code { get; } public HttpException(int code) : base($"HTTP {code}") { Code = code; } }
+    private class HttpException : Exception
+    {
+        public int Code { get; }
+        public string Reason { get; }
+        public string Detail { get; }
+        public HttpException(int code, string? reason, string detail) : base($"HTTP {code} {reason}".Trim()) { Code = code; Reason = reason ?? ""; Detail = detail; }
+        public string Label => $"HTTP {Code}{(Reason.Length > 0 ? " " + Reason : "")}{(Detail.Length > 0 ? ": " + Detail : "")}";
+    }
 
     private static string Describe(Exception e) => e switch
     {
-        HttpException { Code: 403 or 429 or 458 or 509 } h =>
-            $"Provider refused the connection (HTTP {h.Code}), usually because too many streams are open on this account. It is retried automatically; pause other playback if it keeps failing.",
-        HttpException { Code: 404 } h => $"The provider has no file for this episode (HTTP {h.Code}).",
-        HttpException h => $"Provider error (HTTP {h.Code}).",
+        HttpException { Code: 401 or 403 or 429 or 458 or 503 or 509 } h =>
+            $"Provider refused the connection ({h.Label}), usually because too many streams are open on this account. It is retried automatically; pause other playback if it keeps failing.",
+        HttpException { Code: 404 } h => $"The provider has no file for this title ({h.Label}).",
+        HttpException h => $"Provider error ({h.Label}).",
         _ => string.IsNullOrWhiteSpace(e.Message) ? e.GetType().Name : e.Message
     };
 

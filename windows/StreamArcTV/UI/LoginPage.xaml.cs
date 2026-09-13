@@ -38,7 +38,7 @@ public partial class LoginPage : AppPage
         {
             var info = await XtreamApi.Login(_service, user, pass);
             Prefs.Instance.SaveAccount(_service, info.ToAccount(user, pass));
-            Nav.Replace(new BrowsePage(_service));
+            Nav.Replace(_service == Service.VOD ? new VodHomePage(_service) : new BrowsePage(_service));
         }
         catch (Exception e)
         {
