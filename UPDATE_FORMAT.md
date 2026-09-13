@@ -28,3 +28,9 @@ app will reject the download.
 
 The application ID and signing certificate must remain unchanged for all later updates. The Android
 version code must increase with every release.
+
+## Windows
+
+The Windows app uses the same schema in `release/update-windows.json` with a `zip` entry (`assetName`,
+`sha256`, `sizeBytes`) in place of `apk`, `packageName` `com.computergarage.streamarctv.windows`, and
+release tags of the form `windows-v<versionName>`. See `windows/README.md`.
