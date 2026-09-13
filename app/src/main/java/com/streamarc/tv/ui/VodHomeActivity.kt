@@ -317,7 +317,7 @@ class VodHomeActivity : AppCompatActivity() {
         val key = WatchProgress.episodeKey(ep.id)
         WatchProgress.describe(key, WatchProgress.KIND_EPISODE, seriesTitle, image, ep.containerExtension, ep.id,
             subtitle = ep.title, seriesId = seriesId, season = ep.season, episode = ep.number)
-        startActivity(PlayerActivity.intent(this, url, "$seriesTitle · S${ep.season}E${ep.number} ${ep.title}", false, key))
+        startActivity(PlayerActivity.intent(this, url, "$seriesTitle · ${com.streamarc.tv.data.Format.se(ep.season, ep.number)} ${ep.title}", false, key))
     }
 
     private fun openSeries(id: String, title: String, image: String?, plot: String?) {
@@ -338,7 +338,7 @@ class VodHomeActivity : AppCompatActivity() {
                 val url = try { XtreamApi.episodeUrl(service, account, ep) } catch (ex: Exception) {
                     Toast.makeText(this, ex.message, Toast.LENGTH_LONG).show(); return
                 }
-                startActivity(PlayerActivity.intent(this, url, "${e.title} · S${e.season}E${e.episode} ${e.subtitle ?: ""}", false, key))
+                startActivity(PlayerActivity.intent(this, url, "${e.title} · ${com.streamarc.tv.data.Format.se(e.season, e.episode)} ${e.subtitle ?: ""}", false, key))
             }
             WatchProgress.KIND_DOWNLOAD -> {
                 val job = TransferStore.get(this).get(id)

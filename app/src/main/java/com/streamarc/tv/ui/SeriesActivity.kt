@@ -80,7 +80,7 @@ class SeriesActivity : AppCompatActivity() {
         val account = Prefs(this).account(service) ?: return null
         val url = try { XtreamApi.episodeUrl(service, account, ep) } catch (_: Exception) { return null }
         val show = b.txtTitle.text.toString()
-        return DownloadItem("$show S${ep.season}E${ep.number} ${ep.title}", show, url, ep.containerExtension,
+        return DownloadItem("$show ${com.streamarc.tv.data.Format.se(ep.season, ep.number)} ${ep.title}", show, url, ep.containerExtension,
             fileBase = com.streamarc.tv.transfer.Folders.episodeFileName(show, ep.season, ep.number, ep.title))
     }
 
@@ -159,7 +159,7 @@ class SeriesActivity : AppCompatActivity() {
         } catch (e: Exception) {
             b.txtError.text = e.message; b.txtError.visibility = View.VISIBLE; return
         }
-        val title = "${b.txtTitle.text} · S${ep.season}E${ep.number} ${ep.title}"
+        val title = "${b.txtTitle.text} · ${com.streamarc.tv.data.Format.se(ep.season, ep.number)} ${ep.title}"
         WatchProgress.describe(
             WatchProgress.episodeKey(ep.id), WatchProgress.KIND_EPISODE, b.txtTitle.text.toString(),
             intent.getStringExtra(EXTRA_COVER), ep.containerExtension, ep.id,
@@ -189,7 +189,7 @@ class SeriesActivity : AppCompatActivity() {
             holder.vb.btnSeasonDownload.visibility = if (firstOfSeason) View.VISIBLE else View.GONE
             holder.vb.btnSeasonDownload.setOnClickListener { onSeason(ep.season) }
             val frac = WatchProgress.fraction(WatchProgress.episodeKey(ep.id))
-            holder.vb.txtTitle.text = (if (frac != null && frac >= 1f) "✓ " else "") + ctx.getString(R.string.episode_fmt, ep.number, ep.title)
+            holder.vb.txtTitle.text = (if (frac != null && frac >= 1f) "✓ " else "") + ctx.getString(R.string.episode_fmt, com.streamarc.tv.data.Format.se(ep.season, ep.number), ep.title)
             holder.vb.progressWatch.visibility = if (frac != null) View.VISIBLE else View.GONE
             if (frac != null) holder.vb.progressWatch.progress = (frac * 1000).toInt()
             val info = listOfNotNull(ep.duration?.takeIf { it.isNotBlank() }, ep.plot?.takeIf { it.isNotBlank() }).joinToString("  ·  ")

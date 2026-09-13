@@ -66,7 +66,7 @@
     <string name="genre_movies_fmt">%1$s movies</string>
     <string name="genre_series_fmt">%1$s series</string>
     <string name="left_fmt">%1$s left</string>
-    <string name="season_episode_fmt">S%1$d E%2$d</string>
+    <string name="season_episode_fmt">S%1$02dE%2$02d</string>
     <string name="remove_from_continue">Remove from Continue watching</string>
     <string name="open_series">Open series</string>
     <string name="play_hero">▶  Play</string>
@@ -90,7 +90,7 @@
     <string name="download_all_unwatched_fmt">All unwatched episodes (%1$d)</string>
     <string name="download_entire_series_fmt">Entire series (%1$d episodes)</string>
     <string name="nothing_to_download">Nothing left to download.</string>
-    <string name="up_next_fmt">Up next: S%1$d E%2$d · %3$s</string>
+    <string name="up_next_fmt">Up next: S%1$02dE%2$02d · %3$s</string>
     <string name="playing_in_fmt">Playing in %1$d s</string>
     <string name="still_watching">Still watching?</string>
     <string name="play_now">▶ Play now</string>
@@ -278,7 +278,7 @@
     <string name="movies">Movies</string>
     <string name="series">Series</string>
     <string name="season_fmt">Season %1$d</string>
-    <string name="episode_fmt">E%1$d · %2$s</string>
+    <string name="episode_fmt">%1$s · %2$s</string>
     <string name="no_episodes">No episodes found.</string>
     <string name="open">Open</string>
 </resources>

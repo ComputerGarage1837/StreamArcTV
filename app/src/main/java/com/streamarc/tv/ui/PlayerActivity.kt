@@ -261,10 +261,10 @@ class PlayerActivity : AppCompatActivity() {
         val key = WatchProgress.episodeKey(next.id)
         WatchProgress.describe(key, WatchProgress.KIND_EPISODE, seriesTitle, image, next.containerExtension, next.id,
             subtitle = next.title, seriesId = seriesId, season = next.season, episode = next.number)
-        AppLog.i(TAG, "auto-play next S${next.season}E${next.number} (${autoPlays} in a row)")
+        AppLog.i(TAG, "auto-play next ${com.streamarc.tv.data.Format.se(next.season, next.number)} (${autoPlays} in a row)")
         saveProgress(force = true)
         url = nextUrl
-        title = "$seriesTitle · S${next.season}E${next.number} ${next.title}"
+        title = "$seriesTitle · ${com.streamarc.tv.data.Format.se(next.season, next.number)} ${next.title}"
         b.txtTitle.text = title
         watchKey = key
         nextOffered = false

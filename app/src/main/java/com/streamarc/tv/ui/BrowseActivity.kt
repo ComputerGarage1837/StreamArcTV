@@ -565,7 +565,7 @@ class BrowseActivity : AppCompatActivity() {
                 .setMessage(getString(R.string.download_series_confirm_fmt, episodes.size))
                 .setPositiveButton(R.string.download_all) { _, _ ->
                     val items = episodes.map { ep ->
-                        DownloadItem("$name S${ep.season}E${ep.number} ${ep.title}", name, XtreamApi.episodeUrl(service, account, ep), ep.containerExtension,
+                        DownloadItem("$name ${com.streamarc.tv.data.Format.se(ep.season, ep.number)} ${ep.title}", name, XtreamApi.episodeUrl(service, account, ep), ep.containerExtension,
                             fileBase = com.streamarc.tv.transfer.Folders.episodeFileName(name, ep.season, ep.number, ep.title))
                     }
                     TransferDialogs.download(this@BrowseActivity, picker, items)
