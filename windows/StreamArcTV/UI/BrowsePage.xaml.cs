@@ -120,8 +120,8 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         if (_dead) return;
         // If the user signed out from the profile screen, leave.
         if (!_prefs.IsSignedIn(_service)) { Finish(); return; }
-        // Watched marks may have changed in the player.
-        if (!IsLive) RebuildGrid(force: true);
+        // Watched marks may have changed in the player; rebuilding thousands of rows for nothing is a visible stall.
+        if (!IsLive && _watchVersion != WatchProgress.Version) RebuildGrid(force: true);
         if (IsLive && _previewStream != null) StartPreview(_previewStream);
     }
 
@@ -131,7 +131,6 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
     {
         _prefetchCts?.Cancel();
         ReleasePreview();
-        _libVlc?.Dispose();
         _libVlc = null;
         LazyImages.Forget(this);
     }
@@ -145,7 +144,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         _previewStream = stream;
         try
         {
-            _libVlc ??= PlayerCore.CreateLibVlc();
+            _libVlc ??= PlayerCore.Shared();
             if (_preview == null)
             {
                 _preview = new MediaPlayer(_libVlc) { EnableHardwareDecoding = true };
@@ -459,12 +458,15 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
 
     private int _lastCols;
 
+    private int _watchVersion = -1;
+
     private void RebuildGrid(bool force = false)
     {
         if (IsLive) return;
         var cols = PosterColumns();
         if (!force && cols == _lastCols && ListStreams.ItemsSource != null) return;
         _lastCols = cols;
+        _watchVersion = WatchProgress.Version;
         var favs = _prefs.Favorites(_service, _kind);
         Func<Data.Stream, string?>? watchKey = _kind == ContentKind.MOVIE ? s => s.StreamId != null ? WatchProgress.MovieKey(_service, s.StreamId) : null : null;
         var rows = new List<PosterRow>();

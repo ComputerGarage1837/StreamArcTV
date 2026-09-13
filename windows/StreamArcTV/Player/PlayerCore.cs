@@ -9,8 +9,27 @@ public static class PlayerCore
 {
     private static bool _initialized;
     private static readonly object Lock = new();
+    private static LibVLC? _hardware, _software;
 
-    public static LibVLC CreateLibVlc(bool preferSoftware = false)
+    /// The app-wide LibVLC instance (one for hardware decoding, one for software). Creating a
+    /// LibVLC takes a good fraction of a second, so it is done once and never on the window's
+    /// thread when <see cref="Warm"/> has run first.
+    public static LibVLC Shared(bool preferSoftware = false)
+    {
+        lock (Lock)
+        {
+            if (preferSoftware) return _software ??= CreateLibVlc(true);
+            return _hardware ??= CreateLibVlc(false);
+        }
+    }
+
+    /// Creates the hardware-decoding instance in the background so the first playback opens at once.
+    public static void Warm() => Task.Run(() =>
+    {
+        try { Shared(false); } catch (Exception e) { AppLog.W("Player", "LibVLC warm-up failed: " + e.Message); }
+    });
+
+    private static LibVLC CreateLibVlc(bool preferSoftware)
     {
         lock (Lock)
         {

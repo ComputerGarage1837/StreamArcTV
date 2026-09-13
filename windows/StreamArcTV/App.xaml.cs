@@ -41,6 +41,7 @@ public partial class App : Application
             try { Dialogs.Toast("Something went wrong: " + ev.Exception.Message); } catch { }
         };
         TaskScheduler.UnobservedTaskException += (_, ev) => { AppLog.E("App", "unobserved task exception", ev.Exception); ev.SetObserved(); };
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => Prefs.Flush();
 
         Task.Run(Player.TimeshiftServer.Cleanup);
         Tray.Init();
@@ -56,6 +57,7 @@ public partial class App : Application
         {
             Window.Show();
         }
+        Player.PlayerCore.Warm();
     }
 
     private static void Crash(Exception e)
@@ -64,12 +66,14 @@ public partial class App : Application
         {
             AppLog.Crash("Crash", "uncaught exception", e);
             Prefs.Instance.Crashed = true;
+            Prefs.Flush();
         }
         catch { }
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        Prefs.Flush();
         Tray.Dispose();
         base.OnExit(e);
     }

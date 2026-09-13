@@ -161,8 +161,9 @@ public class DialogWindow : Window
         ShowInTaskbar = false;
         SizeToContent = SizeToContent.WidthAndHeight;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = Brushes.Transparent;
-        AllowsTransparency = true;
+        // An opaque window: a transparent (layered) window with a shadow effect is drawn in
+        // software and makes every menu and message box open with a visible stall.
+        Background = Ui.Brush("SurfaceBrush");
         FontFamily = new FontFamily("Segoe UI");
         Foreground = Ui.Brush("TextBrush");
         MaxWidth = 560; MinWidth = 340;
@@ -176,8 +177,7 @@ public class DialogWindow : Window
         Content = new Border
         {
             Background = Ui.Brush("SurfaceBrush"), BorderBrush = Ui.Brush("OutlineBrush"), BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(14), Padding = new Thickness(22, 18, 22, 16), Margin = new Thickness(8),
-            Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 24, ShadowDepth = 0, Opacity = 0.6 },
+            CornerRadius = new CornerRadius(0), Padding = new Thickness(22, 18, 22, 16),
             Child = stack
         };
         Owner = App.Window is { IsVisible: true } m ? m : null;

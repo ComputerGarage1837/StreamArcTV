@@ -56,7 +56,7 @@ public partial class MultiViewPage : AppPage
 
     public override void OnResume() { if (!_dead) StartAll(); }
     public override void OnPause() => StopAll();
-    public override void OnDestroy() { _libVlc?.Dispose(); _libVlc = null; }
+    public override void OnDestroy() { _libVlc = null; }
 
     // ---- Grid -------------------------------------------------------------------
 
@@ -244,7 +244,7 @@ public partial class MultiViewPage : AppPage
         catch (Exception e) { tile.Hint.Text = e.Message; tile.Hint.Visibility = Visibility.Visible; return; }
         try
         {
-            _libVlc ??= PlayerCore.CreateLibVlc();
+            _libVlc ??= PlayerCore.Shared();
             var p = new MediaPlayer(_libVlc) { EnableHardwareDecoding = true };
             p.EncounteredError += (_, _) => Ui.Post(() =>
             {

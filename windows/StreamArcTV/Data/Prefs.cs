@@ -39,19 +39,41 @@ public sealed class Prefs
         }
     }
 
+    private static bool _dirty;
+    private static bool _flushPending;
+
+    /// Marks the file for writing; the write itself happens a moment later on a worker thread so
+    /// that a favorite toggle or a progress tick never stalls the window.
     private static void Save()
     {
         lock (Lock)
         {
-            try
-            {
-                AppPaths.Ensure();
-                var tmp = File + ".tmp";
-                System.IO.File.WriteAllText(tmp, Root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
-                System.IO.File.Move(tmp, File, true);
-            }
-            catch { }
+            _dirty = true;
+            if (_flushPending) return;
+            _flushPending = true;
         }
+        Task.Run(async () => { await Task.Delay(300).ConfigureAwait(false); Flush(); });
+    }
+
+    /// Writes pending changes now (called on exit and before a crash is reported).
+    public static void Flush()
+    {
+        string json;
+        lock (Lock)
+        {
+            _flushPending = false;
+            if (!_dirty) return;
+            _dirty = false;
+            json = Root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+        try
+        {
+            AppPaths.Ensure();
+            var tmp = File + ".tmp";
+            System.IO.File.WriteAllText(tmp, json);
+            System.IO.File.Move(tmp, File, true);
+        }
+        catch { }
     }
 
     // ---- Typed accessors -------------------------------------------------

@@ -3,6 +3,18 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.1 — 2026-09-13
+
+### Fixed
+- Stalls when pressing buttons. Every menu and message box was a transparent window with a
+  drop shadow, which Windows draws in software and which made each one open with a hitch; they
+  are now plain opaque windows. Opening a channel, movie or the guide preview created a new
+  LibVLC engine on the window's thread every time (a good fraction of a second); there is now one
+  shared engine, prepared in the background when the app starts. Settings, favorites and watch
+  progress were written to disk on the spot with every change, including every few seconds while
+  watching; writes are now gathered and done a moment later on a worker thread. Coming back to
+  the poster grid from the player rebuilt every row even when nothing had changed.
+
 ## v1.1.0 — 2026-09-13
 
 ### Added

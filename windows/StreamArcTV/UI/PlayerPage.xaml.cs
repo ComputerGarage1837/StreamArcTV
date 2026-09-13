@@ -155,7 +155,7 @@ public partial class PlayerPage : AppPage
     public override void OnDestroy()
     {
         _dead = true;
-        _libVlc?.Dispose();
+        if (_libVlc != null) _libVlc.Log -= OnVlcLog;
         _libVlc = null;
     }
 
@@ -332,8 +332,8 @@ public partial class PlayerPage : AppPage
         {
             if (_libVlc == null || _libVlcSoftware != _preferSoftware)
             {
-                _libVlc?.Dispose();
-                _libVlc = PlayerCore.CreateLibVlc(_preferSoftware);
+                if (_libVlc != null) _libVlc.Log -= OnVlcLog;
+                _libVlc = PlayerCore.Shared(_preferSoftware);
                 _libVlcSoftware = _preferSoftware;
                 _libVlc.Log += OnVlcLog;
             }

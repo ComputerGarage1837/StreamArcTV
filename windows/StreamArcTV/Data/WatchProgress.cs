@@ -148,8 +148,12 @@ public static class WatchProgress
         return _cache = m;
     }
 
+    /// Bumped on every change, so screens can tell whether their watched marks are stale.
+    public static int Version { get; private set; }
+
     private static void Persist(Dictionary<string, Entry> m)
     {
+        Version++;
         if (m.Count > MAX_ENTRIES)
         {
             foreach (var k in m.OrderBy(kv => kv.Value.UpdatedAt).Take(m.Count - MAX_ENTRIES).Select(kv => kv.Key).ToList()) m.Remove(k);
