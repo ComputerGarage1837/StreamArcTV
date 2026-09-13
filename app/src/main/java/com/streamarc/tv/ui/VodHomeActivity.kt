@@ -380,7 +380,8 @@ class VodHomeActivity : AppCompatActivity() {
                     1 -> { prefs.toggleFavorite(service, ContentKind.MOVIE, id); render() }
                     2 -> {
                         val url = try { XtreamApi.streamUrl(service, account, s, prefs.liveFormat) } catch (_: Exception) { return@setItems }
-                        TransferDialogs.download(this, picker, listOf(DownloadItem(s.name ?: "Movie", getString(R.string.movies), url, s.containerExtension ?: "mp4")))
+                        TransferDialogs.download(this, picker, listOf(DownloadItem(s.name ?: "Movie", getString(R.string.movies), url, s.containerExtension ?: "mp4",
+                            fileBase = com.streamarc.tv.transfer.Folders.movieFileName(s.name ?: "Movie"))))
                     }
                     3 -> { WatchProgress.setWatched(key!!, !WatchProgress.isWatched(key)); render() }
                 }

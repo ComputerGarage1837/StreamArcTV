@@ -548,7 +548,8 @@ class BrowseActivity : AppCompatActivity() {
             Toast.makeText(this, e.message, Toast.LENGTH_LONG).show(); return
         }
         val ext = stream.containerExtension?.takeIf { it.isNotBlank() } ?: "mp4"
-        TransferDialogs.download(this, picker, listOf(DownloadItem(stream.name ?: "Movie", getString(R.string.movies), url, ext)))
+        TransferDialogs.download(this, picker, listOf(DownloadItem(stream.name ?: "Movie", getString(R.string.movies), url, ext,
+            fileBase = com.streamarc.tv.transfer.Folders.movieFileName(stream.name ?: "Movie"))))
     }
 
     private fun downloadSeries(stream: Stream) {
@@ -564,7 +565,8 @@ class BrowseActivity : AppCompatActivity() {
                 .setMessage(getString(R.string.download_series_confirm_fmt, episodes.size))
                 .setPositiveButton(R.string.download_all) { _, _ ->
                     val items = episodes.map { ep ->
-                        DownloadItem("$name S${ep.season}E${ep.number} ${ep.title}", name, XtreamApi.episodeUrl(service, account, ep), ep.containerExtension)
+                        DownloadItem("$name S${ep.season}E${ep.number} ${ep.title}", name, XtreamApi.episodeUrl(service, account, ep), ep.containerExtension,
+                            fileBase = com.streamarc.tv.transfer.Folders.episodeFileName(name, ep.season, ep.number, ep.title))
                     }
                     TransferDialogs.download(this@BrowseActivity, picker, items)
                 }
