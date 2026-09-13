@@ -34,3 +34,9 @@ version code must increase with every release.
 The Windows app uses the same schema in `release/update-windows.json` with `setup` (the installer,
 optional) and `zip` (the portable folder) entries (`assetName`, `sha256`, `sizeBytes`) in place of `apk`, `packageName` `com.computergarage.streamarctv.windows`, and
 release tags of the form `windows-v<versionName>`. See `windows/README.md`.
+
+## The Chocolate Rabbit (Windows)
+
+The Chocolate Rabbit app uses the Windows schema above in `release/update-chocolate-rabbit.json`
+(`setup` and `zip` entries), `packageName` `ca.thechocolaterabbit.app.windows`, and release tags
+of the form `chocolate-rabbit-v<versionName>`. See `chocolate-rabbit/README.md`.

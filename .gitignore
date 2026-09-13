@@ -30,4 +30,7 @@ test-accounts/
 windows/**/bin/
 windows/**/obj/
 windows/**/*.user
+chocolate-rabbit/**/bin/
+chocolate-rabbit/**/obj/
+chocolate-rabbit/**/*.user
 .vs/

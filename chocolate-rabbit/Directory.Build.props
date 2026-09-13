@@ -1,0 +1,14 @@
+<Project>
+  <!--
+    The Chocolate Rabbit for Windows: product settings shared by every project in this folder.
+    VERSION drives the version code (major*10000 + minor*100 + patch), which must always be higher
+    than the versionCode in release/update-chocolate-rabbit.json. Override with -p:GitHubRepo=... or
+    -p:NewsletterEmail=... if needed.
+  -->
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <GitHubRepo Condition="'$(GitHubRepo)' == ''">ComputerGarage1837/StreamArcTV</GitHubRepo>
+    <!-- Where newsletter sign-ups are sent until the newsletter service itself is live. -->
+    <NewsletterEmail Condition="'$(NewsletterEmail)' == ''">info@thechocolaterabbit.ca</NewsletterEmail>
+  </PropertyGroup>
+</Project>

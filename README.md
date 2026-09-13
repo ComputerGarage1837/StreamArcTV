@@ -24,6 +24,14 @@ lives in [`windows/`](windows/). See [`windows/README.md`](windows/README.md) fo
 build and release steps; its releases are tagged `windows-v…` and its update feed is
 `release/update-windows.json`.
 
+## The Chocolate Rabbit (Windows)
+
+A second Windows app lives in this repository: [`chocolate-rabbit/`](chocolate-rabbit/) is The
+Chocolate Rabbit newsletter sign-up app (WPF on .NET 8, Inno Setup installer, same in-app
+updater). Its releases are tagged `chocolate-rabbit-v…`, its update feed is
+`release/update-chocolate-rabbit.json`, and its build is `.github/workflows/chocolate-rabbit.yml`.
+See [`chocolate-rabbit/README.md`](chocolate-rabbit/README.md).
+
 ## Install
 
 1. Download the latest `Stream-Arc-TV-<version>.apk` from the [Releases](../../releases) page.

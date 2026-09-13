@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>TheChocolateRabbit</RootNamespace>
+    <AssemblyName>TheChocolateRabbit</AssemblyName>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <Product>The Chocolate Rabbit</Product>
+    <Company>The Chocolate Rabbit</Company>
+    <Copyright>© The Chocolate Rabbit</Copyright>
+    <AssemblyTitle>The Chocolate Rabbit</AssemblyTitle>
+    <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="GitHubRepo" Value="$(GitHubRepo)" />
+    <AssemblyMetadata Include="NewsletterEmail" Value="$(NewsletterEmail)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\**\*.png;Assets\**\*.jpg;Assets\**\*.ico;Assets\Fonts\*.ttf" />
+  </ItemGroup>
+
+</Project>
