@@ -98,26 +98,56 @@ public static class Installer
         return actual == expected;
     }
 
-    /// Unpacks the package over the installed files once this process has exited, then relaunches.
-    public static void Install(string zipFile)
+    /// Unpacks the package into a staging folder now (no PowerShell, nothing touched while the app
+    /// runs), then hands over to a script that waits for this process to exit, copies the files in
+    /// with retries (robocopy), and starts the app again. Asks for administrator rights only when
+    /// the app's folder is not writable (for example under Program Files).
+    public static async void Install(string zipFile)
     {
         var exe = Environment.ProcessPath ?? "";
         var installDir = Path.GetDirectoryName(exe) ?? AppContext.BaseDirectory;
-        var script = Path.Combine(Path.GetDirectoryName(zipFile)!, "apply-update.cmd");
+        var updatesDir = Path.GetDirectoryName(zipFile)!;
+        var staged = Path.Combine(updatesDir, "staged");
+        var progress = Dialogs.Progress("Installing update", "Unpacking…", null);
+        try
+        {
+            await Task.Run(() =>
+            {
+                if (Directory.Exists(staged)) Directory.Delete(staged, true);
+                Directory.CreateDirectory(staged);
+                System.IO.Compression.ZipFile.ExtractToDirectory(zipFile, staged, true);
+            });
+        }
+        catch (Exception e)
+        {
+            progress.Close();
+            AppLog.E("Update", "unpack failed", e);
+            Dialogs.Alert("Update failed", $"The update package could not be unpacked: {e.Message}\n\nYou can download it from the releases page and extract it over the app's folder by hand.");
+            return;
+        }
+        progress.Close();
+
+        var needsAdmin = !Writable(installDir);
+        if (installDir.Contains(@"\Temp\", StringComparison.OrdinalIgnoreCase))
+        {
+            Dialogs.Alert("Extract the app first", "Stream Arc TV is running from a temporary folder (the zip was opened without extracting it). Extract the zip into a folder of your own, run StreamArcTV.exe from there, and update again.");
+            return;
+        }
+        var script = Path.Combine(updatesDir, "apply-update.cmd");
         var pid = Environment.ProcessId;
-        var ps = "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command " +
-                 $"\"Expand-Archive -LiteralPath '{zipFile.Replace("'", "''")}' -DestinationPath '{installDir.Replace("'", "''")}' -Force\"";
         var cmd = string.Join("\r\n", new[]
         {
             "@echo off",
             "title Stream Arc TV update",
             "echo Waiting for Stream Arc TV to close...",
-            $":wait",
+            ":wait",
             $"tasklist /FI \"PID eq {pid}\" 2>NUL | find \"{pid}\" >NUL",
             "if not errorlevel 1 ( timeout /t 1 /nobreak >NUL & goto wait )",
+            "timeout /t 1 /nobreak >NUL",
             "echo Installing the update...",
-            ps,
-            "if errorlevel 1 ( echo The update could not be unpacked. Press any key to close. & pause >NUL & exit /b 1 )",
+            $"robocopy \"{staged}\" \"{installDir}\" /E /IS /IT /R:30 /W:1 /NFL /NDL /NJH /NJS /NP",
+            "if errorlevel 8 ( echo. & echo The update could not be copied into: & echo   " + installDir + " & echo Close anything using that folder, or extract the zip over it by hand. & echo. & pause & exit /b 1 )",
+            $"rd /s /q \"{staged}\" >NUL 2>&1",
             $"del \"{zipFile}\" >NUL 2>&1",
             $"start \"\" \"{exe}\"",
             "exit /b 0",
@@ -126,13 +156,29 @@ public static class Installer
         try
         {
             File.WriteAllText(script, cmd);
-            AppLog.I("Update", $"installing {Path.GetFileName(zipFile)} into {installDir}");
-            Process.Start(new ProcessStartInfo("cmd.exe", $"/c \"{script}\"") { UseShellExecute = true, WindowStyle = ProcessWindowStyle.Minimized });
+            AppLog.I("Update", $"installing {Path.GetFileName(zipFile)} into {installDir} (admin={needsAdmin})");
+            var psi = new ProcessStartInfo("cmd.exe", $"/c \"{script}\"") { UseShellExecute = true, WindowStyle = ProcessWindowStyle.Minimized };
+            if (needsAdmin) psi.Verb = "runas";
+            Process.Start(psi);
+            App.Window?.ForceClose();
             System.Windows.Application.Current.Shutdown();
         }
         catch (Exception e)
         {
-            Dialogs.Toast($"Couldn't start the installer: {e.Message}");
+            AppLog.E("Update", "installer start failed", e);
+            Dialogs.Alert("Update failed", $"Couldn't start the installer: {e.Message}\n\nThe unpacked update is in:\n{staged}\n\nCopy its contents over the app's folder ({installDir}) after closing the app.");
         }
+    }
+
+    private static bool Writable(string dir)
+    {
+        try
+        {
+            var probe = Path.Combine(dir, ".update-probe-" + Guid.NewGuid().ToString("N")[..8]);
+            File.WriteAllBytes(probe, Array.Empty<byte>());
+            File.Delete(probe);
+            return true;
+        }
+        catch { return false; }
     }
 }

@@ -3,6 +3,15 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.0.3 — 2026-09-13
+
+### Fixed
+- In-app updates failed with a message about not being able to access the folder. The updater no
+  longer unpacks over the running app with PowerShell: it unpacks into its own data folder first,
+  then copies the files in with retries once the app has closed, asking for administrator rights
+  only when the app's folder needs them, and explains what to do if the app was started from
+  inside the zip without extracting it.
+
 ## v1.0.2 — 2026-09-13
 
 ### Fixed
