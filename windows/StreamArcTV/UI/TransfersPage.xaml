@@ -1,0 +1,34 @@
+<ui:AppPage x:Class="StreamArcTV.UI.TransfersPage"
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:ui="clr-namespace:StreamArcTV.UI">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid Margin="12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <Button x:Name="BtnBack" Style="{StaticResource SquareIconButton}" ToolTip="Back">
+                <Path Data="{StaticResource IconBack}" Fill="{StaticResource TextBrush}" Width="22" Height="22" Stretch="Uniform" />
+            </Button>
+            <TextBlock x:Name="TxtTitle" Grid.Column="1" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="14,0,0,0" />
+            <Button x:Name="BtnDeleteAll" Grid.Column="2" Content="Delete all" Style="{StaticResource DangerButton}" MinHeight="40" Padding="18,4" Visibility="Collapsed" />
+        </Grid>
+        <Button x:Name="RowFolder" Grid.Row="1" Style="{StaticResource SettingsRow}" Margin="12,0,12,0" MaxWidth="760" HorizontalAlignment="Left" MinWidth="500">
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <TextBlock Text="Save to" Foreground="{StaticResource TextBrush}" FontSize="15" />
+                <TextBlock x:Name="TxtFolder" Grid.Column="1" Foreground="{StaticResource AccentBrush}" FontSize="14" TextAlignment="Right" TextTrimming="CharacterEllipsis" Margin="12,0,0,0" />
+            </Grid>
+        </Button>
+        <Border x:Name="NoticeBox" Grid.Row="2" Style="{StaticResource Panel}" Padding="12" Margin="12,6,12,0" MaxWidth="760" HorizontalAlignment="Left" MinWidth="500" Visibility="Collapsed">
+            <TextBlock x:Name="TxtNotice" Foreground="{StaticResource TextBrush}" FontSize="13" LineHeight="20" TextWrapping="Wrap" />
+        </Border>
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" Focusable="False" Padding="12,6,12,16" MaxWidth="784" HorizontalAlignment="Left">
+            <StackPanel x:Name="List" MinWidth="500" />
+        </ScrollViewer>
+        <TextBlock x:Name="TxtEmpty" Grid.Row="3" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" TextAlignment="Center" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+    </Grid>
+</ui:AppPage>

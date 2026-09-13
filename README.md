@@ -17,6 +17,13 @@ This repository holds the application source, the GitHub Actions release pipelin
   SHA-256, and hands it to Android to install. You can skip any version.
 - Remote/D-pad friendly UI with clear focus states; touch-friendly on phones.
 
+## Windows
+
+A Windows edition with the same interface and features (WPF on .NET 8, playback through LibVLC)
+lives in [`windows/`](windows/). See [`windows/README.md`](windows/README.md) for the install,
+build and release steps; its releases are tagged `windows-v…` and its update feed is
+`release/update-windows.json`.
+
 ## Install
 
 1. Download the latest `Stream-Arc-TV-<version>.apk` from the [Releases](../../releases) page.

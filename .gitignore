@@ -25,3 +25,9 @@ secrets/
 # Local credentials and test data
 *.env
 test-accounts/
+
+# Windows (.NET) build output
+windows/**/bin/
+windows/**/obj/
+windows/**/*.user
+.vs/

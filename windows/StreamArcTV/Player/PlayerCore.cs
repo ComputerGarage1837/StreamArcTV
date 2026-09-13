@@ -1,0 +1,48 @@
+using LibVLCSharp.Shared;
+using StreamArcTV.Data;
+using StreamArcTV.Util;
+
+namespace StreamArcTV.Player;
+
+/// LibVLC set-up shared by the player, the guide preview and multi-view.
+public static class PlayerCore
+{
+    private static bool _initialized;
+    private static readonly object Lock = new();
+
+    public static LibVLC CreateLibVlc(bool preferSoftware = false)
+    {
+        lock (Lock)
+        {
+            if (!_initialized) { Core.Initialize(); _initialized = true; }
+        }
+        var opts = new List<string>
+        {
+            "--no-video-title-show",
+            "--no-osd",
+            "--http-user-agent=" + XtreamApi.USER_AGENT,
+            "--http-reconnect",
+            "--adaptive-logic=highest",
+            "--quiet",
+        };
+        if (preferSoftware) opts.Add("--avcodec-hw=none");
+        var lib = new LibVLC(opts.ToArray());
+        return lib;
+    }
+
+    /// Stops and disposes a player off the UI thread (LibVLC stop can block while a network read finishes).
+    public static void DisposePlayer(MediaPlayer p)
+    {
+        try
+        {
+            var media = p.Media;
+            Task.Run(() =>
+            {
+                try { p.Stop(); } catch { }
+                try { media?.Dispose(); } catch { }
+                try { p.Dispose(); } catch { }
+            });
+        }
+        catch (Exception e) { AppLog.W("Player", "dispose: " + e.Message); }
+    }
+}

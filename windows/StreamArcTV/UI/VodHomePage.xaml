@@ -1,0 +1,31 @@
+<ui:AppPage x:Class="StreamArcTV.UI.VodHomePage"
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:ui="clr-namespace:StreamArcTV.UI">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ui:HomeHeader x:Name="Header" Margin="14,8,14,0" />
+        <Grid x:Name="Body" Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="NavCol" Width="96" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition x:Name="NavRow" Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <StackPanel x:Name="NavRail" Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Margin="6,6,6,0" />
+            <UniformGrid x:Name="NavTabs" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Rows="1" Margin="6,6,6,0" Visibility="Collapsed" />
+            <Grid x:Name="ContentBox" Grid.Row="1" Grid.Column="1">
+                <ScrollViewer x:Name="RowsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="0,0,0,24" PanningMode="VerticalOnly">
+                    <StackPanel x:Name="Rows" />
+                </ScrollViewer>
+                <Control x:Name="Progress" Style="{StaticResource Spinner}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock x:Name="TxtError" Foreground="{StaticResource DangerBrush}" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" TextWrapping="Wrap" Visibility="Collapsed" />
+            </Grid>
+        </Grid>
+    </Grid>
+</ui:AppPage>

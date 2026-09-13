@@ -1,0 +1,87 @@
+<ui:AppPage x:Class="StreamArcTV.UI.PlayerPage"
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:ui="clr-namespace:StreamArcTV.UI"
+            xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
+            Background="#000000">
+    <Grid Background="#000000">
+        <vlc:VideoView x:Name="Video" Background="#000000">
+            <!-- Everything below is drawn over the video -->
+            <Grid x:Name="Overlay" Background="#01000000" Focusable="True">
+                <!-- Title bar -->
+                <Border x:Name="TitleBar" VerticalAlignment="Top" Background="#99000000" Padding="16,16,200,16">
+                    <TextBlock x:Name="TxtTitle" FontSize="18" Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis" />
+                </Border>
+
+                <!-- LIVE / behind-live badge -->
+                <Button x:Name="TxtLiveStatus" Style="{StaticResource LiveBadge}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,12,0" Visibility="Collapsed" />
+
+                <!-- Skip buttons -->
+                <Button x:Name="BtnSeekBack" Content="« 10 s" Style="{StaticResource SeekButton}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="20" Visibility="Collapsed" />
+                <Button x:Name="BtnSeekFwd" Content="10 s »" Style="{StaticResource SeekButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="20" Visibility="Collapsed" />
+
+                <!-- Up next -->
+                <Border x:Name="NextBox" Style="{StaticResource Panel}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,96" Padding="14" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock x:Name="TxtNextTitle" MaxWidth="360" FontSize="15" FontWeight="Bold" Foreground="{StaticResource TextBrush}" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxHeight="44" />
+                        <TextBlock x:Name="TxtNextCount" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button x:Name="BtnNextPlay" Content="▶ Play now" Style="{StaticResource PrimaryButton}" MinHeight="40" Padding="18,4" FontSize="14" />
+                            <Button x:Name="BtnNextCancel" Content="Cancel" Style="{StaticResource SmallButton}" MinHeight="40" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Buffering -->
+                <StackPanel x:Name="BufferBox" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
+                    <Control Style="{StaticResource Spinner}" HorizontalAlignment="Center" />
+                    <Border Background="#99000000" Padding="10,4" Margin="0,8,0,0" CornerRadius="6" HorizontalAlignment="Center">
+                        <TextBlock x:Name="TxtBuffer" Text="Buffering…" FontSize="13" Foreground="{StaticResource TextBrush}" TextAlignment="Center" />
+                    </Border>
+                </StackPanel>
+
+                <!-- Error -->
+                <StackPanel x:Name="ErrorBox" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="640" Visibility="Collapsed">
+                    <Border Background="#B3000000" CornerRadius="10" Padding="12">
+                        <TextBlock x:Name="TxtError" FontSize="16" Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap" TextAlignment="Center" />
+                    </Border>
+                    <Button x:Name="BtnRetry" Content="Retry" Style="{StaticResource PrimaryButton}" Padding="32,6" HorizontalAlignment="Center" Margin="0,12,0,0" />
+                </StackPanel>
+
+                <!-- Controller -->
+                <Border x:Name="Controller" VerticalAlignment="Bottom" Padding="16,10,16,12">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#00000000" Offset="0" />
+                            <GradientStop Color="#CC000000" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="BtnPlay" Style="{StaticResource PlayerButton}" ToolTip="Play / pause (Space)">
+                            <Path x:Name="IconPlayPause" Data="{StaticResource IconPause}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="20" Height="20" Stretch="Uniform" />
+                        </Button>
+                        <TextBlock x:Name="TxtTime" Grid.Column="1" FontSize="13" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="12,0,12,0" MinWidth="90" />
+                        <Slider x:Name="Seek" Grid.Column="2" Style="{StaticResource SeekSlider}" Minimum="0" Maximum="1000" VerticalAlignment="Center" Focusable="True" />
+                        <Button x:Name="BtnCc" Grid.Column="3" Style="{StaticResource PlayerButton}" Margin="12,0,0,0" ToolTip="Subtitles">
+                            <Path Data="{StaticResource IconCc}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="20" Height="20" Stretch="Uniform" />
+                        </Button>
+                        <Button x:Name="BtnFull" Grid.Column="4" Style="{StaticResource PlayerButton}" Margin="8,0,0,0" ToolTip="Full screen (F11)">
+                            <Path Data="{StaticResource IconFullscreen}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="20" Height="20" Stretch="Uniform" />
+                        </Button>
+                        <Button x:Name="BtnClose" Grid.Column="5" Style="{StaticResource PlayerButton}" Margin="8,0,0,0" ToolTip="Back (Esc)">
+                            <Path Data="{StaticResource IconBack}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="20" Height="20" Stretch="Uniform" />
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
+        </vlc:VideoView>
+    </Grid>
+</ui:AppPage>
