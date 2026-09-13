@@ -98,17 +98,24 @@ public static class Installer
         return actual == expected;
     }
 
-    /// Unpacks the package into a staging folder now (no PowerShell, nothing touched while the app
-    /// runs), then hands over to a script that waits for this process to exit, copies the files in
-    /// with retries (robocopy), and starts the app again. Asks for administrator rights only when
-    /// the app's folder is not writable (for example under Program Files).
+    /// Unpacks the package into a staging folder, then swaps the files into the app's own folder
+    /// while the app is still running: Windows allows a running program's files to be renamed, so
+    /// each old file is moved aside to "*.old" and the new one put in its place, and the app simply
+    /// restarts. No scripts, no waiting for the process to exit. Leftover "*.old" files are removed
+    /// on the next start. If the folder needs administrator rights, an elevated helper does the swap.
     public static async void Install(string zipFile)
     {
         var exe = Environment.ProcessPath ?? "";
         var installDir = Path.GetDirectoryName(exe) ?? AppContext.BaseDirectory;
         var updatesDir = Path.GetDirectoryName(zipFile)!;
         var staged = Path.Combine(updatesDir, "staged");
+        if (installDir.Contains(@"\Temp\", StringComparison.OrdinalIgnoreCase))
+        {
+            Dialogs.Alert("Extract the app first", "Stream Arc TV is running from a temporary folder (the zip was opened without extracting it). Extract the zip into a folder of your own, run StreamArcTV.exe from there, and update again.");
+            return;
+        }
         var progress = Dialogs.Progress("Installing update", "Unpacking…", null);
+        string? failure = null;
         try
         {
             await Task.Run(() =>
@@ -117,56 +124,82 @@ public static class Installer
                 Directory.CreateDirectory(staged);
                 System.IO.Compression.ZipFile.ExtractToDirectory(zipFile, staged, true);
             });
+            progress.Report(null, "Installing…");
+            if (Writable(installDir))
+            {
+                await Task.Run(() => Swap(staged, installDir));
+            }
+            else
+            {
+                // Program Files and the like: run ourselves elevated to do the swap.
+                var psi = new ProcessStartInfo(exe, $"--apply-update \"{staged}\" \"{installDir}\"") { UseShellExecute = true, Verb = "runas" };
+                using var p = Process.Start(psi) ?? throw new InvalidOperationException("Windows did not start the elevated installer");
+                await p.WaitForExitAsync();
+                if (p.ExitCode != 0) throw new InvalidOperationException($"the elevated installer reported code {p.ExitCode}");
+            }
         }
         catch (Exception e)
         {
-            progress.Close();
-            AppLog.E("Update", "unpack failed", e);
-            Dialogs.Alert("Update failed", $"The update package could not be unpacked: {e.Message}\n\nYou can download it from the releases page and extract it over the app's folder by hand.");
-            return;
+            failure = e.Message;
+            AppLog.E("Update", "install failed", e);
         }
         progress.Close();
-
-        var needsAdmin = !Writable(installDir);
-        if (installDir.Contains(@"\Temp\", StringComparison.OrdinalIgnoreCase))
+        if (failure != null)
         {
-            Dialogs.Alert("Extract the app first", "Stream Arc TV is running from a temporary folder (the zip was opened without extracting it). Extract the zip into a folder of your own, run StreamArcTV.exe from there, and update again.");
+            Dialogs.Alert("Update failed", $"The update could not be installed: {failure}\n\nApp folder: {installDir}\n\nYou can download the zip from the releases page and extract it over that folder by hand (close the app first).");
             return;
         }
-        var script = Path.Combine(updatesDir, "apply-update.cmd");
-        var pid = Environment.ProcessId;
-        var cmd = string.Join("\r\n", new[]
+        try { Directory.Delete(staged, true); } catch { }
+        try { File.Delete(zipFile); } catch { }
+        AppLog.I("Update", $"installed {Path.GetFileName(zipFile)} into {installDir}; restarting");
+        try { Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, WorkingDirectory = installDir }); } catch { }
+        App.Window?.ForceClose();
+        System.Windows.Application.Current.Shutdown();
+    }
+
+    /// Moves every staged file into place, renaming the existing (possibly running) file aside first.
+    public static void Swap(string staged, string installDir)
+    {
+        foreach (var src in Directory.EnumerateFiles(staged, "*", SearchOption.AllDirectories))
         {
-            "@echo off",
-            "title Stream Arc TV update",
-            "echo Waiting for Stream Arc TV to close...",
-            ":wait",
-            $"tasklist /FI \"PID eq {pid}\" 2>NUL | find \"{pid}\" >NUL",
-            "if not errorlevel 1 ( timeout /t 1 /nobreak >NUL & goto wait )",
-            "timeout /t 1 /nobreak >NUL",
-            "echo Installing the update...",
-            $"robocopy \"{staged}\" \"{installDir}\" /E /IS /IT /R:30 /W:1 /NFL /NDL /NJH /NJS /NP",
-            "if errorlevel 8 ( echo. & echo The update could not be copied into: & echo   " + installDir + " & echo Close anything using that folder, or extract the zip over it by hand. & echo. & pause & exit /b 1 )",
-            $"rd /s /q \"{staged}\" >NUL 2>&1",
-            $"del \"{zipFile}\" >NUL 2>&1",
-            $"start \"\" \"{exe}\"",
-            "exit /b 0",
-            ""
-        });
+            var rel = Path.GetRelativePath(staged, src);
+            var dest = Path.Combine(installDir, rel);
+            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+            if (File.Exists(dest))
+            {
+                var old = dest + ".old";
+                try { if (File.Exists(old)) File.Delete(old); } catch { old = dest + "." + Guid.NewGuid().ToString("N")[..6] + ".old"; }
+                File.Move(dest, old);
+            }
+            File.Move(src, dest);
+        }
+    }
+
+    /// Called at start-up: removes files left behind by the previous update.
+    public static void CleanLeftovers()
+    {
         try
         {
-            File.WriteAllText(script, cmd);
-            AppLog.I("Update", $"installing {Path.GetFileName(zipFile)} into {installDir} (admin={needsAdmin})");
-            var psi = new ProcessStartInfo("cmd.exe", $"/c \"{script}\"") { UseShellExecute = true, WindowStyle = ProcessWindowStyle.Minimized };
-            if (needsAdmin) psi.Verb = "runas";
-            Process.Start(psi);
-            App.Window?.ForceClose();
-            System.Windows.Application.Current.Shutdown();
+            var dir = Path.GetDirectoryName(Environment.ProcessPath ?? "") ?? AppContext.BaseDirectory;
+            foreach (var f in Directory.EnumerateFiles(dir, "*.old", SearchOption.AllDirectories)) { try { File.Delete(f); } catch { } }
+        }
+        catch { }
+    }
+
+    /// Entry for the elevated helper started with --apply-update <staged> <installDir>.
+    public static int ApplyFromArgs(string[] args)
+    {
+        try
+        {
+            var i = Array.IndexOf(args, "--apply-update");
+            if (i < 0 || i + 2 >= args.Length) return 2;
+            Swap(args[i + 1], args[i + 2]);
+            return 0;
         }
         catch (Exception e)
         {
-            AppLog.E("Update", "installer start failed", e);
-            Dialogs.Alert("Update failed", $"Couldn't start the installer: {e.Message}\n\nThe unpacked update is in:\n{staged}\n\nCopy its contents over the app's folder ({installDir}) after closing the app.");
+            try { File.WriteAllText(Path.Combine(AppPaths.Data, "updates", "elevated-error.txt"), e.ToString()); } catch { }
+            return 1;
         }
     }
 

@@ -3,6 +3,15 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.0.5 — 2026-09-13
+
+### Fixed
+- In-app updates could still fail. The updater no longer uses a script at all: it unpacks the
+  package, swaps the new files into the app's folder itself while running (old files are moved
+  aside and cleaned up on the next start), and restarts. If the folder needs administrator rights
+  it asks once and does the swap elevated. When something does go wrong, the message now says
+  exactly what and where.
+
 ## v1.0.4 — 2026-09-13
 
 ### Fixed

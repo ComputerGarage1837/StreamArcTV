@@ -20,8 +20,15 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (e.Args.Contains("--apply-update"))
+        {
+            // Elevated helper started by the updater: swap the files and exit.
+            Shutdown(Update.Installer.ApplyFromArgs(e.Args));
+            return;
+        }
         AppPaths.Ensure();
         AppLog.Init();
+        Update.Installer.CleanLeftovers();
         StartInTray = e.Args.Any(a => string.Equals(a, "--tray", StringComparison.OrdinalIgnoreCase));
 
         // Crash safety net: log it and offer the log on the next start.
