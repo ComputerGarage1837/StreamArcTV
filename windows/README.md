@@ -37,7 +37,8 @@ Everything the Android app does, on a Windows PC:
   about, category diagnostics, export logs).
 - **Self-updating**: the Update button (and an optional check on launch) reads this repository's
   Windows release feed, shows the changelog, downloads the package with a progress dialog, verifies
-  its SHA-256, and installs it in place. You can skip any version.
+  its SHA-256, and installs it (silently through the setup program, or in place for a portable
+  copy). You can skip any version.
 - **Crash safety net**: if the app ever crashes, the next start offers to save or copy the log.
 
 Keyboard: arrow keys move the highlight (like a remote), Enter is OK, **holding Enter** (or a
@@ -47,15 +48,21 @@ are hidden.
 
 ## Install
 
-1. Download `Stream-Arc-TV-Windows-<version>-x64.zip` from the [Releases](../../../releases) page
-   (the releases tagged `windows-v…`).
-2. Unpack it anywhere you like (for example `C:\Program Files\Stream Arc TV` or a folder in your
-   user profile) and run `StreamArcTV.exe`. Nothing else needs installing: .NET and LibVLC are
-   inside the folder.
-3. Windows SmartScreen may warn the first time because the build is not code-signed; choose
+1. Download `Stream-Arc-TV-Setup-<version>.exe` from the [Releases](../../../releases) page (the
+   releases tagged `windows-v…`) and run it. It installs for the current user without asking for
+   administrator rights, adds Start menu and desktop shortcuts and an Apps & features entry, and can
+   start the app when it finishes. Nothing else needs installing: .NET and LibVLC are included.
+2. Windows SmartScreen may warn the first time because the build is not code-signed; choose
    "More info" → "Run anyway".
-4. Future updates install from inside the app (the app needs write access to its own folder, so a
-   folder in your user profile is the easiest choice).
+3. Future updates install from inside the app: it downloads the new setup program, verifies it,
+   closes, installs and starts again.
+
+Prefer no installer? `Stream-Arc-TV-Windows-<version>-x64.zip` is the same build as a portable
+folder: unpack it anywhere you have write access and run `StreamArcTV.exe`; in-app updates then
+swap the files in place.
+
+Uninstall from Settings → Apps (or the Start menu entry). Your settings, downloads and recordings
+under your profile are kept.
 
 Requires Windows 10 or 11, 64-bit.
 
@@ -103,34 +110,41 @@ To ship a version:
 3. Commit and push to `main` (or merge a pull request).
 
 When `main` carries a version that has no `windows-vX.Y.Z` release yet, the workflow publishes the
-self-contained x64 zip on a release named "Stream Arc TV for Windows X.Y.Z", then commits the
-matching `release/update-windows.json` (with SHA-256 and size) to `main`. Pushing a `windows-v*`
+setup program (built with Inno Setup from `windows/installer/StreamArcTV.iss`) and the portable
+x64 zip on a release named "Stream Arc TV for Windows X.Y.Z", then commits the matching
+`release/update-windows.json` (with SHA-256 and size of each) to `main`. Pushing a `windows-v*`
 tag by hand or running the workflow manually does the same. Pull requests and pushes that don't
 bump the version only build the app as a check.
 
 ## Update format
 
-`release/update-windows.json` uses the same schema as the Android feed, with a `zip` entry instead
-of `apk`:
+`release/update-windows.json` uses the same schema as the Android feed, with `setup` and `zip`
+entries instead of `apk`:
 
 ```json
 {
   "schemaVersion": 1,
   "packageName": "com.computergarage.streamarctv.windows",
-  "versionName": "1.0.0",
-  "versionCode": 10000,
+  "versionName": "1.1.0",
+  "versionCode": 10100,
+  "setup": {
+    "assetName": "Stream-Arc-TV-Setup-1.1.0.exe",
+    "sha256": "64 lowercase hexadecimal characters",
+    "sizeBytes": 12345678
+  },
   "zip": {
-    "assetName": "Stream-Arc-TV-Windows-1.0.0-x64.zip",
+    "assetName": "Stream-Arc-TV-Windows-1.1.0-x64.zip",
     "sha256": "64 lowercase hexadecimal characters",
     "sizeBytes": 12345678
   }
 }
 ```
 
-The app compares `versionCode` with its own, downloads the named asset from the release tagged
-`windows-v<versionName>`, verifies `sha256` and `sizeBytes`, then unpacks it over its own folder
-once it has closed and starts again. A `versionCode` of 0 means no Windows release has been
-published yet.
+The app compares `versionCode` with its own and downloads the matching asset from the release
+tagged `windows-v<versionName>`: an installed copy takes `setup` and runs it silently, a portable
+copy takes `zip` and swaps the files in its own folder; `sha256` and `sizeBytes` are verified first.
+`setup` is optional (feeds older than 1.1.0 have none), `zip` is required. A `versionCode` of 0
+means no Windows release has been published yet.
 
 ## Disclaimer
 

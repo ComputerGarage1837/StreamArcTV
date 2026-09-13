@@ -82,11 +82,27 @@ jobs:
           echo "size=$(stat -c%s "$OUT")" >> "$GITHUB_OUTPUT"
           echo "Built $OUT ($(stat -c%s "$OUT") bytes)"
 
-      - name: Upload build artifact
+      # Inno Setup is preinstalled on the windows-latest runner.
+      - name: Build installer
+        id: setup
+        env:
+          V: ${{ steps.ver.outputs.name }}
+        run: |
+          MSYS_NO_PATHCONV=1 "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" "/DAppVersion=$V" "/DSourceDir=$(cygpath -w "$PWD/out/StreamArcTV")" "/DOutputDir=$(cygpath -w "$PWD/out")" "$(cygpath -w "$PWD/windows/installer/StreamArcTV.iss")"
+          OUT="Stream-Arc-TV-Setup-${V}.exe"
+          mv "out/$OUT" "$OUT"
+          echo "path=$OUT" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$OUT" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "size=$(stat -c%s "$OUT")" >> "$GITHUB_OUTPUT"
+          echo "Built $OUT ($(stat -c%s "$OUT") bytes)"
+
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.pkg.outputs.path }}
-          path: ${{ steps.pkg.outputs.path }}
+          name: Stream-Arc-TV-Windows-${{ steps.ver.outputs.name }}
+          path: |
+            ${{ steps.pkg.outputs.path }}
+            ${{ steps.setup.outputs.path }}
 
       - name: Extract changelog for this version
         if: steps.rel.outputs.publish == 'true'
@@ -107,11 +123,13 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: Stream Arc TV for Windows ${{ steps.ver.outputs.name }}
           body_path: RELEASE_NOTES.md
-          files: ${{ steps.pkg.outputs.path }}
+          files: |
+            ${{ steps.setup.outputs.path }}
+            ${{ steps.pkg.outputs.path }}
           fail_on_unmatched_files: true
 
       # The in-app updater reads release/update-windows.json from main, so publish the
-      # feed only after the release and its zip asset exist.
+      # feed only after the release and its assets exist.
       - name: Update release feed on main
         if: steps.rel.outputs.publish == 'true'
         env:
@@ -119,6 +137,9 @@ jobs:
           ASSET: ${{ steps.pkg.outputs.path }}
           SHA256: ${{ steps.pkg.outputs.sha256 }}
           SIZE: ${{ steps.pkg.outputs.size }}
+          SETUP_ASSET: ${{ steps.setup.outputs.path }}
+          SETUP_SHA256: ${{ steps.setup.outputs.sha256 }}
+          SETUP_SIZE: ${{ steps.setup.outputs.size }}
         run: |
           set -euo pipefail
           IFS=. read -r MAJ MIN PAT <<< "$VERSION_NAME"
@@ -136,6 +157,11 @@ jobs:
             "packageName": "com.computergarage.streamarctv.windows",
             "versionName": "$VERSION_NAME",
             "versionCode": $CODE,
+            "setup": {
+              "assetName": "$SETUP_ASSET",
+              "sha256": "$SETUP_SHA256",
+              "sizeBytes": $SETUP_SIZE
+            },
             "zip": {
               "assetName": "$ASSET",
               "sha256": "$SHA256",

@@ -3,6 +3,18 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.0 — 2026-09-13
+
+### Added
+- A proper Windows installer. Each release now ships `Stream-Arc-TV-Setup-<version>.exe`, which
+  installs the app for the current user (no administrator prompt), adds Start menu and desktop
+  shortcuts and an Apps & features entry with an uninstaller, and offers to start the app when it
+  finishes. Uninstalling removes the app and its scheduled recordings but keeps your settings,
+  downloads and recordings.
+- In-app updates on an installed copy download the new setup program and run it silently: the app
+  closes, the files are replaced, and the app starts again. Portable copies unpacked from the zip
+  keep updating in place as before; the zip is still published for them.
+
 ## v1.0.5 — 2026-09-13
 
 ### Fixed

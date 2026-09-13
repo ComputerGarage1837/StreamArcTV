@@ -10,20 +10,36 @@ namespace StreamArcTV.Update;
 
 /// <summary>
 /// Downloads a release package with a progress dialog, verifies the SHA-256 from the update feed,
-/// then hands over to a small script that waits for the app to exit, unpacks the new files over
-/// the installed ones, and starts the app again.
+/// then installs it. An installed copy (set up by Stream-Arc-TV-Setup-*.exe) is updated by running
+/// the new setup program silently; a portable copy (unpacked from the zip) has its files swapped
+/// in place.
 /// </summary>
 public static class Installer
 {
     private static bool _active;
 
+    /// True when this copy was put here by the setup program (its uninstaller sits next to the exe).
+    public static bool IsInstalled
+    {
+        get
+        {
+            try
+            {
+                var dir = Path.GetDirectoryName(Environment.ProcessPath ?? "") ?? AppContext.BaseDirectory;
+                return Directory.EnumerateFiles(dir, "unins*.exe").Any();
+            }
+            catch { return false; }
+        }
+    }
+
     public static async void Download(UpdateChecker.Release release)
     {
         if (_active) { Dialogs.Toast("An update is already downloading."); return; }
         _active = true;
+        var package = IsInstalled && release.Setup != null ? release.Setup : release.Zip;
         var dir = Path.Combine(AppPaths.Data, "updates");
         Directory.CreateDirectory(dir);
-        var file = Path.Combine(dir, release.AssetName);
+        var file = Path.Combine(dir, package.AssetName);
         try { if (File.Exists(file)) File.Delete(file); } catch { }
 
         var cts = new CancellationTokenSource();
@@ -32,13 +48,13 @@ public static class Installer
         {
             var ok = await Task.Run(async () =>
             {
-                var req = new HttpRequestMessage(HttpMethod.Get, release.ZipUrl);
+                var req = new HttpRequestMessage(HttpMethod.Get, package.Url);
                 req.Headers.UserAgent.ParseAdd(XtreamApi.USER_AGENT);
                 using var client = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = true }) { Timeout = Timeout.InfiniteTimeSpan };
                 using var resp = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
                 if ((int)resp.StatusCode == 404) throw new InvalidOperationException("package not found on the release");
                 if (!resp.IsSuccessStatusCode) throw new InvalidOperationException($"server error (HTTP {(int)resp.StatusCode})");
-                var total = resp.Content.Headers.ContentLength ?? release.SizeBytes;
+                var total = resp.Content.Headers.ContentLength ?? package.SizeBytes;
                 await using var input = await resp.Content.ReadAsStreamAsync(cts.Token);
                 await using var output = File.Create(file);
                 var buf = new byte[256 * 1024];
@@ -60,7 +76,7 @@ public static class Installer
                     }
                 }
                 progress.Report(null, "Verifying download…");
-                return Verify(file, release);
+                return Verify(file, package);
             });
             progress.Close();
             if (!ok)
@@ -69,7 +85,8 @@ public static class Installer
                 Dialogs.Toast("The downloaded update didn't match the release. Please try again.");
                 return;
             }
-            Install(file);
+            if (file.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) RunSetup(file);
+            else Install(file);
         }
         catch (OperationCanceledException)
         {
@@ -86,16 +103,37 @@ public static class Installer
     }
 
     /// Verifies size and SHA-256 against the update feed when they are present.
-    private static bool Verify(string file, UpdateChecker.Release release)
+    private static bool Verify(string file, UpdateChecker.Package package)
     {
         var fi = new FileInfo(file);
         if (!fi.Exists || fi.Length == 0) return false;
-        if (release.SizeBytes > 0 && fi.Length != release.SizeBytes) return false;
-        var expected = release.Sha256;
+        if (package.SizeBytes > 0 && fi.Length != package.SizeBytes) return false;
+        var expected = package.Sha256;
         if (expected == null) return true;
         using var s = File.OpenRead(file);
         var actual = Convert.ToHexString(SHA256.HashData(s)).ToLowerInvariant();
         return actual == expected;
+    }
+
+    /// Runs the downloaded setup program silently: it closes the app, replaces the files, updates
+    /// the Apps & features entry and starts the app again. Nothing else to do here but quit.
+    public static void RunSetup(string setupFile)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo(setupFile, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /NOCANCEL")
+            { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(setupFile) };
+            if (Process.Start(psi) == null) throw new InvalidOperationException("Windows did not start the setup program");
+        }
+        catch (Exception e)
+        {
+            AppLog.E("Update", "setup failed to start", e);
+            Dialogs.Alert("Update failed", $"The setup program could not be started: {e.Message}\n\nIt was saved as {setupFile}; you can run it yourself.");
+            return;
+        }
+        AppLog.I("Update", $"started {Path.GetFileName(setupFile)}; closing so it can replace the files");
+        App.Window?.ForceClose();
+        System.Windows.Application.Current.Shutdown();
     }
 
     /// Unpacks the package into a staging folder, then swaps the files into the app's own folder

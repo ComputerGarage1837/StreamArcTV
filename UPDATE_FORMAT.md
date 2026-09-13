@@ -31,6 +31,6 @@ version code must increase with every release.
 
 ## Windows
 
-The Windows app uses the same schema in `release/update-windows.json` with a `zip` entry (`assetName`,
-`sha256`, `sizeBytes`) in place of `apk`, `packageName` `com.computergarage.streamarctv.windows`, and
+The Windows app uses the same schema in `release/update-windows.json` with `setup` (the installer,
+optional) and `zip` (the portable folder) entries (`assetName`, `sha256`, `sizeBytes`) in place of `apk`, `packageName` `com.computergarage.streamarctv.windows`, and
 release tags of the form `windows-v<versionName>`. See `windows/README.md`.

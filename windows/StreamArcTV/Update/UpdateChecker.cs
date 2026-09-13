@@ -17,7 +17,13 @@ namespace StreamArcTV.Update;
 /// </summary>
 public static class UpdateChecker
 {
-    public record Release(string VersionName, int VersionCode, string Notes, string ZipUrl, string AssetName, string? Sha256, long SizeBytes, string HtmlUrl);
+    /// One downloadable package on the release: the setup program or the portable zip.
+    public record Package(string Url, string AssetName, string? Sha256, long SizeBytes);
+
+    public record Release(string VersionName, int VersionCode, string Notes, string ZipUrl, string AssetName, string? Sha256, long SizeBytes, string HtmlUrl, Package? Setup = null)
+    {
+        public Package Zip => new(ZipUrl, AssetName, Sha256, SizeBytes);
+    }
 
     private const int SUPPORTED_SCHEMA = 1;
     public const string FEED_FILE = "release/update-windows.json";
@@ -70,15 +76,9 @@ public static class UpdateChecker
             if (string.IsNullOrEmpty(versionName)) throw new InvalidOperationException("Update feed has no version");
             var versionCode = feed.Get("versionCode")?.GetInt32() ?? throw new InvalidOperationException("Update feed has no version code");
             if (versionCode <= 0) return new Release(versionName, 0, "", "", "", null, 0, $"https://github.com/{Repo}/releases");   // nothing published yet
-            var zip = feed.Get("zip") ?? throw new InvalidOperationException("Update feed has no package entry");
-            var assetName = zip.Get("assetName")?.Str()?.Trim();
-            if (string.IsNullOrEmpty(assetName)) throw new InvalidOperationException("Update feed has no package name");
-            var sha = zip.Get("sha256")?.Str()?.Trim().ToLowerInvariant();
-            if (sha != null && !(sha.Length == 64 && sha.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f'))) sha = null;
-            var sizeBytes = zip.Get("sizeBytes")?.GetInt64() ?? 0;
-
             var tag = TagFor(versionName);
-            var zipUrl = $"https://github.com/{Repo}/releases/download/{tag}/{Uri.EscapeDataString(assetName)}";
+            var zip = ReadPackage(feed.Get("zip"), tag) ?? throw new InvalidOperationException("Update feed has no package entry");
+            var setup = ReadPackage(feed.Get("setup"), tag);   // older feeds have no installer
             var htmlUrl = $"https://github.com/{Repo}/releases/tag/{tag}";
 
             // Release notes come from the GitHub release body when available.
@@ -90,8 +90,20 @@ public static class UpdateChecker
             }
             catch { }
 
-            return new Release(versionName, versionCode, notes, zipUrl, assetName, sha, sizeBytes, htmlUrl);
+            return new Release(versionName, versionCode, notes, zip.Url, zip.AssetName, zip.Sha256, zip.SizeBytes, htmlUrl, setup);
         }
+    }
+
+    private static Package? ReadPackage(JsonElement? entry, string tag)
+    {
+        if (entry == null) return null;
+        var assetName = entry.Value.Get("assetName")?.Str()?.Trim();
+        if (string.IsNullOrEmpty(assetName)) return null;
+        var sha = entry.Value.Get("sha256")?.Str()?.Trim().ToLowerInvariant();
+        if (sha != null && !(sha.Length == 64 && sha.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f'))) sha = null;
+        var sizeBytes = entry.Value.Get("sizeBytes")?.GetInt64() ?? 0;
+        var url = $"https://github.com/{Repo}/releases/download/{tag}/{Uri.EscapeDataString(assetName)}";
+        return new Package(url, assetName, sha, sizeBytes);
     }
 
     /// GET a JSON document; returns null on 404.
