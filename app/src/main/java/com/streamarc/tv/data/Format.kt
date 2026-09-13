@@ -5,6 +5,9 @@ import java.util.Date
 import java.util.Locale
 
 object Format {
+    /** "S01E05" style episode code. */
+    fun se(season: Int, episode: Int): String = "S%02dE%02d".format(season, episode)
+
     private val dateFmt = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
     private val timeFmt = SimpleDateFormat("h:mm a", Locale.getDefault())
 

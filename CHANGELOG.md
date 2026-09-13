@@ -3,6 +3,18 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.51 — 2026-09-13
+
+### Fixed
+- The Downloads and Recordings lists did not update while open; progress only changed after
+  leaving and reopening the screen. The refresh loop was cancelling itself the moment the screen
+  opened. It now runs for as long as the screen is in front, twice a second.
+
+### Changed
+- Episode codes are shown as S01E05 everywhere (episode lists, player title, Continue watching,
+  Next episodes, Up next, downloads) instead of S1E5.
+- After queuing a download, a prompt offers "Go to Downloads" or "Stay here".
+
 ## v1.0.50 — 2026-09-13
 
 ### Changed
