@@ -105,6 +105,9 @@
     <string name="full_screen">Full screen</string>
     <string name="change_channel">Change channel</string>
     <string name="remove">Remove</string>
+    <string name="download_queued_title">Added to downloads</string>
+    <string name="go_to_downloads">Go to Downloads</string>
+    <string name="stay_here">Stay here</string>
     <string name="subtitles">Subtitles</string>
     <string name="subtitles_on">On when available</string>
     <string name="subtitles_off">Off</string>

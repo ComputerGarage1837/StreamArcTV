@@ -78,7 +78,15 @@ object TransferDialogs {
         }
         val msg = if (items.size == 1) activity.getString(R.string.download_started_fmt, items[0].title)
         else activity.getString(R.string.downloads_started_fmt, items.size)
-        Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
+        // Queued: offer the Downloads screen, or stay put.
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.download_queued_title)
+            .setMessage(msg)
+            .setPositiveButton(R.string.go_to_downloads) { _, _ ->
+                activity.startActivity(TransfersActivity.intent(activity, TransferType.DOWNLOAD))
+            }
+            .setNegativeButton(R.string.stay_here, null)
+            .show()
     }
 
     /** Start and end clock times (to the minute) on hour / minute / AM-PM wheels, then folder and schedule. */
