@@ -22,9 +22,9 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:paddingStart="16dp"
-        android:paddingTop="8dp"
+        android:paddingTop="4dp"
         android:paddingEnd="16dp"
-        android:paddingBottom="10dp">
+        android:paddingBottom="4dp">
 
         <androidx.core.widget.NestedScrollView
             android:id="@+id/scroll"
@@ -60,7 +60,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="2dp"
                     android:text="@string/hero_subtitle"
                     android:textColor="#E2E8F0"
                     android:textSize="@dimen/home_hero_subtitle" />
@@ -68,7 +68,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="6dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -93,8 +93,10 @@
                     android:id="@+id/cards"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/home_land_card_margin"
                     android:layout_marginTop="@dimen/home_cards_top"
-                    android:layout_marginBottom="12dp"
+                    android:layout_marginEnd="@dimen/home_land_card_margin"
+                    android:layout_marginBottom="4dp"
                     android:clipChildren="false"
                     android:orientation="horizontal">
 
@@ -122,8 +124,8 @@
 
                         <ImageView
                             android:id="@+id/imgLiveIcon"
-                            android:layout_width="60dp"
-                            android:layout_height="60dp"
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
                             android:layout_marginStart="16dp"
                             android:contentDescription="@null"
                             android:scaleType="fitCenter"
@@ -134,9 +136,9 @@
 
                         <ImageView
                             android:id="@+id/imgLiveChevron"
-                            android:layout_width="44dp"
-                            android:layout_height="44dp"
-                            android:layout_marginEnd="14dp"
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_marginEnd="12dp"
                             android:contentDescription="@null"
                             android:src="@drawable/img_btn_next_live"
                             app:layout_constraintBottom_toBottomOf="@id/imgLiveCard"
@@ -160,14 +162,14 @@
                                 android:fontFamily="sans-serif-medium"
                                 android:text="@string/live_tv"
                                 android:textColor="@color/text"
-                                android:textSize="18sp" />
+                                android:textSize="15sp" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/live_tv_subtitle"
                                 android:textColor="#BFDBFE"
-                                android:textSize="12sp" />
+                                android:textSize="11sp" />
 
                             <TextView
                                 android:id="@+id/txtLiveStatus"
@@ -204,8 +206,8 @@
 
                         <ImageView
                             android:id="@+id/imgVodIcon"
-                            android:layout_width="60dp"
-                            android:layout_height="60dp"
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
                             android:layout_marginStart="16dp"
                             android:contentDescription="@null"
                             android:scaleType="fitCenter"
@@ -216,9 +218,9 @@
 
                         <ImageView
                             android:id="@+id/imgVodChevron"
-                            android:layout_width="44dp"
-                            android:layout_height="44dp"
-                            android:layout_marginEnd="14dp"
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:layout_marginEnd="12dp"
                             android:contentDescription="@null"
                             android:src="@drawable/img_btn_next_vod"
                             app:layout_constraintBottom_toBottomOf="@id/imgVodCard"
@@ -242,14 +244,14 @@
                                 android:fontFamily="sans-serif-medium"
                                 android:text="@string/video_on_demand"
                                 android:textColor="@color/text"
-                                android:textSize="18sp" />
+                                android:textSize="15sp" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/vod_subtitle"
                                 android:textColor="#DDD6FE"
-                                android:textSize="12sp" />
+                                android:textSize="11sp" />
 
                             <TextView
                                 android:id="@+id/txtVodStatus"

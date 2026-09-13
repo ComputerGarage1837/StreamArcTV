@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.49 — 2026-09-13
+
+### Changed
+- Home screen on a phone held sideways now fits on one screen without scrolling: smaller header,
+  tighter headline, and the two big buttons are narrower so they are shorter. Tablets and TVs
+  are unchanged.
+
 ## v1.0.48 — 2026-09-12
 
 ### Added

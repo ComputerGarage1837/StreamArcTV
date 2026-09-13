@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <dimen name="home_logo">46dp</dimen>
+    <dimen name="home_brand_text">22sp</dimen>
+    <dimen name="home_tagline_text">12sp</dimen>
+    <dimen name="home_round_btn">44dp</dimen>
+    <dimen name="home_round_label">11sp</dimen>
+    <dimen name="home_hero_title">34sp</dimen>
+    <dimen name="home_hero_subtitle">15sp</dimen>
+    <dimen name="home_hero_top">28dp</dimen>
+    <dimen name="home_cards_top">22dp</dimen>
+    <dimen name="home_land_card_margin">0dp</dimen>
     <dimen name="vod_hero_height">250dp</dimen>
     <dimen name="vod_hero_poster_w">150dp</dimen>
     <dimen name="vod_hero_text_end">190dp</dimen>
