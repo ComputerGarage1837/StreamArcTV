@@ -129,6 +129,14 @@
     <string name="all_channels_shown">All channels shown again.</string>
     <string name="hide_channel">Hide channel</string>
     <string name="channel_hidden_fmt">%1$s hidden. Settings → Channels shown brings it back.</string>
+    <string name="backup">Backup</string>
+    <string name="export_settings">Export settings &amp; watched history</string>
+    <string name="import_settings">Import from a backup file</string>
+    <string name="include_sign_in">Include sign-in details (usernames and passwords)</string>
+    <string name="save_file">Save file…</string>
+    <string name="backup_saved">Backup saved.</string>
+    <string name="backup_failed_fmt">Backup failed: %1$s</string>
+    <string name="backup_imported_fmt">Restored %1$s. The app will return to the home screen.</string>
     <string name="subtitles">Subtitles</string>
     <string name="subtitles_on">On when available</string>
     <string name="subtitles_off">Off</string>

@@ -3,6 +3,14 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.56 — 2026-09-14
+
+### Added
+- Settings → Backup: export everything to one file (settings, favourites, hidden categories and
+  channels, default category, layout, buffer, multi-view slots, watched positions, and the
+  sign-in details if you tick the box) as a saved file or a share, and import it on a fresh
+  install or a new box to get it all back in one go.
+
 ## v1.0.55 — 2026-09-14
 
 ### Added

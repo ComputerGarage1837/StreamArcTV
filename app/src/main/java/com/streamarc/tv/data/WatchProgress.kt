@@ -129,6 +129,9 @@ object WatchProgress {
 
     fun ended(key: String) = setWatched(key, true)
 
+    /** Drops the in-memory copy after a backup import so the next read comes from disk. */
+    fun reload() = synchronized(this) { cache = null }
+
     private fun map(): HashMap<String, Entry> = cache ?: run {
         val json = sp.getString("entries", null)
         val m: HashMap<String, Entry> = try {

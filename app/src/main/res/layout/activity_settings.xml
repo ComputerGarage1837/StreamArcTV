@@ -454,6 +454,33 @@
                 android:gravity="start|center_vertical"
                 android:padding="16dp" />
 
+            <!-- Backup -->
+            <TextView
+                style="@style/SectionHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/backup" />
+
+            <Button
+                android:id="@+id/btnExportSettings"
+                style="@style/SecondaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="6dp"
+                android:gravity="start|center_vertical"
+                android:padding="16dp"
+                android:text="@string/export_settings" />
+
+            <Button
+                android:id="@+id/btnImportSettings"
+                style="@style/SecondaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="6dp"
+                android:gravity="start|center_vertical"
+                android:padding="16dp"
+                android:text="@string/import_settings" />
+
             <!-- About -->
             <TextView
                 style="@style/SectionHeader"
