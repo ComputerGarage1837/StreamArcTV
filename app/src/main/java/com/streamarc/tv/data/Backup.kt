@@ -26,7 +26,8 @@ object Backup {
         val sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         for ((key, value) in sp.all) {
             if (key in skip) continue
-            if (!includeAccounts && (key.endsWith("_account") || key.contains("password") || key.contains("username"))) continue
+            // Accounts are stored as <service>_user / _pass / _status / _exp.
+            if (!includeAccounts && (key.endsWith("_user") || key.endsWith("_pass") || key.endsWith("_status") || key.endsWith("_exp"))) continue
             val entry = JSONObject()
             when (value) {
                 is String -> { entry.put("t", "s"); entry.put("v", value) }
