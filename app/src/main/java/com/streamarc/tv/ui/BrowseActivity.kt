@@ -95,6 +95,7 @@ class BrowseActivity : AppCompatActivity() {
         b.btnBack.setOnClickListener { finish() }
         b.btnProfile.setOnClickListener { startActivity(ProfileActivity.intent(this, service)) }
         b.btnMulti.visibility = if (isLive) View.VISIBLE else View.GONE
+        b.btnRefreshGuide.visibility = if (isLive) View.VISIBLE else View.GONE
         b.btnMulti.setOnClickListener { startActivity(MultiViewActivity.intent(this, service)) }
 
         applyCategoryLayout()
@@ -115,47 +116,8 @@ class BrowseActivity : AppCompatActivity() {
             b.listStreams.visibility = View.GONE
             b.epgGrid.visibility = View.VISIBLE
             b.epgGrid.guideLookup = { ch -> EpgCache.guideFor(service, ch.epgChannelId, ch.name) }
-            lifecycleScope.launch {
-                val mode = prefs.guideMode
-                val remembered = prefs.guideSize(service)
-                val usePerChannel = mode == "channel" || (mode == "auto" && remembered > FULL_GUIDE_LIMIT)
-                var lastBytes = 0L
-                val ok = if (usePerChannel) {
-                    false   // rows are filled channel by channel below
-                } else {
-                    showGuideProgress(getString(R.string.guide_downloading), null)
-                    EpgCache.loadGuide(service, account) { bytes, total ->
-                        lastBytes = bytes
-                        if (mode == "auto" && bytes > FULL_GUIDE_LIMIT) {
-                            // Far too big to pull on every refresh: remember that and switch to
-                            // per-channel lookups, which only fetch the channels you actually list.
-                            prefs.setGuideSize(service, bytes)
-                            throw XtreamApi.GuideTooLarge(bytes)
-                        }
-                        val exact = total > 0
-                        val estimate = when {
-                            exact -> total
-                            remembered > 0 -> remembered
-                            else -> 25L * 1024 * 1024
-                        }
-                        val shown = maxOf(estimate, bytes + 1)
-                        val pct = (bytes * 100 / shown).toInt().coerceIn(0, 99)
-                        runOnUiThread {
-                            val text = getString(
-                                R.string.guide_downloading_pct_fmt,
-                                UpdateChecker.formatSize(bytes),
-                                (if (exact) "" else "~") + UpdateChecker.formatSize(shown),
-                                pct
-                            )
-                            showGuideProgress(text, (bytes * 1000 / shown).toInt())
-                        }
-                    }
-                }
-                if (ok && lastBytes > 0) prefs.setGuideSize(service, lastBytes)
-                if (ok) b.epgGrid.guideLoaded()
-                guideReady = true
-                prefetchEpg()
-            }
+            loadGuide(force = false)
+            b.btnRefreshGuide.setOnClickListener { askGuideRefresh() }
             b.epgGrid.listener = object : EpgGridView.Listener {
                 override fun onFocusChanged(channel: Stream, programme: EpgProgramme?) {
                     showChannelDetails(channel, channel.streamId?.let { EpgCache.peek(service, it) }, programme)
@@ -258,6 +220,74 @@ class BrowseActivity : AppCompatActivity() {
     private fun compactCategories(): Boolean =
         resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT &&
             resources.configuration.smallestScreenWidthDp < 600
+
+    /** Refresh button: choose how much guide to fetch (Auto / whole / per channel), then fetch it now. */
+    private fun askGuideRefresh() {
+        val labels = arrayOf(
+            getString(R.string.guide_mode_auto) + " – " + getString(R.string.guide_mode_auto_hint),
+            getString(R.string.guide_mode_full) + " – " + getString(R.string.guide_mode_full_hint),
+            getString(R.string.guide_mode_channel) + " – " + getString(R.string.guide_mode_channel_hint),
+        )
+        val values = arrayOf("auto", "full", "channel")
+        AlertDialog.Builder(this)
+            .setTitle(R.string.refresh_guide)
+            .setSingleChoiceItems(labels, values.indexOf(prefs.guideMode).coerceAtLeast(0)) { d, which ->
+                d.dismiss()
+                prefs.guideMode = values[which]
+                if (values[which] == "full") prefs.setGuideSize(service, 0)   // a deliberate full download is never "too big"
+                Toast.makeText(this, R.string.guide_refreshing, Toast.LENGTH_SHORT).show()
+                loadGuide(force = true)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** Downloads (or refreshes) the programme guide and fills the grid; [force] ignores the cached copy's age. */
+    private fun loadGuide(force: Boolean) {
+        lifecycleScope.launch {
+            val forced = force
+                val mode = prefs.guideMode
+                val remembered = prefs.guideSize(service)
+                val usePerChannel = mode == "channel" || (mode == "auto" && remembered > FULL_GUIDE_LIMIT)
+                var lastBytes = 0L
+                val ok = if (usePerChannel) {
+                    false   // rows are filled channel by channel below
+                } else {
+                    showGuideProgress(getString(R.string.guide_downloading), null)
+                    EpgCache.loadGuide(service, account, force = forced, onProgress = { bytes, total ->
+                        lastBytes = bytes
+                        if (mode == "auto" && bytes > FULL_GUIDE_LIMIT) {
+                            // Far too big to pull on every refresh: remember that and switch to
+                            // per-channel lookups, which only fetch the channels you actually list.
+                            prefs.setGuideSize(service, bytes)
+                            throw XtreamApi.GuideTooLarge(bytes)
+                        }
+                        val exact = total > 0
+                        val estimate = when {
+                            exact -> total
+                            remembered > 0 -> remembered
+                            else -> 25L * 1024 * 1024
+                        }
+                        val shown = maxOf(estimate, bytes + 1)
+                        val pct = (bytes * 100 / shown).toInt().coerceIn(0, 99)
+                        runOnUiThread {
+                            val text = getString(
+                                R.string.guide_downloading_pct_fmt,
+                                UpdateChecker.formatSize(bytes),
+                                (if (exact) "" else "~") + UpdateChecker.formatSize(shown),
+                                pct
+                            )
+                            showGuideProgress(text, (bytes * 1000 / shown).toInt())
+                        }
+                    })
+                }
+                if (ok && lastBytes > 0) prefs.setGuideSize(service, lastBytes)
+                if (ok) b.epgGrid.guideLoaded()
+                guideReady = true
+                prefetchEpg()
+            if (forced) b.epgGrid.invalidate()
+        }
+    }
 
     private fun applyCategoryLayout() {
         val compact = compactCategories()

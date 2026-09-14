@@ -3,6 +3,25 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.53 — 2026-09-14
+
+### Fixed
+- Remote focus is now obvious everywhere: settings rows and buttons (Check for updates, Allow
+  installing updates, Log out, Export logs…) light up with a white ring on a brighter fill, the
+  cyan Log out / primary buttons turn white with a purple ring, and every list inside a dialog
+  (categories shown, default category, guide source, buffer, subtitles, folder and channel
+  pickers) plus the dialog's own OK / Cancel buttons show the same white ring.
+- A Refresh button at the top right of the Live TV screen asks how much guide to fetch (Auto,
+  Whole guide, or Lite per-channel), remembers the choice as your guide source, and downloads
+  it straight away with the progress bar in the guide panel. A new copy only replaces the old
+  one if it is at least as complete.
+- The TV guide now rolls forward as time passes: half-hour slots that are fully over drop off
+  the left, so the grid always starts one slot before the current one instead of keeping the
+  slots from when it was opened.
+- On Android TV devices (NVIDIA Shield and others) every screen keeps a small extra margin
+  inside the TV's overscan area, so the Live TV button and other edge content are no longer
+  clipped at the side of the picture.
+
 ## v1.0.52 — 2026-09-14
 
 ### Added

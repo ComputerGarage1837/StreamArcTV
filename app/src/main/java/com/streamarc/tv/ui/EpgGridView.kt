@@ -62,8 +62,8 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private val gap = 2 * d
     private val corner = 6 * d
 
-    private val windowStart: Long
-    private val windowEnd: Long
+    private var windowStart: Long
+    private var windowEnd: Long
     private var scrollX = 0f
     private var scrollY = 0f
     private var focusRow = 0
@@ -91,7 +91,23 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private val placeholder: Drawable? = context.getDrawable(com.streamarc.tv.R.drawable.ic_placeholder)
 
     private val ticker = object : Runnable {
-        override fun run() { invalidate(); postDelayed(this, 60_000) }
+        override fun run() { rollWindow(); invalidate(); postDelayed(this, 60_000) }
+    }
+
+    /**
+     * As the clock moves on, drop the half-hour slots that are fully in the past so the grid
+     * always starts one slot before the current one. Keeps whatever the user has scrolled to.
+     */
+    private fun rollWindow() {
+        val now = System.currentTimeMillis() / 1000
+        val wanted = (now / 1800) * 1800 - 1800
+        if (wanted <= windowStart) return
+        val shiftPx = (wanted - windowStart) / 60f * pxPerMin
+        windowStart = wanted
+        windowEnd = windowStart + 24 * 3600
+        scrollX = (scrollX - shiftPx).coerceAtLeast(0f)
+        if (focusTime < windowStart) focusTime = windowStart
+        scrollX = scrollX.coerceIn(0f, maxScrollX())
     }
 
     init {
@@ -139,7 +155,7 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         }
     }
 
-    override fun onAttachedToWindow() { super.onAttachedToWindow(); postDelayed(ticker, 60_000) }
+    override fun onAttachedToWindow() { super.onAttachedToWindow(); rollWindow(); postDelayed(ticker, 60_000) }
     override fun onDetachedFromWindow() { removeCallbacks(ticker); super.onDetachedFromWindow() }
 
     override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: Rect?) {

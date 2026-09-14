@@ -29,6 +29,25 @@
         <item name="android:textColorPrimary">@color/text</item>
         <item name="android:textColorSecondary">@color/text_muted</item>
         <item name="android:background">@color/surface</item>
+        <!-- Remote focus inside dialogs: list rows and the bottom buttons get a white ring -->
+        <item name="listChoiceBackgroundIndicator">@drawable/bg_list_item_focus</item>
+        <item name="android:listChoiceBackgroundIndicator">@drawable/bg_list_item_focus</item>
+        <item name="selectableItemBackground">@drawable/bg_list_item_focus</item>
+        <item name="android:selectableItemBackground">@drawable/bg_list_item_focus</item>
+        <item name="android:listSelector">@drawable/bg_list_item_focus</item>
+        <item name="buttonBarPositiveButtonStyle">@style/DialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/DialogButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/DialogButton</item>
+        <item name="buttonBarButtonStyle">@style/DialogButton</item>
+    </style>
+
+    <style name="DialogButton" parent="Widget.AppCompat.Button.Borderless.Colored">
+        <item name="android:background">@drawable/bg_dialog_button</item>
+        <item name="android:textColor">@color/accent</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
     </style>
 
     <style name="HomeButton" parent="Widget.AppCompat.Button">

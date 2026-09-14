@@ -113,6 +113,11 @@
     <string name="readiness_battery">Battery optimisation is on for this app, so Android may stop the recording while the device is asleep. Set Stream Arc TV to "Unrestricted" / "Don\'t optimise".</string>
     <string name="open_settings">Open settings</string>
     <string name="readiness_no_screen">This device has no settings screen for that; the recording is still scheduled.</string>
+    <string name="refresh_guide">Refresh guide</string>
+    <string name="guide_mode_auto_hint">whole guide unless it is oversized</string>
+    <string name="guide_mode_full_hint">the whole schedule, biggest download</string>
+    <string name="guide_mode_channel_hint">lite: only the channels you list</string>
+    <string name="guide_refreshing">Refreshing the TV guide…</string>
     <string name="subtitles">Subtitles</string>
     <string name="subtitles_on">On when available</string>
     <string name="subtitles_off">Off</string>

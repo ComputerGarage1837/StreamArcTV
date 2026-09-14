@@ -225,7 +225,14 @@ object EpgCache {
      * downloading. A guide older than [REFRESH_MS] is refreshed in the background while the
      * old one stays in use. Returns true when a guide is available afterwards. Never throws.
      */
-    suspend fun loadGuide(service: Service, account: Account, onProgress: ((Long, Long) -> Unit)? = null): Boolean {
+    suspend fun loadGuide(service: Service, account: Account, onProgress: ((Long, Long) -> Unit)? = null, force: Boolean = false): Boolean {
+        if (force) {
+            // Manual refresh: fetch now, regardless of age. The download still only replaces the
+            // current guide when it is at least as complete, so a bad fetch can't lose data.
+            synchronized(guides) { guideFailedAt.remove(service) }
+            clear()
+            return guideMutex.withLock { download(service, account, onProgress) }
+        }
         synchronized(guides) { guides[service] }?.let { (at, _) ->
             if (System.currentTimeMillis() - at > REFRESH_MS) refreshInBackground(service, account)
             return true
