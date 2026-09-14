@@ -150,6 +150,10 @@ jobs:
           CODE=$(( ${MAJ%%[^0-9]*} * 10000 + ${MIN%%[^0-9]*} * 100 + ${PAT%%[^0-9]*} ))
           git fetch origin main
           git checkout -B main origin/main
+          if [ ! -f release/update-macos.json ]; then
+            echo "::warning::release/update-macos.json is not on main yet (branch not merged); the release is published but the in-app update feed was not updated."
+            exit 0
+          fi
           CURRENT=$(python3 -c "import json;print(json.load(open('release/update-macos.json'))['versionCode'])")
           if [ "$CODE" -le "$CURRENT" ]; then
             echo "::error::versionCode $CODE is not newer than the feed's $CURRENT; not updating release/update-macos.json."
