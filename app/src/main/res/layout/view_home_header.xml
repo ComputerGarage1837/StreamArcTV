@@ -62,6 +62,32 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/boxGuide"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <ImageButton
+            android:id="@+id/btnGuide"
+            android:layout_width="@dimen/home_round_btn"
+            android:layout_height="@dimen/home_round_btn"
+            android:background="@drawable/fg_focus_circle"
+            android:contentDescription="@string/refresh_guide"
+            android:scaleType="fitCenter"
+            android:src="@drawable/img_btn_guide" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text="@string/guide_short"
+            android:textColor="@color/text"
+            android:textSize="@dimen/home_round_label" />
+    </LinearLayout>
+
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="14dp"

@@ -114,6 +114,11 @@
     <string name="open_settings">Open settings</string>
     <string name="readiness_no_screen">This device has no settings screen for that; the recording is still scheduled.</string>
     <string name="refresh_guide">Refresh guide</string>
+    <string name="guide_short">Guide</string>
+    <string name="guide_sign_in_first">Sign in to Live TV first.</string>
+    <string name="guide_lite_note">Lite mode: the guide fills in channel by channel when you open it.</string>
+    <string name="guide_updated">TV guide updated.</string>
+    <string name="guide_refresh_failed">Couldn\'t refresh the guide; the previous copy is kept.</string>
     <string name="guide_mode_auto_hint">whole guide unless it is oversized</string>
     <string name="guide_mode_full_hint">the whole schedule, biggest download</string>
     <string name="guide_mode_channel_hint">lite: only the channels you list</string>

@@ -223,23 +223,10 @@ class BrowseActivity : AppCompatActivity() {
 
     /** Refresh button: choose how much guide to fetch (Auto / whole / per channel), then fetch it now. */
     private fun askGuideRefresh() {
-        val labels = arrayOf(
-            getString(R.string.guide_mode_auto) + " – " + getString(R.string.guide_mode_auto_hint),
-            getString(R.string.guide_mode_full) + " – " + getString(R.string.guide_mode_full_hint),
-            getString(R.string.guide_mode_channel) + " – " + getString(R.string.guide_mode_channel_hint),
-        )
-        val values = arrayOf("auto", "full", "channel")
-        AlertDialog.Builder(this)
-            .setTitle(R.string.refresh_guide)
-            .setSingleChoiceItems(labels, values.indexOf(prefs.guideMode).coerceAtLeast(0)) { d, which ->
-                d.dismiss()
-                prefs.guideMode = values[which]
-                if (values[which] == "full") prefs.setGuideSize(service, 0)   // a deliberate full download is never "too big"
-                Toast.makeText(this, R.string.guide_refreshing, Toast.LENGTH_SHORT).show()
-                loadGuide(force = true)
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        GuideRefresh.askMode(this, prefs) {
+            Toast.makeText(this, R.string.guide_refreshing, Toast.LENGTH_SHORT).show()
+            loadGuide(force = true)
+        }
     }
 
     /** Downloads (or refreshes) the programme guide and fills the grid; [force] ignores the cached copy's age. */
