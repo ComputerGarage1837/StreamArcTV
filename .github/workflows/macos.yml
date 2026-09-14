@@ -3,10 +3,10 @@ name: macOS Build & Release
 on:
   push:
     branches: [main]
-    paths: ["macos/**", ".github/workflows/macos.yml"]
+    paths: ["macos/**", "desktop/**", ".github/workflows/macos.yml"]
     tags: ["macos-v*"]
   pull_request:
-    paths: ["macos/**", ".github/workflows/macos.yml"]
+    paths: ["macos/**", "desktop/**", ".github/workflows/macos.yml"]
   workflow_dispatch:
 
 permissions:

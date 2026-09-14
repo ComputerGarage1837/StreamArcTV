@@ -1,5 +1,3 @@
-using System.Reflection;
-using System.Runtime.InteropServices;
 using LibVLCSharp.Shared;
 using StreamArcTV.Data;
 using StreamArcTV.Util;
@@ -12,7 +10,6 @@ public static class PlayerCore
     private static bool _initialized;
     private static readonly object Lock = new();
     private static LibVLC? _hardware, _software;
-    private static IntPtr _libvlcHandle;
 
     /// The app-wide LibVLC instance (one for hardware decoding, one for software). Creating a
     /// LibVLC takes a good fraction of a second, so it is done once and never on the window's
@@ -32,33 +29,12 @@ public static class PlayerCore
         try { Shared(false); } catch (Exception e) { AppLog.W("Player", "LibVLC warm-up failed: " + e.Message); }
     });
 
-    /// <summary>
-    /// Finds the LibVLC shipped inside the app bundle (Contents/Frameworks/libvlc, copied from
-    /// VLC.app by the release workflow), points VLC at its plugins folder, loads the two libraries
-    /// by their full paths and makes LibVLCSharp's P/Invokes resolve to that copy.
-    /// </summary>
+    /// Loads the native LibVLC the way this platform ships it (see Platform.InitializeLibVlc).
     private static void InitializeNative()
     {
         if (_initialized) return;
-        var found = Mac.LibVlc();
-        if (found is { } loc)
-        {
-            Environment.SetEnvironmentVariable("VLC_PLUGIN_PATH", loc.Plugins);
-            var core = Path.Combine(loc.Lib, "libvlccore.dylib");
-            var lib = Path.Combine(loc.Lib, "libvlc.dylib");
-            NativeLibrary.Load(core);
-            _libvlcHandle = NativeLibrary.Load(lib);
-            NativeLibrary.SetDllImportResolver(typeof(LibVLC).Assembly, (name, _, _) =>
-                name is "libvlc" or "libvlc.dylib" && _libvlcHandle != IntPtr.Zero ? _libvlcHandle : IntPtr.Zero);
-            try { Core.Initialize(loc.Lib); }
-            catch (Exception e) { AppLog.W("Player", "Core.Initialize(path) reported: " + e.Message + " (using the pre-loaded libraries)"); }
-            AppLog.I("Player", $"libvlc from {loc.Lib}, plugins {loc.Plugins}");
-        }
-        else
-        {
-            AppLog.W("Player", "no bundled libvlc found; trying the default search");
-            Core.Initialize();
-        }
+        Platform.InitializeLibVlc();
+        AppLog.I("Player", Platform.LibVlcDescription);
         _initialized = true;
     }
 

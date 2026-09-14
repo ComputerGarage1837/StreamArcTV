@@ -9,8 +9,8 @@ using StreamArcTV.Util;
 namespace StreamArcTV.UI;
 
 /// <summary>
-/// Menu-bar (status item) icon: keeps downloads and recordings running when the window is
-/// closed, and posts "finished / failed" notices (the counterpart of the Android foreground
+/// Tray (macOS menu bar / Linux status area) icon: keeps downloads and recordings running when the
+/// window is closed, and posts "finished / failed" notices (the counterpart of the Android foreground
 /// service and its notifications).
 /// </summary>
 public static class Tray
@@ -39,10 +39,10 @@ public static class Tray
             TransferService.Finished += (job, ok, error) =>
             {
                 var text = ok ? $"{job.Title} finished." : $"{job.Title} failed: {error}";
-                Mac.Notify("Stream Arc TV", text);
+                Platform.Notify("Stream Arc TV", text);
             };
         }
-        catch (Exception e) { AppLog.W("Tray", "menu-bar icon failed: " + e.Message); _icon = null; }
+        catch (Exception e) { AppLog.W("Tray", "tray icon failed: " + e.Message); _icon = null; }
     }
 
     private static NativeMenuItem Item(string header, Action action)

@@ -3,14 +3,14 @@ using System.Reflection;
 namespace StreamArcTV;
 
 /// <summary>
-/// Build-time configuration, the macOS counterpart of Android's BuildConfig: the version, the
+/// Build-time configuration, the desktop counterpart of Android's BuildConfig: the version, the
 /// GitHub repository that hosts the update feed, and the two Xtream Codes server addresses
-/// (all set in macos/Directory.Build.props).
+/// (all set in the platform folder's Directory.Build.props).
 /// </summary>
 public static class BuildInfo
 {
     /// Must never change: the update feed and the installed base use this id.
-    public const string ApplicationId = "com.computergarage.streamarctv.macos";
+    public static string ApplicationId => Util.Platform.ApplicationId;
 
     public static readonly string VersionName = ReadVersion();
     public static readonly int VersionCode = VersionCodeFrom(VersionName);

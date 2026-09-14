@@ -42,3 +42,10 @@ section, each holding `dmg` (the disk image, for installing by hand) and `zip` (
 updater) entries (`assetName`, `sha256`, `sizeBytes`), `packageName`
 `com.computergarage.streamarctv.macos`, and release tags of the form `macos-v<versionName>`.
 See `macos/README.md`.
+
+## Linux
+
+The Linux app uses the same schema in `release/update-linux.json` with an `x64` and an `arm64`
+section, each holding `deb` (the Debian package) and `tar` (the portable archive) entries
+(`assetName`, `sha256`, `sizeBytes`), `packageName` `com.computergarage.streamarctv.linux`, and
+release tags of the form `linux-v<versionName>`. See `linux/README.md`.

@@ -7,7 +7,7 @@ using StreamArcTV.Util;
 namespace StreamArcTV.Data;
 
 /// <summary>
-/// User settings and accounts, kept in a JSON file under ~/Library/Application Support/StreamArcTV (the macOS
+/// User settings and accounts, kept in a JSON file in the app's data folder (the desktop
 /// counterpart of the Android SharedPreferences). Same keys as the Android app.
 /// </summary>
 public sealed class Prefs

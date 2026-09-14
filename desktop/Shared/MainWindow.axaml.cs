@@ -13,7 +13,7 @@ namespace StreamArcTV;
 /// <summary>
 /// The single window that hosts every screen (each Android activity is a page pushed onto
 /// <see cref="Nav"/>). Escape, Backspace (Delete on a Mac keyboard), the browser-back key and the
-/// mouse's back button go back; F11 (or Ctrl+Cmd+F) toggles full screen.
+/// mouse's back button go back; F11 (or Ctrl+Cmd+F on a Mac) toggles full screen.
 /// </summary>
 public partial class MainWindow : Window
 {
@@ -113,7 +113,7 @@ public partial class MainWindow : Window
             // Keep downloads and recordings going in the background, like the Android service.
             e.Cancel = true;
             Hide();
-            Mac.Notify("Stream Arc TV", "Still downloading or recording in the background. Use the menu-bar icon to open the app; Quit from its menu to stop.");
+            Platform.Notify("Stream Arc TV", $"Still downloading or recording in the background. Use the {Platform.TrayName} to open the app; Quit from its menu to stop.");
             return;
         }
         if (!_forceClose)

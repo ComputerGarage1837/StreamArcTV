@@ -8,26 +8,27 @@ using StreamArcTV.Util;
 namespace StreamArcTV.Update;
 
 /// <summary>
-/// Checks the repository's `release/update-macos.json` feed (see UPDATE_FORMAT.md) for a newer
-/// build and offers to download and install it, with a "skip this version" option.
+/// Checks the repository's update feed for this platform (release/update-macos.json or
+/// release/update-linux.json, see UPDATE_FORMAT.md) for a newer build and offers to download and
+/// install it, with a "skip this version" option.
 ///
-/// The feed is the source of truth: it names, per architecture (arm64 / x64), the zip and the
-/// disk image attached to the matching GitHub release (`macos-v&lt;versionName&gt;`) and carries
-/// their SHA-256 and size so the download can be verified before it is installed. The release
-/// notes are fetched from the GitHub release itself, best-effort.
+/// The feed is the source of truth: it names, per architecture (arm64 / x64), the update package
+/// and the installer attached to the matching GitHub release (`&lt;prefix&gt;&lt;versionName&gt;`) and
+/// carries their SHA-256 and size so the download can be verified before it is installed. The
+/// release notes are fetched from the GitHub release itself, best-effort.
 /// </summary>
 public static class UpdateChecker
 {
-    /// One downloadable package on the release: the zip (used for in-app updates) or the disk image.
+    /// One downloadable package on the release: the archive used for in-app updates, or the installer (disk image, .deb).
     public record Package(string Url, string AssetName, string? Sha256, long SizeBytes);
 
-    public record Release(string VersionName, int VersionCode, string Notes, Package Zip, Package? Dmg, string HtmlUrl)
+    public record Release(string VersionName, int VersionCode, string Notes, Package Update, Package? Installer, string HtmlUrl)
     {
-        public long SizeBytes => Zip.SizeBytes;
+        public long SizeBytes => Update.SizeBytes;
     }
 
     private const int SUPPORTED_SCHEMA = 1;
-    public const string FEED_FILE = "release/update-macos.json";
+    public static string FEED_FILE => Platform.FeedFile;
 
     private static string Repo => BuildInfo.GitHubRepo;
 
@@ -37,7 +38,7 @@ public static class UpdateChecker
     private static string FeedApiUrl => $"https://api.github.com/repos/{Repo}/contents/{FEED_FILE}?ref=main";
     private static string FeedRawUrl => $"https://raw.githubusercontent.com/{Repo}/main/{FEED_FILE}";
 
-    public static string TagFor(string versionName) => $"macos-v{versionName}";
+    public static string TagFor(string versionName) => Platform.TagPrefix + versionName;
 
     /// <param name="manual">true when the user pressed the Update button: always reports the outcome and ignores the "skipped" version.</param>
     public static async void Check(bool manual)
@@ -80,9 +81,9 @@ public static class UpdateChecker
             if (versionCode <= 0) return new Release(versionName, 0, "", new Package("", "", null, 0), null, htmlUrlAll);   // nothing published yet
             var tag = TagFor(versionName);
             // Packages live under the architecture of this build ("arm64" for Apple silicon, "x64" for Intel).
-            var arch = feed.Get(Mac.Arch) ?? feed;
-            var zip = ReadPackage(arch.Get("zip"), tag) ?? throw new InvalidOperationException($"Update feed has no {Mac.Arch} package entry");
-            var dmg = ReadPackage(arch.Get("dmg"), tag);
+            var arch = feed.Get(Platform.Arch) ?? feed;
+            var update = ReadPackage(arch.Get(Platform.UpdatePackageKey), tag) ?? throw new InvalidOperationException($"Update feed has no {Platform.Arch} package entry");
+            var installer = ReadPackage(arch.Get(Platform.InstallerPackageKey), tag);
             var htmlUrl = $"https://github.com/{Repo}/releases/tag/{tag}";
 
             // Release notes come from the GitHub release body when available.
@@ -94,7 +95,7 @@ public static class UpdateChecker
             }
             catch { }
 
-            return new Release(versionName, versionCode, notes, zip, dmg, htmlUrl);
+            return new Release(versionName, versionCode, notes, update, installer, htmlUrl);
         }
     }
 

@@ -12,8 +12,8 @@ namespace StreamArcTV;
 
 /// <summary>
 /// Application entry point (the counterpart of StreamArcApp): sets up logging, the crash safety
-/// net, the transfer engine and the menu-bar icon, then opens the main window (or stays in the
-/// menu bar when started by a scheduled recording with --tray).
+/// net, the transfer engine and the tray / menu-bar icon, then opens the main window (or stays
+/// in the background when started by a scheduled recording with --tray).
 /// </summary>
 public partial class App : Application
 {
@@ -32,6 +32,7 @@ public partial class App : Application
         StartInTray = args.Any(a => string.Equals(a, "--tray", StringComparison.OrdinalIgnoreCase));
 
         AppPaths.Ensure();
+        Platform.Startup();
         if (!AcquireInstanceLock())
         {
             // A second copy (launchd starting a recording while the app is already open): the
@@ -74,8 +75,8 @@ public partial class App : Application
 
         if (StartInTray)
         {
-            // Started by a scheduled recording: run in the background; the menu-bar icon opens the window.
-            Mac.Notify("Stream Arc TV", "Recording in the background. Use the menu-bar icon to open the app.");
+            // Started by a scheduled recording: run in the background; the tray icon opens the window.
+            Platform.Notify("Stream Arc TV", $"Recording in the background. Use the {Platform.TrayName} to open the app.");
         }
         else
         {
@@ -114,7 +115,7 @@ public partial class App : Application
         catch { }
     }
 
-    /// Quits for real: flushes settings, removes the menu-bar icon and ends the process.
+    /// Quits for real: flushes settings, removes the tray icon and ends the process.
     public static void Quit()
     {
         Prefs.Flush();

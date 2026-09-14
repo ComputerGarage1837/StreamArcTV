@@ -502,7 +502,7 @@ public partial class VodHomePage : AppPage
             {
                 var job = TransferStore.Get().Get(id);
                 var path = job?.FileUri;
-                if (path == null || !Folders.Exists(path)) { Dialogs.Toast("The file is no longer on this Mac."); return; }
+                if (path == null || !Folders.Exists(path)) { Dialogs.Toast("The file is no longer on this computer."); return; }
                 Nav.Push(new PlayerPage(path, e.Title ?? "", false, key));
                 break;
             }

@@ -10,8 +10,8 @@ namespace StreamArcTV.Transfer;
 /// <summary>
 /// Background engine that performs downloads and live recordings: streams the URL into the
 /// chosen folder, reports progress to <see cref="TransferStore"/>, stops a recording when its end
-/// time passes, and schedules future recordings (in-process while the app runs, and as a launchd
-/// agent that starts the app in the background when it is closed).
+/// time passes, and schedules future recordings (in-process while the app runs, and through the
+/// system scheduler (launchd / systemd) that starts the app in the background when it is closed).
 /// </summary>
 public static class TransferService
 {
@@ -371,18 +371,18 @@ public static class TransferService
         try { Finished?.Invoke(job, ok, error); } catch { }
     }
 
-    // ---- launchd agents (recordings start even when the app is closed) ----
+    // ---- System scheduler (recordings start even when the app is closed) ----
 
-    /// Registers a launch agent that starts the app in the background just before the recording.
+    /// Registers a scheduled launch that starts the app in the background just before the recording.
     public static void ScheduleTask(TransferJob job)
     {
         try
         {
             var at = DateTimeOffset.FromUnixTimeMilliseconds(job.StartAt - 5_000).LocalDateTime;
-            Mac.ScheduleLaunch(job.Id, at);
+            Platform.ScheduleLaunch(job.Id, at);
         }
-        catch (Exception e) { AppLog.W("Transfer", $"couldn't register the launch agent: {e.Message}"); }
+        catch (Exception e) { AppLog.W("Transfer", $"couldn't register the scheduled launch: {e.Message}"); }
     }
 
-    public static void UnscheduleTask(string id) => Mac.UnscheduleLaunch(id);
+    public static void UnscheduleTask(string id) => Platform.UnscheduleLaunch(id);
 }

@@ -31,7 +31,7 @@ public static class SelfTest
         {
             Util.AppPaths.Ensure();
             var lib = Player.PlayerCore.Shared();
-            Console.WriteLine($"Stream Arc TV {BuildInfo.VersionName} · LibVLC {lib.Version} · {Util.Mac.LibVlcDescription}");
+            Console.WriteLine($"Stream Arc TV {BuildInfo.VersionName} · LibVLC {lib.Version} · {Util.Platform.LibVlcDescription}");
             using var probe = new LibVLCSharp.Shared.MediaPlayer(lib);
             Console.WriteLine("media player created OK");
             return 0;

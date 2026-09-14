@@ -57,6 +57,7 @@ public partial class HomePage : AppPage
                 if (r == DialogResultKind.Positive && App.Window != null) AppLog.Share(App.Window);
                 else if (r == DialogResultKind.Neutral) AppLog.Copy();
             }
+            if (Platform.StartupNotice is { } notice) Dialogs.Alert(notice.Title, notice.Message);
             if (_prefs.AutoCheckUpdates && !_checkedUpdatesThisLaunch)
             {
                 _checkedUpdatesThisLaunch = true;
@@ -115,7 +116,7 @@ public partial class HomePage : AppPage
     private void AskLayout()
     {
         var r = Dialogs.Alert("How are you using Stream Arc TV?",
-            "Pick the layout that fits this Mac's screen. You can change it later in Settings.",
+            "Pick the layout that fits this screen. You can change it later in Settings.",
             "TV or tablet", "Phone", cancelable: false);
         ApplyLayoutChoice(r == DialogResultKind.Negative ? "phone" : "tv");
     }

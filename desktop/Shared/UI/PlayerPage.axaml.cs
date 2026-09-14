@@ -415,7 +415,6 @@ public partial class PlayerPage : AppPage
         }
         var hw = Regex.Match(msg, @"Using (.+?) for hardware decoding", RegexOptions.IgnoreCase);
         if (hw.Success) _decoderName = hw.Groups[1].Value.Trim();
-        if (msg.Contains("VideoToolbox", StringComparison.OrdinalIgnoreCase) && _decoderName == null) _decoderName = "VideoToolbox";
     }
 
     /// Human words for an HTTP failure reported by LibVLC, or null if it isn't one.
@@ -604,7 +603,7 @@ public partial class PlayerPage : AppPage
                 _nudges = 4;
                 try { p.SetPause(true); } catch { }
                 BufferBox.IsVisible = false;
-                ShowFailure($"The video is downloaded but this Mac's decoder is not producing a picture ({_videoInfo ?? "?"} via {_decoderName ?? "?"}). Try again, or pick a different quality/format of this title if the provider offers one.");
+                ShowFailure($"The video is downloaded but this computer's decoder is not producing a picture ({_videoInfo ?? "?"} via {_decoderName ?? "?"}). Try again, or pick a different quality/format of this title if the provider offers one.");
                 break;
         }
     }

@@ -59,7 +59,7 @@ public partial class SettingsPage : AppPage
 
         TxtVersion.Text = $"v{BuildInfo.VersionName}";
         TxtRepo.Text = $"github.com/{BuildInfo.GitHubRepo}";
-        RowGithub.Click += (_, _) => Mac.OpenUrl($"https://github.com/{BuildInfo.GitHubRepo}/releases");
+        RowGithub.Click += (_, _) => Platform.OpenUrl($"https://github.com/{BuildInfo.GitHubRepo}/releases");
     }
 
     public override IInputElement InitialFocus => SwitchAutoUpdate;

@@ -23,9 +23,9 @@ public static class AppLog
     {
         Directory.CreateDirectory(Dir);
         _file = Path.Combine(Dir, "streamarc.log");
-        I("App", $"Stream Arc TV {BuildInfo.VersionName} · macOS {Environment.OSVersion.Version} · " +
+        I("App", $"Stream Arc TV {BuildInfo.VersionName} · {Platform.OsName} {Environment.OSVersion.Version} · " +
                  $"{RuntimeInformation.OSArchitecture} os · {RuntimeInformation.ProcessArchitecture} process · .NET {Environment.Version} · " +
-                 $"bundle {Mac.BundlePath ?? "(none)"}");
+                 $"{Platform.InstallDescription}");
     }
 
     public static void I(string tag, string msg) => Write("I", tag, msg);
@@ -95,7 +95,7 @@ public static class AppLog
         }
     }
 
-    /// Writes the log to a text file the user chooses (the macOS counterpart of "Share…").
+    /// Writes the log to a text file the user chooses (the desktop counterpart of "Share…").
     public static async void Share(Avalonia.Controls.Window owner)
     {
         try
@@ -136,16 +136,14 @@ public static class AppLog
     }
 }
 
-/// Where the app keeps its files (the macOS counterpart of the Android app's private storage).
+/// Where the app keeps its files (the desktop counterpart of the Android app's private storage); see Platform.
 public static class AppPaths
 {
-    private static string Library => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library");
+    /// Settings, accounts, transfer list, logs.
+    public static string Data { get; } = Platform.DataDir;
 
-    /// Settings, accounts, transfer list, logs: ~/Library/Application Support/StreamArcTV.
-    public static string Data { get; } = Path.Combine(Library, "Application Support", "StreamArcTV");
-
-    /// Caches (catalogues, guides, posters, timeshift chunks) that can be deleted at any time: ~/Library/Caches/StreamArcTV.
-    public static string Cache { get; } = Path.Combine(Library, "Caches", "StreamArcTV");
+    /// Caches (catalogues, guides, posters, timeshift chunks) that can be deleted at any time.
+    public static string Cache { get; } = Platform.CacheDir;
 
     public static void Ensure()
     {

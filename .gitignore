@@ -32,8 +32,12 @@ windows/**/obj/
 windows/**/*.user
 .vs/
 
-# macOS (.NET / Avalonia) build output
+# macOS / Linux (.NET / Avalonia) build output
 macos/**/bin/
 macos/**/obj/
 macos/**/*.user
+linux/**/bin/
+linux/**/obj/
+linux/**/*.user
 *.dmg
+*.deb

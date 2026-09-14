@@ -158,7 +158,7 @@ public partial class TransfersPage : AppPage
         if (all.Count == 0) return;
         var active = all.Count(j => j.IsActive);
         var what = _type == TransferType.RECORDING ? "recordings" : "downloads";
-        var msg = $"Delete all {all.Count} {what} from this Mac? This cannot be undone." +
+        var msg = $"Delete all {all.Count} {what} from this computer? This cannot be undone." +
                   (active > 0 ? $"\n\n{active} in progress or scheduled will be cancelled." : "");
         if (Dialogs.Alert("Delete all", msg, "Delete all", "Cancel") != DialogResultKind.Positive) return;
         var store = TransferStore.Get();
@@ -197,7 +197,7 @@ public partial class TransfersPage : AppPage
     {
         if (j.State != TransferState.DONE && j.State != TransferState.RUNNING) { Dialogs.Toast("This item hasn't finished yet."); return; }
         var path = Folders.Exists(j.FileUri) ? j.FileUri : null;
-        if (path == null) { Dialogs.Toast("The file is no longer on this Mac."); return; }
+        if (path == null) { Dialogs.Toast("The file is no longer on this computer."); return; }
         var key = WatchProgress.DownloadKey(j.Id);
         WatchProgress.Describe(key, WatchProgress.KIND_DOWNLOAD, j.Title, null, null, j.Id, subtitle: j.Subtitle);
         Nav.Push(new PlayerPage(path, j.Title, false, key));
@@ -206,7 +206,7 @@ public partial class TransfersPage : AppPage
     private void ConfirmDelete(TransferJob j)
     {
         var active = j.IsActive;
-        var r = Dialogs.Alert(active ? "Cancel" : "Delete", $"Delete {j.Title} from this Mac?", active ? "Cancel download" : "Delete", "Keep");
+        var r = Dialogs.Alert(active ? "Cancel" : "Delete", $"Delete {j.Title} from this computer?", active ? "Cancel download" : "Delete", "Keep");
         if (r != DialogResultKind.Positive) return;
         if (active) TransferService.Cancel(j.Id);
         Folders.Delete(j.FileUri);

@@ -31,6 +31,14 @@ Apple silicon and Intel) lives in [`macos/`](macos/). See [`macos/README.md`](ma
 the install, build and release steps; its releases are tagged `macos-v…` and its update feed is
 `release/update-macos.json`.
 
+## Linux
+
+A Linux edition (same Avalonia code base as the macOS app, playing through the distribution's VLC
+library, x86-64 and 64-bit ARM, as a .deb and a portable archive) lives in [`linux/`](linux/). See
+[`linux/README.md`](linux/README.md); its releases are tagged `linux-v…` and its update feed is
+`release/update-linux.json`. The code the macOS and Linux editions share is in
+[`desktop/Shared`](desktop/Shared).
+
 ## Install
 
 1. Download the latest `Stream-Arc-TV-<version>.apk` from the [Releases](../../releases) page.

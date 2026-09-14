@@ -1,0 +1,185 @@
+name: Linux Build & Release
+
+on:
+  push:
+    branches: [main]
+    paths: ["linux/**", "desktop/**", ".github/workflows/linux.yml"]
+    tags: ["linux-v*"]
+  pull_request:
+    paths: ["linux/**", "desktop/**", ".github/workflows/linux.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: linux-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Linux packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/linux-v* ]]; then
+            echo "name=${GITHUB_REF#refs/tags/linux-v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=$(sed -n 's/.*<Version>\(.*\)<\/Version>.*/\1/p' linux/Directory.Build.props | head -n1)" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A release is published when a linux-v* tag is pushed, or when a push to main
+      # (or a manual run) carries a version that has no release yet.
+      - name: Decide whether to publish a release
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.ver.outputs.name }}
+        run: |
+          publish=false
+          if [[ "$GITHUB_REF" == refs/tags/linux-v* ]]; then
+            publish=true
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]] || { [[ "$GITHUB_EVENT_NAME" == "push" ]] && [[ "$GITHUB_REF" == "refs/heads/main" ]]; }; then
+            if gh release view "linux-v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "Release linux-v$V already exists; building only."
+            else
+              publish=true
+            fi
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "Publish release linux-v$V: $publish"
+
+      # The runtime VLC packages only (no -dev): the app must find libvlc.so.5 the way users' machines have it.
+      - name: Install VLC for the self-test
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libvlc5 vlc-plugin-base
+
+      - name: Build packages (x64 and arm64)
+        env:
+          V: ${{ steps.ver.outputs.name }}
+        run: |
+          for arch in x64 arm64; do
+            dotnet publish linux/StreamArcTV/StreamArcTV.csproj -c Release -r "linux-$arch" --self-contained true \
+              -p:Version="$V" -p:GitHubRepo="${GITHUB_REPOSITORY}" -p:DebugType=none -p:DebugSymbols=false \
+              -o "out/publish-$arch"
+            linux/package/make-packages.sh "$V" "$arch" "out/$arch" "out/publish-$arch"
+          done
+
+      - name: Self-test (system LibVLC loads from the published app)
+        run: out/publish-x64/StreamArcTV --selftest
+
+      - name: Collect package details
+        id: pkg
+        env:
+          V: ${{ steps.ver.outputs.name }}
+        run: |
+          for arch in x64 arm64; do
+            deb_arch=amd64; [[ "$arch" == arm64 ]] && deb_arch=arm64
+            tar="out/$arch/Stream-Arc-TV-${V}-linux-${arch}.tar.gz"
+            deb="out/$arch/streamarctv_${V}_${deb_arch}.deb"
+            cp "$tar" "$deb" .
+            for kind in tar deb; do
+              f="$tar"; [[ "$kind" == deb ]] && f="$deb"
+              echo "${arch}_${kind}_name=$(basename "$f")" >> "$GITHUB_OUTPUT"
+              echo "${arch}_${kind}_sha256=$(sha256sum "$f" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+              echo "${arch}_${kind}_size=$(stat -c%s "$f")" >> "$GITHUB_OUTPUT"
+            done
+          done
+          ls -la *.tar.gz *.deb
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Stream-Arc-TV-Linux-${{ steps.ver.outputs.name }}
+          path: |
+            *.tar.gz
+            *.deb
+
+      - name: Extract changelog for this version
+        if: steps.rel.outputs.publish == 'true'
+        run: |
+          V="${{ steps.ver.outputs.name }}"
+          awk -v v="$V" '
+            /^## / { if (found) exit; if (index($0, "v" v) > 0) { found=1; next } }
+            found { print }
+          ' linux/CHANGELOG.md > RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then echo "Stream Arc TV for Linux v$V" > RELEASE_NOTES.md; fi
+          echo "---- release notes ----"; cat RELEASE_NOTES.md
+
+      - name: Publish GitHub release
+        if: steps.rel.outputs.publish == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: linux-v${{ steps.ver.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          name: Stream Arc TV for Linux ${{ steps.ver.outputs.name }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            *.tar.gz
+            *.deb
+          fail_on_unmatched_files: true
+
+      # The in-app updater reads release/update-linux.json from main, so publish the
+      # feed only after the release and its assets exist.
+      - name: Update release feed on main
+        if: steps.rel.outputs.publish == 'true'
+        env:
+          VERSION_NAME: ${{ steps.ver.outputs.name }}
+          X_DEB: ${{ steps.pkg.outputs.x64_deb_name }}
+          X_DEB_SHA: ${{ steps.pkg.outputs.x64_deb_sha256 }}
+          X_DEB_SIZE: ${{ steps.pkg.outputs.x64_deb_size }}
+          X_TAR: ${{ steps.pkg.outputs.x64_tar_name }}
+          X_TAR_SHA: ${{ steps.pkg.outputs.x64_tar_sha256 }}
+          X_TAR_SIZE: ${{ steps.pkg.outputs.x64_tar_size }}
+          A_DEB: ${{ steps.pkg.outputs.arm64_deb_name }}
+          A_DEB_SHA: ${{ steps.pkg.outputs.arm64_deb_sha256 }}
+          A_DEB_SIZE: ${{ steps.pkg.outputs.arm64_deb_size }}
+          A_TAR: ${{ steps.pkg.outputs.arm64_tar_name }}
+          A_TAR_SHA: ${{ steps.pkg.outputs.arm64_tar_sha256 }}
+          A_TAR_SIZE: ${{ steps.pkg.outputs.arm64_tar_size }}
+        run: |
+          set -euo pipefail
+          IFS=. read -r MAJ MIN PAT <<< "$VERSION_NAME"
+          CODE=$(( ${MAJ%%[^0-9]*} * 10000 + ${MIN%%[^0-9]*} * 100 + ${PAT%%[^0-9]*} ))
+          git fetch origin main
+          git checkout -B main origin/main
+          CURRENT=$(python3 -c "import json;print(json.load(open('release/update-linux.json'))['versionCode'])")
+          if [ "$CODE" -le "$CURRENT" ]; then
+            echo "::error::versionCode $CODE is not newer than the feed's $CURRENT; not updating release/update-linux.json."
+            exit 1
+          fi
+          cat > release/update-linux.json <<JSON
+          {
+            "schemaVersion": 1,
+            "packageName": "com.computergarage.streamarctv.linux",
+            "versionName": "$VERSION_NAME",
+            "versionCode": $CODE,
+            "x64": {
+              "deb": { "assetName": "$X_DEB", "sha256": "$X_DEB_SHA", "sizeBytes": $X_DEB_SIZE },
+              "tar": { "assetName": "$X_TAR", "sha256": "$X_TAR_SHA", "sizeBytes": $X_TAR_SIZE }
+            },
+            "arm64": {
+              "deb": { "assetName": "$A_DEB", "sha256": "$A_DEB_SHA", "sizeBytes": $A_DEB_SIZE },
+              "tar": { "assetName": "$A_TAR", "sha256": "$A_TAR_SHA", "sizeBytes": $A_TAR_SIZE }
+            }
+          }
+          JSON
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release/update-linux.json
+          git commit -m "Publish Stream Arc TV for Linux $VERSION_NAME update feed"
+          for i in 1 2 3 4; do
+            if git push origin main; then exit 0; fi
+            echo "push rejected; rebasing and retrying ($i)"
+            git fetch origin main && git rebase origin/main
+          done
+          exit 1

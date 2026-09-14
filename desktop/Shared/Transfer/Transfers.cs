@@ -119,9 +119,9 @@ public static class Folders
 {
     public static string AppDir(TransferType type)
     {
-        // ~/Movies/Stream Arc TV (the Movies folder is where macOS keeps video).
-        var movies = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Movies");
-        var baseDir = Directory.Exists(movies) ? Path.Combine(movies, "Stream Arc TV") : Path.Combine(AppPaths.Data, "Media");
+        // The user's video folder (~/Movies on a Mac, ~/Videos on Linux) / Stream Arc TV.
+        var videos = Platform.VideosDir;
+        var baseDir = videos != null && Directory.Exists(videos) ? Path.Combine(videos, "Stream Arc TV") : Path.Combine(AppPaths.Data, "Media");
         var dir = Path.Combine(baseDir, type == TransferType.RECORDING ? "Recordings" : "Downloads");
         Directory.CreateDirectory(dir);
         return dir;
@@ -130,7 +130,7 @@ public static class Folders
     /// Human-readable name of a folder choice.
     public static string Describe(string? folder, TransferType type)
     {
-        if (folder == null) return "Movies / Stream Arc TV / " + (type == TransferType.RECORDING ? "Recordings" : "Downloads");
+        if (folder == null) return Platform.VideosLabel + " / Stream Arc TV / " + (type == TransferType.RECORDING ? "Recordings" : "Downloads");
         try
         {
             var name = new DirectoryInfo(folder).Name;
@@ -184,7 +184,7 @@ public static class Folders
 
     public static bool Exists(string? fileUri) => fileUri != null && File.Exists(fileUri);
 
-    private static readonly Regex Bad = new("[\\\\/:*?\"<>|\\x00-\\x1F]", RegexOptions.Compiled);   // stricter than macOS needs, so names also work on a shared drive
+    private static readonly Regex Bad = new("[\\\\/:*?\"<>|\\x00-\\x1F]", RegexOptions.Compiled);   // stricter than Unix needs, so names also work on a shared drive
     private static readonly Regex Spaces = new("\\s+", RegexOptions.Compiled);
 
     public static string SafeName(string name)

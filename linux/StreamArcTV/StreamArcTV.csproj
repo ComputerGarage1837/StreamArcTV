@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Stream Arc TV for macOS. The screens, data layer, player and transfer engine are shared with
-    the Linux edition and live in desktop/Shared; this project adds the macOS specifics
-    (Util/Platform.cs) and the bundle build (bundle/make-app.sh).
+    Stream Arc TV for Linux. The screens, data layer, player and transfer engine are shared with
+    the macOS edition and live in desktop/Shared; this project adds the Linux specifics
+    (Util/Platform.cs) and the packaging (package/make-packages.sh).
   -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -21,7 +21,7 @@
     <Company>Computer Garage</Company>
     <Copyright>MIT</Copyright>
     <AssemblyTitle>Stream Arc TV</AssemblyTitle>
-    <RuntimeIdentifiers>osx-arm64;osx-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
     <UseAppHost>true</UseAppHost>
     <SharedDir>$(MSBuildThisFileDirectory)../../desktop/Shared/</SharedDir>
   </PropertyGroup>

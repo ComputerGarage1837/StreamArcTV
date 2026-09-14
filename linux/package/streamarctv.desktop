@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Stream Arc TV
+GenericName=TV and video player
+Comment=Live TV and video on demand from your Xtream Codes service
+Exec=/opt/streamarctv/StreamArcTV
+Icon=streamarctv
+Terminal=false
+Categories=AudioVideo;Video;Player;TV;
+Keywords=IPTV;television;live;streaming;
+StartupWMClass=StreamArcTV

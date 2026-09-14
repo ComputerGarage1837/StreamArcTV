@@ -87,7 +87,7 @@ public static class Ui
 
 /// <summary>
 /// A focusable card that reports a click (Enter, Space, left click) and a long click (holding
-/// Enter, right click or Control-click, the context-menu key): the macOS counterpart of
+/// Enter, right click or Control-click, the context-menu key): the desktop counterpart of
 /// "press OK / hold OK".
 /// </summary>
 public class FocusCard : ContentControl
