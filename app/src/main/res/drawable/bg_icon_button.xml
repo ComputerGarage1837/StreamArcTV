@@ -10,8 +10,8 @@
     <item android:state_focused="true">
         <shape android:shape="rectangle">
             <corners android:radius="12dp" />
-            <solid android:color="@color/surface_focused" />
-            <stroke android:width="2dp" android:color="@color/accent" />
+            <solid android:color="#2A5399" />
+            <stroke android:width="3dp" android:color="#FFFFFF" />
         </shape>
     </item>
     <item android:state_selected="true">

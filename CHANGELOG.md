@@ -3,6 +3,15 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.53 — 2026-09-14
+
+### Fixed
+- Remote focus is now obvious everywhere: settings rows and buttons (Check for updates, Allow
+  installing updates, Log out, Export logs…) light up with a white ring on a brighter fill, the
+  cyan Log out / primary buttons turn white with a purple ring, and every list inside a dialog
+  (categories shown, default category, guide source, buffer, subtitles, folder and channel
+  pickers) plus the dialog's own OK / Cancel buttons show the same white ring.
+
 ## v1.0.52 — 2026-09-14
 
 ### Added
