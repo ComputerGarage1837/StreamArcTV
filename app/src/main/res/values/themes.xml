@@ -16,6 +16,9 @@
         <item name="android:navigationBarColor">@color/bg</item>
         <item name="materialAlertDialogTheme">@style/Theme.StreamArcTV.Dialog</item>
         <item name="alertDialogTheme">@style/Theme.StreamArcTV.Dialog</item>
+        <!-- Plain AppCompat buttons: Material buttons ignore our background drawables and paint
+             themselves cyan with an invisible focus state (the "light blue buttons"). -->
+        <item name="viewInflaterClass">androidx.appcompat.app.AppCompatViewInflater</item>
     </style>
 
     <style name="Theme.StreamArcTV.Player" parent="Theme.StreamArcTV">
@@ -24,6 +27,7 @@
     </style>
 
     <style name="Theme.StreamArcTV.Dialog" parent="Theme.MaterialComponents.Dialog.Alert">
+        <item name="viewInflaterClass">androidx.appcompat.app.AppCompatViewInflater</item>
         <item name="colorPrimary">@color/accent</item>
         <item name="colorSurface">@color/surface</item>
         <item name="android:textColorPrimary">@color/text</item>
