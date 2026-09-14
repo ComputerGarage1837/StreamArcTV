@@ -91,6 +91,12 @@
                     </Grid>
                 </Button>
 
+                <!-- Backup -->
+                <TextBlock Text="BACKUP" Style="{StaticResource SectionHeader}" />
+                <Button x:Name="RowBackupExport" Content="Export settings and watch history…" Style="{StaticResource SettingsRow}" HorizontalContentAlignment="Left" />
+                <Button x:Name="RowBackupImport" Content="Import settings and watch history…" Style="{StaticResource SettingsRow}" HorizontalContentAlignment="Left" />
+                <TextBlock Text="Saves accounts, favorites, hidden and default categories, watch progress and watched marks, the download list and every setting to one file, so you can put them back on a fresh install or another PC." Foreground="{StaticResource TextMutedBrush}" FontSize="13" TextWrapping="Wrap" Margin="12,2,12,6" />
+
                 <!-- Accounts -->
                 <TextBlock Text="ACCOUNTS" Style="{StaticResource SectionHeader}" />
                 <Button x:Name="BtnLogoutLive" Style="{StaticResource SettingsRow}" HorizontalContentAlignment="Left" />

@@ -39,6 +39,8 @@ public partial class SettingsPage : AppPage
         RenderLayout();
         RowDiagnostics.Click += (_, _) => RunDiagnostics();
         RowLogs.Click += (_, _) => ExportLogs();
+        RowBackupExport.Click += (_, _) => ExportBackup();
+        RowBackupImport.Click += (_, _) => ImportBackup();
         RowLiveCategories.Click += (_, _) => PickLiveCategories();
         RowDefaultCategory.Click += (_, _) => PickDefaultCategory();
         RowGuideMode.Click += (_, _) => PickGuideMode();
@@ -130,6 +132,59 @@ public partial class SettingsPage : AppPage
             _prefs.BufferLevelKey = level.Key;
             RenderBuffer();
         }
+    }
+
+    private void ExportBackup()
+    {
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Export settings and watch history",
+            FileName = $"StreamArcTV-backup-{DateTime.Now:yyyy-MM-dd}.json",
+            Filter = "Stream Arc TV backup (*.json)|*.json",
+            DefaultExt = ".json"
+        };
+        if (dlg.ShowDialog(App.Window) != true) return;
+        try
+        {
+            System.IO.File.WriteAllText(dlg.FileName, Prefs.Export());
+            AppLog.I("Backup", $"exported to {dlg.FileName}");
+            Dialogs.Alert("Backup saved", $"Everything was saved to:\n{dlg.FileName}\n\nThe file contains your sign-in details, so keep it somewhere private.");
+        }
+        catch (Exception e)
+        {
+            AppLog.E("Backup", "export failed", e);
+            Dialogs.Alert("Export failed", e.Message);
+        }
+    }
+
+    private void ImportBackup()
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Import settings and watch history",
+            Filter = "Stream Arc TV backup (*.json)|*.json|All files (*.*)|*.*",
+            CheckFileExists = true
+        };
+        if (dlg.ShowDialog(App.Window) != true) return;
+        var r = Dialogs.Alert("Replace everything?",
+            "Importing replaces the accounts, favorites, watch history, download list and settings on this PC with the ones in the backup. The app restarts afterwards.\n\nDownloaded files are not touched.",
+            "Import and restart", "Cancel");
+        if (r != DialogResultKind.Positive) return;
+        try
+        {
+            Prefs.Import(System.IO.File.ReadAllText(dlg.FileName));
+            AppLog.I("Backup", $"imported from {dlg.FileName}; restarting");
+        }
+        catch (Exception e)
+        {
+            AppLog.E("Backup", "import failed", e);
+            Dialogs.Alert("Import failed", e.Message + "\n\nNothing was changed.");
+            return;
+        }
+        var exe = Environment.ProcessPath;
+        if (exe != null) { try { Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true }); } catch { } }
+        App.Window?.ForceClose();
+        Application.Current.Shutdown();
     }
 
     private void ExportLogs()

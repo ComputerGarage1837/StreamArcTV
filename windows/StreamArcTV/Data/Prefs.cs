@@ -76,6 +76,51 @@ public sealed class Prefs
         catch { }
     }
 
+    // ---- Backup ----------------------------------------------------------
+
+    private const string BACKUP_KIND = "streamarctv-backup";
+
+    /// Everything the app remembers (settings, accounts, favorites, watch history, transfer list)
+    /// as one JSON document that <see cref="Import"/> reads back.
+    public static string Export()
+    {
+        lock (Lock)
+        {
+            var doc = new JsonObject
+            {
+                ["kind"] = BACKUP_KIND,
+                ["format"] = 1,
+                ["app"] = BuildInfo.ApplicationId,
+                ["appVersion"] = BuildInfo.VersionName,
+                ["exportedAt"] = DateTimeOffset.Now.ToString("O"),
+                ["prefs"] = JsonNode.Parse(Root.ToJsonString()),
+            };
+            return doc.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
+    /// Replaces the stored data with a backup. Throws with a readable message when the file is
+    /// not one. The caller restarts the app so every screen and cache reloads.
+    public static void Import(string json)
+    {
+        JsonObject? doc;
+        try { doc = JsonNode.Parse(json) as JsonObject; }
+        catch (Exception e) { throw new InvalidOperationException("The file is not readable JSON: " + e.Message); }
+        if (doc == null) throw new InvalidOperationException("The file is empty.");
+        if (doc["kind"]?.GetValue<string>() != BACKUP_KIND) throw new InvalidOperationException("The file is not a Stream Arc TV backup.");
+        var format = doc["format"]?.GetValue<int>() ?? 0;
+        if (format != 1) throw new InvalidOperationException($"The backup was made by a newer version (format {format}).");
+        if (doc["prefs"] is not JsonObject prefs) throw new InvalidOperationException("The backup has no settings in it.");
+        lock (Lock)
+        {
+            var fresh = (JsonObject)JsonNode.Parse(prefs.ToJsonString())!;
+            fresh.Remove("crashed");
+            _root = fresh;
+            _dirty = true;
+        }
+        Flush();
+    }
+
     // ---- Typed accessors -------------------------------------------------
 
     private static string? GetString(string key, string? def = null)

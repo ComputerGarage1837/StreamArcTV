@@ -3,6 +3,14 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.4 — 2026-09-14
+
+### Added
+- Settings → Backup: "Export settings and watch history" writes accounts, favorites, hidden and
+  default categories, watch progress and watched marks, the download list and every setting to
+  one JSON file; "Import settings and watch history" reads such a file back, replaces what is on
+  the PC and restarts the app. For a fresh install or a second PC.
+
 ## v1.1.3 — 2026-09-13
 
 ### Fixed
