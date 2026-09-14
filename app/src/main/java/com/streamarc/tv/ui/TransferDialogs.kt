@@ -1,6 +1,9 @@
 package com.streamarc.tv.ui
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.os.Build
 import android.view.LayoutInflater
 import android.widget.Toast
@@ -204,6 +207,55 @@ object TransferDialogs {
         val msg = if (startsNow) activity.getString(R.string.recording_started_fmt, channel)
         else activity.getString(R.string.recording_scheduled_fmt, channel, t.format(Date(startAt)))
         Toast.makeText(activity, msg, Toast.LENGTH_LONG).show()
+        if (!startsNow) checkRecordingReadiness(activity)
+    }
+
+    /**
+     * A scheduled recording needs Android to wake the app on time and to leave it running.
+     * If exact alarms are blocked or battery optimisation is on, say so now and open the
+     * setting, rather than finding an empty file in the morning.
+     */
+    fun checkRecordingReadiness(activity: AppCompatActivity) {
+        val problems = ArrayList<Pair<String, Intent>>()
+        val pkg = activity.packageName
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val am = activity.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
+            if (!am.canScheduleExactAlarms()) {
+                problems.add(activity.getString(R.string.readiness_exact_alarms) to
+                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$pkg")))
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = activity.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+            if (!pm.isIgnoringBatteryOptimizations(pkg)) {
+                val direct = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$pkg"))
+                val list = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                val intent = when {
+                    direct.resolveActivity(activity.packageManager) != null -> direct
+                    list.resolveActivity(activity.packageManager) != null -> list
+                    else -> null
+                }
+                if (intent != null) problems.add(activity.getString(R.string.readiness_battery) to intent)
+            }
+        }
+        if (problems.isEmpty()) return
+        var i = 0
+        fun showNext() {
+            if (i >= problems.size) return
+            val (text, intent) = problems[i++]
+            AlertDialog.Builder(activity)
+                .setTitle(R.string.readiness_title)
+                .setMessage(text)
+                .setPositiveButton(R.string.open_settings) { _, _ ->
+                    try { activity.startActivity(intent) } catch (_: Exception) {
+                        Toast.makeText(activity, R.string.readiness_no_screen, Toast.LENGTH_LONG).show()
+                    }
+                    showNext()
+                }
+                .setNegativeButton(R.string.not_now) { _, _ -> showNext() }
+                .show()
+        }
+        showNext()
     }
 
     fun offsetLabel(minutes: Int): String {

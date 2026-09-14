@@ -108,6 +108,11 @@
     <string name="download_queued_title">Added to downloads</string>
     <string name="go_to_downloads">Go to Downloads</string>
     <string name="stay_here">Stay here</string>
+    <string name="readiness_title">Recording may not start on time</string>
+    <string name="readiness_exact_alarms">Android is not allowing this app to set exact alarms, so it may not be woken at the recording\'s start time. Allow "Alarms &amp; reminders" for Stream Arc TV.</string>
+    <string name="readiness_battery">Battery optimisation is on for this app, so Android may stop the recording while the device is asleep. Set Stream Arc TV to "Unrestricted" / "Don\'t optimise".</string>
+    <string name="open_settings">Open settings</string>
+    <string name="readiness_no_screen">This device has no settings screen for that; the recording is still scheduled.</string>
     <string name="subtitles">Subtitles</string>
     <string name="subtitles_on">On when available</string>
     <string name="subtitles_off">Off</string>

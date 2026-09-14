@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.52 — 2026-09-14
+
+### Added
+- When you schedule a recording, the app checks whether Android will let it wake up and keep
+  running: if exact alarms are blocked or battery optimisation is on, it explains and opens the
+  right settings page (the recording is scheduled either way).
+
 ## v1.0.51 — 2026-09-13
 
 ### Fixed
