@@ -54,6 +54,11 @@ class Prefs(context: Context) {
         get() = sp.getStringSet("live_hidden_cats", emptySet())?.toSet() ?: emptySet()
         set(value) { sp.edit().putStringSet("live_hidden_cats", value).apply() }
 
+    /** Individual live channels (stream ids) the user has switched off. */
+    var hiddenLiveChannels: Set<String>
+        get() = sp.getStringSet("live_hidden_channels", emptySet())?.toSet() ?: emptySet()
+        set(value) { sp.edit().putStringSet("live_hidden_channels", value).apply() }
+
     /**
      * Category the guide opens on: a provider category id, [CATEGORY_FAVORITES],
      * [CATEGORY_ALL], or null for the automatic choice ("General" if present, else All).

@@ -489,6 +489,8 @@ class BrowseActivity : AppCompatActivity() {
         if (isLive) {
             val hidden = prefs.hiddenLiveCategories
             if (hidden.isNotEmpty()) list = list.filter { it.categoryId !in hidden }
+            val hiddenChannels = prefs.hiddenLiveChannels
+            if (hiddenChannels.isNotEmpty()) list = list.filter { it.id !in hiddenChannels }
         }
         if (q.isNotEmpty()) list = list.filter { it.name?.contains(q, ignoreCase = true) == true }
 
@@ -537,11 +539,16 @@ class BrowseActivity : AppCompatActivity() {
         val watchKey = if (kind == ContentKind.MOVIE) stream.streamId?.let { WatchProgress.movieKey(service, it) } else null
         val options = arrayListOf(first, favLabel, third)
         if (watchKey != null) options.add(getString(if (WatchProgress.isWatched(watchKey)) R.string.mark_unwatched else R.string.mark_watched))
+        if (kind == ContentKind.LIVE) options.add(getString(R.string.hide_channel))
         AlertDialog.Builder(this)
             .setTitle(stream.name ?: "")
             .setItems(options.toTypedArray()) { _, which ->
                 when (which) {
-                    3 -> { WatchProgress.setWatched(watchKey!!, !WatchProgress.isWatched(watchKey)); streamAdapter.notifyDataSetChanged() }
+                    3 -> if (kind == ContentKind.LIVE) {
+                        prefs.hiddenLiveChannels = prefs.hiddenLiveChannels + id
+                        Toast.makeText(this, getString(R.string.channel_hidden_fmt, stream.name ?: ""), Toast.LENGTH_LONG).show()
+                        applyFilter()
+                    } else { WatchProgress.setWatched(watchKey!!, !WatchProgress.isWatched(watchKey)); streamAdapter.notifyDataSetChanged() }
                     0 -> play(stream)
                     1 -> {
                         val nowFav = prefs.toggleFavorite(service, kind, id)

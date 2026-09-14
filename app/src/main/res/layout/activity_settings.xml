@@ -217,6 +217,29 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/rowHiddenChannels"
+                style="@style/SettingsRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/channels_shown"
+                    android:textColor="@color/text"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/txtHiddenChannelsValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/accent"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/rowGuideMode"
                 style="@style/SettingsRow"
                 android:layout_width="match_parent"
