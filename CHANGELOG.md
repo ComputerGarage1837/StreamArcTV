@@ -11,6 +11,9 @@ version is shown to users inside the app when an update is available.
   cyan Log out / primary buttons turn white with a purple ring, and every list inside a dialog
   (categories shown, default category, guide source, buffer, subtitles, folder and channel
   pickers) plus the dialog's own OK / Cancel buttons show the same white ring.
+- On Android TV devices (NVIDIA Shield and others) every screen keeps a small extra margin
+  inside the TV's overscan area, so the Live TV button and other edge content are no longer
+  clipped at the side of the picture.
 
 ## v1.0.52 — 2026-09-14
 
