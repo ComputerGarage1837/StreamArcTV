@@ -30,6 +30,66 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var prefs: Prefs
     private val picker = FolderPicker(this)
 
+    // ---- Backup / restore --------------------------------------------------
+    private var pendingExport: String? = null
+    private val saveBackup = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        val json = pendingExport ?: return@registerForActivityResult
+        if (uri == null) return@registerForActivityResult
+        try {
+            contentResolver.openOutputStream(uri, "w")?.use { it.write(json.toByteArray()) }
+            Toast.makeText(this, R.string.backup_saved, Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.backup_failed_fmt, e.message ?: ""), Toast.LENGTH_LONG).show()
+        }
+    }
+    private val openBackup = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        try {
+            val json = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: throw IllegalStateException("Can't read file")
+            val summary = com.streamarc.tv.data.Backup.import(this, json)
+            AlertDialog.Builder(this)
+                .setTitle(R.string.import_settings)
+                .setMessage(getString(R.string.backup_imported_fmt, summary))
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    // Start over from the home screen so every screen picks up the restored values.
+                    startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+                .show()
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.backup_failed_fmt, e.message ?: ""), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun exportSettings() {
+        val includeAccounts = booleanArrayOf(true)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.export_settings)
+            .setMultiChoiceItems(arrayOf(getString(R.string.include_sign_in)), includeAccounts) { _, _, checked -> includeAccounts[0] = checked }
+            .setPositiveButton(R.string.save_file) { _, _ ->
+                pendingExport = com.streamarc.tv.data.Backup.export(this, includeAccounts[0])
+                val stamp = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                try { saveBackup.launch("stream-arc-tv-backup-$stamp.json") } catch (_: Exception) { shareBackup() }
+            }
+            .setNeutralButton(R.string.share) { _, _ ->
+                pendingExport = com.streamarc.tv.data.Backup.export(this, includeAccounts[0])
+                shareBackup()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun shareBackup() {
+        val json = pendingExport ?: return
+        try {
+            val f = java.io.File(cacheDir, "stream-arc-tv-backup.json").apply { writeText(json) }
+            val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.fileprovider", f)
+            startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("application/json")
+                .putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), getString(R.string.export_settings)))
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.backup_failed_fmt, e.message ?: ""), Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         b = ActivitySettingsBinding.inflate(layoutInflater)
@@ -58,6 +118,12 @@ class SettingsActivity : AppCompatActivity() {
         renderLayout()
         b.rowDiagnostics.setOnClickListener { runDiagnostics() }
         b.rowLogs.setOnClickListener { exportLogs() }
+        b.btnExportSettings.setOnClickListener { exportSettings() }
+        b.btnImportSettings.setOnClickListener {
+            try { openBackup.launch(arrayOf("application/json", "text/plain", "*/*")) } catch (e: Exception) {
+                Toast.makeText(this, getString(R.string.backup_failed_fmt, e.message ?: ""), Toast.LENGTH_LONG).show()
+            }
+        }
         b.rowLiveCategories.setOnClickListener { pickLiveCategories() }
         b.rowHiddenChannels.setOnClickListener { startActivity(HiddenChannelsActivity.intent(this)) }
         b.rowDefaultCategory.setOnClickListener { pickDefaultCategory() }
