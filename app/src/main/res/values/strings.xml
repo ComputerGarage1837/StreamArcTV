@@ -123,6 +123,12 @@
     <string name="guide_mode_full_hint">the whole schedule, biggest download</string>
     <string name="guide_mode_channel_hint">lite: only the channels you list</string>
     <string name="guide_refreshing">Refreshing the TV guide…</string>
+    <string name="channels_shown">Channels shown</string>
+    <string name="channels_shown_hint">Untick a channel to hide it from the guide, lists and multi-view. Only the categories you have enabled are listed.</string>
+    <string name="show_all_channels">Show all</string>
+    <string name="all_channels_shown">All channels shown again.</string>
+    <string name="hide_channel">Hide channel</string>
+    <string name="channel_hidden_fmt">%1$s hidden. Settings → Channels shown brings it back.</string>
     <string name="subtitles">Subtitles</string>
     <string name="subtitles_on">On when available</string>
     <string name="subtitles_off">Off</string>

@@ -128,7 +128,8 @@ class MultiViewActivity : AppCompatActivity() {
             try {
                 val all = cached ?: XtreamApi.streams(service, account, null, ContentKind.LIVE).also { cached = it }
                 val favs = prefs.favorites(service, ContentKind.LIVE)
-                channels = all.sortedWith(compareBy({ !favs.contains(it.id) }, { it.name?.lowercase() ?: "" }))
+                val hidden = prefs.hiddenLiveChannels
+                channels = all.filter { it.id !in hidden }.sortedWith(compareBy({ !favs.contains(it.id) }, { it.name?.lowercase() ?: "" }))
                 applyPending()
             } catch (e: Exception) {
                 Toast.makeText(this@MultiViewActivity, e.message ?: getString(R.string.load_failed), Toast.LENGTH_LONG).show()

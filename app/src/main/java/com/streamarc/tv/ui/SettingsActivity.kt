@@ -59,6 +59,7 @@ class SettingsActivity : AppCompatActivity() {
         b.rowDiagnostics.setOnClickListener { runDiagnostics() }
         b.rowLogs.setOnClickListener { exportLogs() }
         b.rowLiveCategories.setOnClickListener { pickLiveCategories() }
+        b.rowHiddenChannels.setOnClickListener { startActivity(HiddenChannelsActivity.intent(this)) }
         b.rowDefaultCategory.setOnClickListener { pickDefaultCategory() }
         b.rowGuideMode.setOnClickListener { pickGuideMode() }
         renderGuideMode()
@@ -90,6 +91,8 @@ class SettingsActivity : AppCompatActivity() {
         super.onResume()
         renderSkipped()
         renderAccounts()
+        val hiddenChannels = prefs.hiddenLiveChannels.size
+        b.txtHiddenChannelsValue.text = if (hiddenChannels == 0) getString(R.string.all_shown) else getString(R.string.hidden_count_fmt, hiddenChannels)
     }
 
     private fun renderLiveFormat() {

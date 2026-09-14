@@ -3,6 +3,14 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.55 — 2026-09-14
+
+### Added
+- Hide individual live channels: Settings → Live TV → Channels shown lists only the categories
+  you have enabled; pick one, search if you like, and untick the channels you never watch. They
+  disappear from the guide, the lists and the multi-view picker. Hold OK on a channel in the
+  guide for a quick "Hide channel", and "Show all" brings everything back.
+
 ## v1.0.54 — 2026-09-14
 
 ### Added
