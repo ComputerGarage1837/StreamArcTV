@@ -102,6 +102,7 @@ class VodHomeActivity : AppCompatActivity() {
         b.header.txtBrand.text = getString(R.string.app_name)
         b.header.btnSettings.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
         b.header.btnUpdate.setOnClickListener { UpdateChecker.check(this, manual = true) }
+        b.header.boxGuide.visibility = View.GONE   // the guide belongs to Live TV
 
         b.navHome.isSelected = true
         b.navHome.setOnClickListener { b.listRows.smoothScrollToPosition(0) }

@@ -86,6 +86,7 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.btnSettings).setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
         findViewById<View>(R.id.btnUpdate).setOnClickListener { UpdateChecker.check(this, manual = true) }
+        findViewById<View>(R.id.btnGuide).setOnClickListener { GuideRefresh.fromHome(this, prefs) }
 
         findViewById<View>(R.id.navHome).isSelected = true
         findViewById<View>(R.id.navHome).setOnClickListener { live.requestFocus() }

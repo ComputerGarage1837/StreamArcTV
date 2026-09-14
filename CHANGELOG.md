@@ -3,6 +3,18 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.54 — 2026-09-14
+
+### Added
+- A round "Guide" button on the home screen, next to Update, refreshes the TV guide from there:
+  choose Auto, Whole guide or Lite, and the download runs with a progress dialog.
+
+### Fixed
+- The solid light-blue buttons (Check for updates now, Allow installing updates, Log out, tabs,
+  Download and others) were being drawn by the Material library, which ignored the app's own
+  button styles and showed no usable focus state. Buttons now use the app's styles everywhere:
+  dark with an outline at rest, bright fill with a white ring when focused.
+
 ## v1.0.53 — 2026-09-14
 
 ### Fixed
