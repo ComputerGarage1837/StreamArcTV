@@ -154,7 +154,7 @@ class MultiViewActivity : AppCompatActivity() {
         var shown = channels
         val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, shown.map { it.name ?: "" }.toMutableList())
         vb.listChannels.adapter = adapter
-        val dialog = AlertDialog.Builder(this).setTitle(R.string.choose_channel).setView(vb.root)
+        val dialog = FocusDialog(this).setTitle(R.string.choose_channel).setView(vb.root)
             .setNegativeButton(android.R.string.cancel, null).create()
         vb.inputFilter.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b2: Int, c: Int) {}
@@ -197,7 +197,7 @@ class MultiViewActivity : AppCompatActivity() {
         val hasStream = tile.stream != null
         val opts = if (hasStream) arrayOf(getString(R.string.full_screen), getString(R.string.change_channel), getString(R.string.remove))
         else arrayOf(getString(R.string.choose_channel))
-        AlertDialog.Builder(this).setTitle(tile.stream?.name ?: getString(R.string.multiview))
+        FocusDialog(this).setTitle(tile.stream?.name ?: getString(R.string.multiview))
             .setItems(opts) { _, which ->
                 if (!hasStream) { pickChannel(i); return@setItems }
                 when (which) {

@@ -47,7 +47,7 @@ class SettingsActivity : AppCompatActivity() {
         try {
             val json = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: throw IllegalStateException("Can't read file")
             val summary = com.streamarc.tv.data.Backup.import(this, json)
-            AlertDialog.Builder(this)
+            FocusDialog(this)
                 .setTitle(R.string.import_settings)
                 .setMessage(getString(R.string.backup_imported_fmt, summary))
                 .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -62,7 +62,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun exportSettings() {
         val includeAccounts = booleanArrayOf(true)
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(R.string.export_settings)
             .setMultiChoiceItems(arrayOf(getString(R.string.include_sign_in)), includeAccounts) { _, _, checked -> includeAccounts[0] = checked }
             .setPositiveButton(R.string.save_file) { _, _ ->
@@ -146,10 +146,7 @@ class SettingsActivity : AppCompatActivity() {
         b.btnLogoutVod.setOnClickListener { logout(Service.VOD) }
 
         b.txtVersion.text = getString(R.string.version_fmt, BuildConfig.VERSION_NAME)
-        b.txtRepo.text = "github.com/${BuildConfig.GITHUB_REPO}"
-        b.rowGithub.setOnClickListener {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/${BuildConfig.GITHUB_REPO}/releases")))
-        }
+        b.rowGithub.visibility = View.GONE   // the update source is an implementation detail
         b.switchAutoUpdate.requestFocus()
     }
 
@@ -168,7 +165,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun pickLiveFormat() {
         val options = arrayOf("HLS (.m3u8)", "MPEG-TS (.ts)")
         val current = if (prefs.liveFormat == "ts") 1 else 0
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(R.string.live_stream_format)
             .setSingleChoiceItems(options, current) { d, which ->
                 prefs.liveFormat = if (which == 1) "ts" else "m3u8"
@@ -184,7 +181,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun pickSubtitles() {
         val options = arrayOf(getString(R.string.subtitles_off), getString(R.string.subtitles_on))
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(R.string.subtitles)
             .setSingleChoiceItems(options, if (prefs.subtitles) 1 else 0) { d, which ->
                 prefs.subtitles = which == 1
@@ -206,7 +203,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun pickBuffer() {
         val current = BufferLevel.entries.indexOf(BufferLevel.from(prefs.bufferLevel))
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(R.string.live_buffer)
             .setSingleChoiceItems(bufferLabels(), current) { d, which ->
                 val level = BufferLevel.entries[which]
@@ -217,7 +214,7 @@ class SettingsActivity : AppCompatActivity() {
                     return@setSingleChoiceItems
                 }
                 val free = Formatter.formatShortFileSize(this, TimeshiftServer.freeSpaceBytes(this))
-                AlertDialog.Builder(this)
+                FocusDialog(this)
                     .setTitle(R.string.storage_buffer_title)
                     .setMessage(getString(R.string.storage_buffer_notice, free))
                     .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -228,14 +225,14 @@ class SettingsActivity : AppCompatActivity() {
                     .show()
             }
             .setNeutralButton(R.string.buffer_help_title) { _, _ ->
-                AlertDialog.Builder(this).setTitle(R.string.buffer_help_title)
+                FocusDialog(this).setTitle(R.string.buffer_help_title)
                     .setMessage(R.string.buffer_help).setPositiveButton(android.R.string.ok, null).show()
             }
             .show()
     }
 
     private fun exportLogs() {
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(R.string.export_logs)
             .setMessage(R.string.export_logs_msg)
             .setPositiveButton(R.string.share) { _, _ -> com.streamarc.tv.util.AppLog.share(this) }
@@ -250,7 +247,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun runDiagnostics() {
         val account = prefs.account(Service.VOD)
         if (account == null) { Toast.makeText(this, R.string.sign_in_vod_first, Toast.LENGTH_SHORT).show(); return }
-        val progress = AlertDialog.Builder(this).setMessage(R.string.diagnostics_running).setCancelable(false).show()
+        val progress = FocusDialog(this).setMessage(R.string.diagnostics_running).setCancelable(false).show()
         lifecycleScope.launch {
             val report = StringBuilder()
             for (kind in listOf(ContentKind.MOVIE, ContentKind.SERIES)) {
@@ -276,7 +273,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
             progress.dismiss()
-            AlertDialog.Builder(this@SettingsActivity)
+            FocusDialog(this@SettingsActivity)
                 .setTitle(R.string.category_diagnostics)
                 .setMessage(report.toString())
                 .setPositiveButton(android.R.string.ok, null)
@@ -299,7 +296,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun pickGuideMode() {
         val labels = arrayOf(getString(R.string.guide_mode_auto), getString(R.string.guide_mode_full), getString(R.string.guide_mode_channel))
         val values = arrayOf("auto", "full", "channel")
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(R.string.guide_source)
             .setSingleChoiceItems(labels, values.indexOf(prefs.guideMode).coerceAtLeast(0)) { d, which ->
                 prefs.guideMode = values[which]
@@ -342,7 +339,7 @@ class SettingsActivity : AppCompatActivity() {
         val hidden = prefs.hiddenLiveCategories.toMutableSet()
         val names = cats.map { it.name ?: "—" }.toTypedArray()
         val checked = BooleanArray(cats.size) { i -> cats[i].id !in hidden }
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(R.string.live_categories_shown)
             .setMultiChoiceItems(names, checked) { _, which, isChecked ->
                 val id = cats[which].id ?: return@setMultiChoiceItems
@@ -362,7 +359,7 @@ class SettingsActivity : AppCompatActivity() {
         val labels = listOf(getString(R.string.default_auto), "★ " + getString(R.string.favorites), getString(R.string.all_categories)) + visible.map { it.name ?: "—" }
         val values: List<String?> = listOf(null, Prefs.CATEGORY_FAVORITES, Prefs.CATEGORY_ALL) + visible.map { it.id }
         val current = values.indexOf(prefs.defaultLiveCategory).coerceAtLeast(0)
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(R.string.default_live_category)
             .setSingleChoiceItems(labels.toTypedArray(), current) { d, which ->
                 prefs.defaultLiveCategory = values[which]
@@ -385,7 +382,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun pickLayout() {
         val options = arrayOf(getString(R.string.layout_phone), getString(R.string.layout_tv))
         val current = if (prefs.layoutMode == "phone") 0 else 1
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(R.string.display_layout)
             .setSingleChoiceItems(options, current) { d, which ->
                 prefs.layoutMode = if (which == 0) "phone" else "tv"
@@ -414,7 +411,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun logout(service: Service) {
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(R.string.log_out)
             .setMessage(getString(R.string.log_out_confirm_fmt, service.title))
             .setPositiveButton(R.string.log_out) { _, _ ->

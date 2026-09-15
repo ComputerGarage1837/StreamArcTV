@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
         if (prefs.layoutMode == null) askLayout() else maybeAskInstallPermission()
         if (prefs.crashed) {
             prefs.crashed = false
-            AlertDialog.Builder(this)
+            FocusDialog(this)
                 .setTitle(R.string.crash_title)
                 .setMessage(R.string.crash_msg)
                 .setPositiveButton(R.string.share) { _, _ -> com.streamarc.tv.util.AppLog.share(this) }
@@ -120,7 +120,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun askLayout() {
         val guessTv = looksLikeTv()
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(R.string.layout_question_title)
             .setMessage(R.string.layout_question_message)
             .setCancelable(false)
@@ -150,7 +150,7 @@ class MainActivity : AppCompatActivity() {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return
         if (packageManager.canRequestPackageInstalls()) { prefs.installPermissionAsked = true; return }
         if (prefs.installPermissionAsked) return
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(R.string.install_permission_title)
             .setMessage(R.string.install_permission_message)
             .setCancelable(false)
@@ -196,7 +196,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun pickSearch() {
         val options = arrayOf(getString(R.string.live_tv), getString(R.string.video_on_demand))
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(R.string.search_where)
             .setItems(options) { _, which -> open(if (which == 0) Service.LIVE else Service.VOD) }
             .show()
@@ -207,7 +207,7 @@ class MainActivity : AppCompatActivity() {
         when (signedIn.size) {
             0 -> open(Service.LIVE)
             1 -> startActivity(ProfileActivity.intent(this, signedIn[0]))
-            else -> AlertDialog.Builder(this)
+            else -> FocusDialog(this)
                 .setTitle(R.string.profile)
                 .setItems(signedIn.map { it.title }.toTypedArray()) { _, which ->
                     startActivity(ProfileActivity.intent(this, signedIn[which]))

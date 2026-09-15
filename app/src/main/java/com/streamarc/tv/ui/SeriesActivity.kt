@@ -90,7 +90,7 @@ class SeriesActivity : AppCompatActivity() {
     }
 
     private fun askDownload(ep: Episode) {
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(ep.title)
             .setItems(arrayOf(
                 getString(R.string.play), getString(R.string.download), getString(R.string.download_season_fmt, ep.season),
@@ -114,7 +114,7 @@ class SeriesActivity : AppCompatActivity() {
     private fun downloadSeason(season: Int) {
         val eps = episodes.filter { it.season == season }
         if (eps.isEmpty()) return
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(getString(R.string.download_season_fmt, season))
             .setMessage(getString(R.string.download_season_confirm_fmt, eps.size, season))
             .setPositiveButton(R.string.download_here) { _, _ -> TransferDialogs.download(this, picker, eps.mapNotNull { item(it) }) }
@@ -139,7 +139,7 @@ class SeriesActivity : AppCompatActivity() {
             getString(R.string.download_next_n_fmt, 3), getString(R.string.download_next_n_fmt, 5), getString(R.string.download_next_n_fmt, 10),
             getString(R.string.download_all_unwatched_fmt, pending.size), getString(R.string.download_entire_series_fmt, episodes.size)
         )
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(b.txtTitle.text)
             .setItems(options) { _, which ->
                 val chosen = when (which) {
