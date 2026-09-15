@@ -139,6 +139,7 @@ public partial class HomePage : AppPage
 
     private void Open(Service service)
     {
+        if (!IsResumed) return;   // a second press while the next screen is already opening
         if (_prefs.IsSignedIn(service))
             Nav.Push(service == Service.VOD ? new VodHomePage(service) : new BrowsePage(service));
         else

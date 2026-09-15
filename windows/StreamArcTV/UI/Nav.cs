@@ -46,6 +46,13 @@ public static class Nav
     private static readonly List<AppPage> Stack = new();
 
     public static void Attach(Grid host) => _host = host;
+
+    private static long _navigatedAt;
+
+    /// Milliseconds since the visible page last changed. Clicks that arrive right after a change
+    /// belong to the previous page (the second half of a double-click) and are ignored.
+    public static long SinceNavigationMs => Environment.TickCount64 - _navigatedAt;
+    public const long CLICK_GUARD_MS = 450;
     public static int Depth => Stack.Count;
     public static AppPage? Current => Stack.Count > 0 ? Stack[^1] : null;
 
@@ -60,6 +67,7 @@ public static class Nav
             prev.Visibility = Visibility.Collapsed;
         }
         Stack.Add(page);
+        _navigatedAt = Environment.TickCount64;
         _host.Children.Add(page);
         page.Visibility = Visibility.Visible;
         page.IsResumed = true;
@@ -102,6 +110,7 @@ public static class Nav
         var top = Stack[^1];
         Stack.RemoveAt(Stack.Count - 1);
         Destroy(top);
+        _navigatedAt = Environment.TickCount64;
         var now = Current;
         if (now != null)
         {

@@ -3,6 +3,14 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.6 — 2026-09-15
+
+### Fixed
+- Opening Video on Demand could land on the category grid instead of the streaming-style home:
+  the second click of a double-click on the home card hit whatever the new screen had under the
+  pointer (for example its Categories item). Clicks in the first moment after a screen change
+  are now ignored, and the home cards ignore a second press while the next screen is opening.
+
 ## v1.1.5 — 2026-09-15
 
 ### Changed

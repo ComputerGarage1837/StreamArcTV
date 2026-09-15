@@ -27,7 +27,13 @@ public partial class MainWindow : Window
         RestorePlacement();
         Loaded += (_, _) => { if (Nav.Depth == 0) Nav.Push(new HomePage()); };
         PreviewKeyDown += OnPreviewKeyDown;
-        PreviewMouseDown += (_, e) => { if (e.ChangedButton == MouseButton.XButton1) { Nav.Back(); e.Handled = true; } };
+        PreviewMouseDown += (_, e) =>
+        {
+            if (e.ChangedButton == MouseButton.XButton1) { Nav.Back(); e.Handled = true; return; }
+            // The second click of a double-click must not act on the page that just opened.
+            if (Nav.SinceNavigationMs < Nav.CLICK_GUARD_MS) e.Handled = true;
+        };
+        PreviewMouseUp += (_, e) => { if (Nav.SinceNavigationMs < Nav.CLICK_GUARD_MS) e.Handled = true; };
     }
 
     public bool IsFullScreen => WindowStyle == WindowStyle.None && WindowState == WindowState.Maximized;
