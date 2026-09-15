@@ -3,6 +3,20 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.57 — 2026-09-15
+
+### Fixed
+- Every choice list in the app (buffer, subtitles, layout, live format, guide source, default
+  category, categories shown, hold-OK menus, refresh guide, series download options, and the
+  rest) is now built from the app's own rows, so the remote's focus shows the same bright ring
+  as everywhere else instead of leaving you scrolling blind.
+
+- Signing in to Video on Demand opened the old Movies / Series grid instead of the new home
+  (only the first time, until you backed out). It now opens the home straight away.
+
+### Changed
+- The About section no longer shows the update source.
+
 ## v1.0.56 — 2026-09-14
 
 ### Added

@@ -540,7 +540,7 @@ class BrowseActivity : AppCompatActivity() {
         val options = arrayListOf(first, favLabel, third)
         if (watchKey != null) options.add(getString(if (WatchProgress.isWatched(watchKey)) R.string.mark_unwatched else R.string.mark_watched))
         if (kind == ContentKind.LIVE) options.add(getString(R.string.hide_channel))
-        AlertDialog.Builder(this)
+        FocusDialog(this)
             .setTitle(stream.name ?: "")
             .setItems(options.toTypedArray()) { _, which ->
                 when (which) {
@@ -584,7 +584,7 @@ class BrowseActivity : AppCompatActivity() {
                 Toast.makeText(this@BrowseActivity, e.message ?: getString(R.string.load_failed), Toast.LENGTH_LONG).show(); return@launch
             }
             if (episodes.isEmpty()) { Toast.makeText(this@BrowseActivity, R.string.no_episodes, Toast.LENGTH_SHORT).show(); return@launch }
-            AlertDialog.Builder(this@BrowseActivity)
+            FocusDialog(this@BrowseActivity)
                 .setTitle(name)
                 .setMessage(getString(R.string.download_series_confirm_fmt, episodes.size))
                 .setPositiveButton(R.string.download_all) { _, _ ->

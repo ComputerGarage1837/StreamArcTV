@@ -23,7 +23,7 @@ object GuideRefresh {
             activity.getString(R.string.guide_mode_full) + " – " + activity.getString(R.string.guide_mode_full_hint),
             activity.getString(R.string.guide_mode_channel) + " – " + activity.getString(R.string.guide_mode_channel_hint),
         )
-        AlertDialog.Builder(activity)
+        FocusDialog(activity)
             .setTitle(R.string.refresh_guide)
             .setSingleChoiceItems(labels, modes.indexOf(prefs.guideMode).coerceAtLeast(0)) { d, which ->
                 d.dismiss()
@@ -50,7 +50,7 @@ object GuideRefresh {
             }
             val vb = DialogProgressBinding.inflate(LayoutInflater.from(activity))
             vb.txtProgress.text = activity.getString(R.string.guide_downloading)
-            val dialog = AlertDialog.Builder(activity).setTitle(R.string.refresh_guide).setView(vb.root).setCancelable(false).create()
+            val dialog = FocusDialog(activity).setTitle(R.string.refresh_guide).setView(vb.root).setCancelable(false).create()
             dialog.show()
             val remembered = prefs.guideSize(Service.LIVE)
             activity.lifecycleScope.launch {

@@ -352,7 +352,7 @@ class VodHomeActivity : AppCompatActivity() {
     private fun showContinueMenu(key: String, e: WatchProgress.Entry) {
         val opts = arrayListOf(getString(R.string.play), getString(R.string.mark_watched), getString(R.string.remove_from_continue))
         if (e.kind == WatchProgress.KIND_EPISODE && e.seriesId != null) opts.add(getString(R.string.open_series))
-        AlertDialog.Builder(this).setTitle(e.title ?: "")
+        FocusDialog(this).setTitle(e.title ?: "")
             .setItems(opts.toTypedArray()) { _, which ->
                 when (which) {
                     0 -> resume(key, e)
@@ -374,7 +374,7 @@ class VodHomeActivity : AppCompatActivity() {
             getString(R.string.download),
         )
         if (key != null) opts.add(getString(if (WatchProgress.isWatched(key)) R.string.mark_unwatched else R.string.mark_watched))
-        AlertDialog.Builder(this).setTitle(s.name ?: "")
+        FocusDialog(this).setTitle(s.name ?: "")
             .setItems(opts.toTypedArray()) { _, which ->
                 when (which) {
                     0 -> playMovie(s)
@@ -393,7 +393,7 @@ class VodHomeActivity : AppCompatActivity() {
     private fun showSeriesMenu(id: String, title: String, image: String?, plot: String? = null) {
         val fav = prefs.isFavorite(service, ContentKind.SERIES, id)
         val opts = arrayOf(getString(R.string.open), getString(if (fav) R.string.remove_from_favorites else R.string.add_to_favorites))
-        AlertDialog.Builder(this).setTitle(title)
+        FocusDialog(this).setTitle(title)
             .setItems(opts) { _, which ->
                 when (which) {
                     0 -> openSeries(id, title, image, plot)
