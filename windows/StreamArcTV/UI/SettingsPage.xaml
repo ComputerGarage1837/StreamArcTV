@@ -104,13 +104,7 @@
 
                 <!-- About -->
                 <TextBlock Text="ABOUT" Style="{StaticResource SectionHeader}" />
-                <Button x:Name="RowGithub" Style="{StaticResource SettingsRow}" HorizontalContentAlignment="Left">
-                    <StackPanel>
-                        <TextBlock Text="View releases &amp; changelog on GitHub" Foreground="{StaticResource TextBrush}" />
-                        <TextBlock x:Name="TxtRepo" Foreground="{StaticResource AccentBrush}" FontSize="13" Margin="0,4,0,0" />
-                    </StackPanel>
-                </Button>
-                <TextBlock x:Name="TxtVersion" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="16,10,16,0" />
+                <TextBlock x:Name="TxtVersion" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="16,4,16,0" />
             </StackPanel>
         </Grid>
     </ScrollViewer>

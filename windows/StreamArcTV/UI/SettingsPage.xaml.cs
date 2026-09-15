@@ -61,12 +61,7 @@ public partial class SettingsPage : AppPage
         BtnLogoutLive.Click += (_, _) => Logout(Service.LIVE);
         BtnLogoutVod.Click += (_, _) => Logout(Service.VOD);
 
-        TxtVersion.Text = $"v{BuildInfo.VersionName}";
-        TxtRepo.Text = $"github.com/{BuildInfo.GitHubRepo}";
-        RowGithub.Click += (_, _) =>
-        {
-            try { Process.Start(new ProcessStartInfo($"https://github.com/{BuildInfo.GitHubRepo}/releases") { UseShellExecute = true }); } catch { }
-        };
+        TxtVersion.Text = $"Stream Arc TV v{BuildInfo.VersionName}";
     }
 
     public override IInputElement InitialFocus => SwitchAutoUpdate;

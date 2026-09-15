@@ -184,7 +184,7 @@ public static class Installer
         progress.Close();
         if (failure != null)
         {
-            Dialogs.Alert("Update failed", $"The update could not be installed: {failure}\n\nApp folder: {installDir}\n\nYou can download the zip from the releases page and extract it over that folder by hand (close the app first).");
+            Dialogs.Alert("Update failed", $"The update could not be installed: {failure}\n\nApp folder: {installDir}\n\nPlease try again later.");
             return;
         }
         try { Directory.Delete(staged, true); } catch { }

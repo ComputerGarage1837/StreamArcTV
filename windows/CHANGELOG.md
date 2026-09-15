@@ -3,6 +3,13 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.5 — 2026-09-15
+
+### Changed
+- The source repository is no longer shown anywhere in the app: the About row linking to it is
+  gone (the version stays), the update-failure message no longer points there, and the installer
+  no longer puts its links in Apps & features.
+
 ## v1.1.4 — 2026-09-14
 
 ### Added

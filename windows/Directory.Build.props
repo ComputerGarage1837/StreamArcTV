@@ -6,7 +6,7 @@
     Xtream Codes services as the Android app; override with -p:LiveUrl=... if needed.
   -->
   <PropertyGroup>
-    <Version>1.1.4</Version>
+    <Version>1.1.5</Version>
     <GitHubRepo Condition="'$(GitHubRepo)' == ''">ComputerGarage1837/StreamArcTV</GitHubRepo>
     <LiveUrl Condition="'$(LiveUrl)' == ''">https://mediahere.ca/</LiveUrl>
     <VodUrl Condition="'$(VodUrl)' == ''">https://onlypuds.fans:2083/</VodUrl>
