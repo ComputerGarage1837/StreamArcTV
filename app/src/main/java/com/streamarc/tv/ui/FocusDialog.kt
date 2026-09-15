@@ -14,7 +14,7 @@ import com.streamarc.tv.databinding.ItemChoiceBinding
  * app's own focusable rows, so a remote's focus is always visible (the stock dialog list
  * draws no usable highlight on TV).
  */
-class FocusDialog(context: Context) : FocusDialog(context) {
+class FocusDialog(context: Context) : AlertDialog.Builder(context) {
 
     private var items: Array<out CharSequence>? = null
     private var mode = 0                      // 1 items, 2 single, 3 multi
