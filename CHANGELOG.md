@@ -11,6 +11,9 @@ version is shown to users inside the app when an update is available.
   rest) is now built from the app's own rows, so the remote's focus shows the same bright ring
   as everywhere else instead of leaving you scrolling blind.
 
+- Signing in to Video on Demand opened the old Movies / Series grid instead of the new home
+  (only the first time, until you backed out). It now opens the home straight away.
+
 ### Changed
 - The About section no longer shows the update source.
 

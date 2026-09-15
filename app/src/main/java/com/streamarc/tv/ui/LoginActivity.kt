@@ -56,7 +56,9 @@ class LoginActivity : AppCompatActivity() {
             try {
                 val info = XtreamApi.login(service, user, pass)
                 Prefs(this@LoginActivity).saveAccount(service, info.toAccount(user, pass))
-                startActivity(BrowseActivity.intent(this@LoginActivity, service))
+                // Video on Demand lands on its home; Live TV goes straight to the guide.
+                startActivity(if (service == Service.VOD) VodHomeActivity.intent(this@LoginActivity, service)
+                    else BrowseActivity.intent(this@LoginActivity, service))
                 finish()
             } catch (e: Exception) {
                 showError(e.message ?: getString(R.string.sign_in_failed))
