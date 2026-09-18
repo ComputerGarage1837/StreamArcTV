@@ -104,6 +104,8 @@ class SettingsActivity : AppCompatActivity() {
 
         b.rowLiveFormat.setOnClickListener { pickLiveFormat() }
         renderLiveFormat()
+        b.rowTimeZone.setOnClickListener { pickTimeZone() }
+        renderTimeZone()
         b.rowBuffer.setOnClickListener { pickBuffer() }
         renderBuffer()
         b.switchAutoPlayNext.isChecked = prefs.autoPlayNext
@@ -188,6 +190,29 @@ class SettingsActivity : AppCompatActivity() {
                 renderSubtitles()
                 d.dismiss()
             }
+            .show()
+    }
+
+    private fun renderTimeZone() {
+        b.txtTimeZoneValue.text = com.streamarc.tv.data.Format.describeZone(prefs.timeZoneId).substringBefore(" ·")
+    }
+
+    private fun pickTimeZone() {
+        val f = com.streamarc.tv.data.Format
+        val ids = listOf(f.DEVICE_ZONE) + f.zoneChoices.map { it.first }
+        val labels = ids.map { id ->
+            if (id == f.DEVICE_ZONE) getString(R.string.device_time_zone_fmt, f.describeZone(id).substringAfter("· "))
+            else f.describeZone(id)
+        }.toTypedArray()
+        FocusDialog(this)
+            .setTitle(R.string.time_zone)
+            .setSingleChoiceItems(labels, ids.indexOf(prefs.timeZoneId).coerceAtLeast(0)) { d, which ->
+                prefs.timeZoneId = ids[which]
+                renderTimeZone()
+                d.dismiss()
+                Toast.makeText(this, getString(R.string.time_zone_set_fmt, f.timeMs(System.currentTimeMillis())), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 

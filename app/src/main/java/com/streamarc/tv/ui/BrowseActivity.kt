@@ -159,8 +159,9 @@ class BrowseActivity : AppCompatActivity() {
         super.onResume()
         // If the user signed out from the profile screen, leave.
         if (!prefs.isSignedIn(service)) finish()
-        // Watched marks may have changed in the player.
+        // Watched marks may have changed in the player; the time zone may have changed in Settings.
         if (streamAdapter.grid) streamAdapter.notifyDataSetChanged()
+        if (isLive) b.epgGrid.invalidate()
     }
 
     override fun onStart() {

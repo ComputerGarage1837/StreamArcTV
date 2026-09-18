@@ -3,6 +3,19 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.58 — 2026-09-18
+
+### Added
+- The app has its own time zone setting (Settings → Playback → Time zone), set to Eastern
+  (Toronto / New York) by default, with the common North American zones and others to pick
+  from, or "Follow the device". Every clock time follows it straight away: the TV guide grid
+  and header, programme details, the home-screen clock, recording times and the recordings
+  list.
+
+### Fixed
+- Times could stay on the old zone after the box's clock or zone was changed, because the app
+  kept formatters created at start-up. Every time is now formatted fresh in the chosen zone.
+
 ## v1.0.57 — 2026-09-15
 
 ### Fixed

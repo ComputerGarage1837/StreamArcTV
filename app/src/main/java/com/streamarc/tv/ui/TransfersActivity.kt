@@ -126,10 +126,9 @@ class TransfersActivity : AppCompatActivity() {
         val running = all.filter { it.state == TransferState.RUNNING }
         val scheduled = all.filter { it.state == TransferState.SCHEDULED }.sortedBy { it.startAt }
         if (running.isEmpty() && scheduled.isEmpty()) { b.txtNotice.visibility = View.GONE; return }
-        val day = java.text.SimpleDateFormat("EEE MMM d", java.util.Locale.getDefault())
-        val today = day.format(java.util.Date())
+        val today = Format.dayMs(System.currentTimeMillis())
         fun whenText(ms: Long): String {
-            val d = day.format(java.util.Date(ms))
+            val d = Format.dayMs(ms)
             return if (d == today) Format.time(ms / 1000) else "$d ${Format.time(ms / 1000)}"
         }
         val lines = ArrayList<String>()

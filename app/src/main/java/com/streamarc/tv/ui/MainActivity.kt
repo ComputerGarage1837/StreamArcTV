@@ -176,6 +176,9 @@ class MainActivity : AppCompatActivity() {
             prefs.installPermissionAsked = true
         }
         if (prefs.layoutMode != null && prefs.layoutMode != appliedLayout) inflateHome()
+        // The header clock follows the app's own time zone setting.
+        findViewById<android.widget.TextClock>(R.id.txtClock)?.timeZone =
+            if (com.streamarc.tv.data.Format.zoneId() == com.streamarc.tv.data.Format.DEVICE_ZONE) null else com.streamarc.tv.data.Format.zoneId()
         refreshAll()
         if (currentFocus == null) findViewById<View>(R.id.btnLive).requestFocus()
     }

@@ -85,7 +85,6 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private val subPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF94A3B8.toInt(); textSize = 11 * d }
     private val subFocusPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF475569.toInt(); textSize = 11 * d }
     private val markerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFA78BFA.toInt() }
-    private val dateFmt = java.text.SimpleDateFormat("EEE MMM d", java.util.Locale.getDefault())
     private val channelPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textSize = 13 * d }
     private val timePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFCBD5E1.toInt(); textSize = 12 * d }
     private val placeholder: Drawable? = context.getDrawable(com.streamarc.tv.R.drawable.ic_placeholder)
@@ -292,7 +291,7 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
         // Time header with the date on the left and a marker at "now"
         c.drawRect(0f, 0f, width.toFloat(), headerH, headerPaint)
-        c.drawText(dateFmt.format(java.util.Date(now * 1000)), 12 * d, headerH - 10 * d, timePaint)
+        c.drawText(Format.dayMs(now * 1000), 12 * d, headerH - 10 * d, timePaint)
         c.save()
         c.clipRect(channelColW, 0f, width.toFloat(), headerH)
         var t = windowStart

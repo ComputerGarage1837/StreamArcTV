@@ -137,6 +137,9 @@
     <string name="backup_saved">Backup saved.</string>
     <string name="backup_failed_fmt">Backup failed: %1$s</string>
     <string name="backup_imported_fmt">Restored %1$s. The app will return to the home screen.</string>
+    <string name="time_zone">Time zone</string>
+    <string name="device_time_zone_fmt">Follow the device (%1$s)</string>
+    <string name="time_zone_set_fmt">Time zone set. It is now %1$s.</string>
     <string name="subtitles">Subtitles</string>
     <string name="subtitles_on">On when available</string>
     <string name="subtitles_off">Off</string>
