@@ -17,7 +17,15 @@ import java.util.concurrent.TimeUnit
  */
 object XtreamApi {
 
-    class ApiException(message: String) : Exception(message)
+    open class ApiException(message: String) : Exception(message)
+    /** The request never got a proper answer (DNS, connect, timeout, TLS…); the cause says which. */
+    class NetworkException(message: String, cause: Throwable) : ApiException(message) { init { initCause(cause) } }
+    /** The server answered with an HTTP error status. */
+    class HttpException(val code: Int) : ApiException("Server error (HTTP $code)")
+    /** The server answered, but not with the JSON the API promises (a block page, say). */
+    class BadResponseException : ApiException("Unexpected response from server")
+    /** Signed in fine as far as the network goes, but the account itself is the problem. */
+    class AccountException(message: String) : ApiException(message)
 
     const val USER_AGENT = "StreamArcTV"
 
@@ -38,11 +46,29 @@ object XtreamApi {
             val resp = try {
                 gson.fromJson(body, LoginResponse::class.java)
             } catch (e: JsonSyntaxException) {
-                throw ApiException("Unexpected response from server")
+                throw BadResponseException()
             }
-            val info = resp?.userInfo ?: throw ApiException("Unexpected response from server")
+            val info = resp?.userInfo ?: throw BadResponseException()
+            com.streamarc.tv.util.AppLog.i("Api", "login ${service.name}: auth=${info.auth} status=${info.status} exp=${info.expDate} " +
+                "connections=${info.activeCons}/${info.maxConnections} trial=${info.isTrial} created=${info.createdAt} message=${info.message} " +
+                "server=${resp.serverInfo?.url}:${resp.serverInfo?.port} (${resp.serverInfo?.serverProtocol})")
+            val status = info.status?.trim()?.lowercase().orEmpty()
+            val exp = info.expDateEpochSeconds
             if (!info.isAuthenticated) {
-                throw ApiException(info.message?.takeIf { it.isNotBlank() } ?: "Invalid username or password")
+                throw AccountException(when {
+                    status.contains("expire") || (exp != null && exp * 1000 < System.currentTimeMillis()) ->
+                        "This account has expired" + (exp?.let { " (on ${Format.date(it)})" } ?: "") + ". Contact your provider to renew it."
+                    status.contains("ban") || status.contains("disab") || status.contains("block") ->
+                        "This account has been disabled by the provider. Contact them to sort it out."
+                    !info.message.isNullOrBlank() -> "The provider says: ${info.message}"
+                    else -> "Wrong username or password. Check both carefully (they are case-sensitive)."
+                })
+            }
+            if (status.contains("expire") || (exp != null && exp * 1000 < System.currentTimeMillis())) {
+                throw AccountException("This account expired" + (exp?.let { " on ${Format.date(it)}" } ?: "") + ". Contact your provider to renew it.")
+            }
+            if (status.contains("ban") || status.contains("disab") || status.contains("block")) {
+                throw AccountException("This account has been disabled by the provider. Contact them to sort it out.")
             }
             info
         }
@@ -231,14 +257,15 @@ object XtreamApi {
     private inline fun <reified T> parseList(body: String): List<T> {
         val trimmed = body.trim()
         if (!trimmed.startsWith("[")) {
-            // Some panels answer with an object (e.g. an error) instead of a list.
+            // A web page means a block / maintenance page; an object is a panel's own error message.
+            if (trimmed.startsWith("<")) throw BadResponseException()
             return emptyList()
         }
         val type = TypeToken.getParameterized(List::class.java, T::class.java).type
         return try {
             gson.fromJson<List<T>>(trimmed, type) ?: emptyList()
         } catch (e: JsonSyntaxException) {
-            throw ApiException("Unexpected response from server")
+            throw BadResponseException()
         }
     }
 
@@ -265,20 +292,32 @@ object XtreamApi {
             .header("User-Agent", USER_AGENT)
             .header("Accept", "application/json, */*")
             .build()
+        val safe = com.streamarc.tv.util.AppLog.safeUrl(url.toString())
+        val started = System.currentTimeMillis()
         try {
             client.newCall(req).execute().use { resp ->
                 val text = resp.body?.string() ?: ""
+                val ct = resp.header("Content-Type").orEmpty()
+                val ms = System.currentTimeMillis() - started
                 if (!resp.isSuccessful) {
-                    if (resp.code == 401 || resp.code == 403) {
-                        throw ApiException("Invalid username or password")
-                    }
-                    throw ApiException("Server error (HTTP ${resp.code})")
+                    com.streamarc.tv.util.AppLog.e("Api", "GET $safe -> HTTP ${resp.code} ($ct, ${text.length} chars, ${ms}ms) body: ${text.take(300).replace('\n', ' ')}")
+                    throw HttpException(resp.code)
                 }
-                if (text.isBlank()) throw ApiException("Empty response from server")
+                if (text.isBlank()) {
+                    com.streamarc.tv.util.AppLog.e("Api", "GET $safe -> HTTP ${resp.code} but an empty body (${ms}ms)")
+                    throw BadResponseException()
+                }
+                if (ct.contains("text/html", ignoreCase = true) && text.trimStart().startsWith("<")) {
+                    com.streamarc.tv.util.AppLog.e("Api", "GET $safe -> HTTP ${resp.code} returned a web page instead of data ($ct, ${ms}ms): ${text.take(300).replace('\n', ' ')}")
+                    throw BadResponseException()
+                }
+                com.streamarc.tv.util.AppLog.i("Api", "GET $safe -> HTTP ${resp.code} ($ct, ${text.length} chars, ${ms}ms)")
                 return text
             }
         } catch (e: IOException) {
-            throw ApiException("Can't reach server: ${e.message ?: "network error"}")
+            com.streamarc.tv.util.AppLog.e("Api", "GET $safe failed after ${System.currentTimeMillis() - started}ms: ${e.javaClass.simpleName}: ${e.message}" +
+                (e.cause?.let { " <- ${it.javaClass.simpleName}: ${it.message}" } ?: ""))
+            throw NetworkException("Can't reach server: ${e.message ?: "network error"}", e)
         }
     }
 }

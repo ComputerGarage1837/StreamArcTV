@@ -394,7 +394,7 @@ class BrowseActivity : AppCompatActivity() {
                     selectCategory(all[1])
                 }
             } catch (e: Exception) {
-                showError(e.message ?: getString(R.string.load_failed))
+                showError(com.streamarc.tv.data.Diagnose.explain(this@BrowseActivity, e))
             }
         }
     }
@@ -478,7 +478,7 @@ class BrowseActivity : AppCompatActivity() {
                 applyFilter()
                 setLoading(false)
             } catch (e: Exception) {
-                showError(e.message ?: getString(R.string.load_failed))
+                showError(com.streamarc.tv.data.Diagnose.explain(this@BrowseActivity, e))
             }
         }
     }
