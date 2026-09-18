@@ -94,12 +94,12 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     }
 
     /**
-     * As the clock moves on, drop the half-hour slots that are fully in the past so the grid
-     * always starts one slot before the current one. Keeps whatever the user has scrolled to.
+     * As the clock moves on, drop half-hour slots that are over so the grid always starts at
+     * the slot in progress. Keeps whatever the user has scrolled to.
      */
     private fun rollWindow() {
         val now = System.currentTimeMillis() / 1000
-        val wanted = (now / 1800) * 1800 - 1800
+        val wanted = (now / 1800) * 1800
         if (wanted <= windowStart) return
         val shiftPx = (wanted - windowStart) / 60f * pxPerMin
         windowStart = wanted
@@ -111,7 +111,7 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
     init {
         val now = System.currentTimeMillis() / 1000
-        windowStart = (now / 1800) * 1800 - 1800          // half-hour boundary, one slot back
+        windowStart = (now / 1800) * 1800                 // the half-hour slot in progress
         windowEnd = windowStart + 24 * 3600
         isFocusable = true
         isClickable = true
