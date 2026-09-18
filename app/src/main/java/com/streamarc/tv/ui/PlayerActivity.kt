@@ -630,6 +630,8 @@ class PlayerActivity : AppCompatActivity() {
         }
         b.bufferBox.visibility = View.GONE
         b.txtError.text = describeError(error)
+        AppLog.e(TAG, "giving up: ${b.txtError.text} | bytes=$bytesLoaded loads=$loadsStarted video=$videoInfo decoder=$decoderName firstFrame=$firstFrame " +
+            "network=${com.streamarc.tv.data.Diagnose.describeNetwork(this)} | ${com.streamarc.tv.data.Diagnose.chain(error)}")
         b.txtError.visibility = View.VISIBLE
         b.btnRetry.visibility = View.VISIBLE
         b.btnRetry.requestFocus()

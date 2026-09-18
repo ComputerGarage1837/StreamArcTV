@@ -41,12 +41,19 @@ object Diagnose {
      * so "no internet" and "the provider is down" are told apart. Runs a short probe off the UI thread.
      */
     suspend fun explain(context: Context, e: Throwable): String {
+        val verdict = explainInner(context, e)
+        com.streamarc.tv.util.AppLog.w("Diagnose", "verdict: $verdict | error: ${chain(e)} | network: ${describeNetwork(context)}")
+        return verdict
+    }
+
+    private suspend fun explainInner(context: Context, e: Throwable): String {
         val root = rootCause(e)
         val networkish = e is XtreamApi.NetworkException || root is UnknownHostException || root is SocketTimeoutException ||
             root is ConnectException || root is SSLException
         if (!networkish) return quick(context, e)
         if (!hasNetwork(context)) return "This device is not connected to any network. Check the Wi-Fi or the Ethernet cable."
         val internet = withContext(Dispatchers.IO) { internetReachable() }
+        com.streamarc.tv.util.AppLog.i("Diagnose", "internet probe: ${if (internet) "reachable" else "NOT reachable"}")
         return if (!internet) {
             "Connected to the network, but there is no internet access. Restart the router or check with your internet provider."
         } else when (root) {
@@ -85,6 +92,31 @@ object Diagnose {
             } catch (_: Exception) {}
         }
         return false
+    }
+
+    /** "NetworkException: … <- UnknownHostException: …" for the log. */
+    fun chain(e: Throwable): String {
+        val parts = ArrayList<String>()
+        var t: Throwable? = e
+        while (t != null && parts.size < 6) { parts.add("${t.javaClass.simpleName}: ${t.message}"); t = if (t.cause === t) null else t.cause }
+        return parts.joinToString(" <- ")
+    }
+
+    /** Transports and flags of the active network, for the log. */
+    fun describeNetwork(context: Context): String {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return "unknown"
+        val n = cm.activeNetwork ?: return "no active network"
+        val c = cm.getNetworkCapabilities(n) ?: return "no capabilities"
+        val t = ArrayList<String>()
+        if (c.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) t.add("wifi")
+        if (c.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) t.add("ethernet")
+        if (c.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) t.add("cellular")
+        if (c.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) t.add("vpn")
+        val flags = ArrayList<String>()
+        if (c.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) flags.add("internet")
+        if (c.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) flags.add("validated")
+        if (android.os.Build.VERSION.SDK_INT >= 23 && c.hasCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL)) flags.add("captive-portal")
+        return "${t.joinToString("+").ifEmpty { "other" }} [${flags.joinToString(",")}]"
     }
 
     private fun rootCause(e: Throwable): Throwable {

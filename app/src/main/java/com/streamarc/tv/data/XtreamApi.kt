@@ -49,6 +49,9 @@ object XtreamApi {
                 throw BadResponseException()
             }
             val info = resp?.userInfo ?: throw BadResponseException()
+            com.streamarc.tv.util.AppLog.i("Api", "login ${service.name}: auth=${info.auth} status=${info.status} exp=${info.expDate} " +
+                "connections=${info.activeCons}/${info.maxConnections} trial=${info.isTrial} created=${info.createdAt} message=${info.message} " +
+                "server=${resp.serverInfo?.url}:${resp.serverInfo?.port} (${resp.serverInfo?.serverProtocol})")
             val status = info.status?.trim()?.lowercase().orEmpty()
             val exp = info.expDateEpochSeconds
             if (!info.isAuthenticated) {
@@ -289,16 +292,31 @@ object XtreamApi {
             .header("User-Agent", USER_AGENT)
             .header("Accept", "application/json, */*")
             .build()
+        val safe = com.streamarc.tv.util.AppLog.safeUrl(url.toString())
+        val started = System.currentTimeMillis()
         try {
             client.newCall(req).execute().use { resp ->
                 val text = resp.body?.string() ?: ""
-                if (!resp.isSuccessful) throw HttpException(resp.code)
-                if (text.isBlank()) throw BadResponseException()
                 val ct = resp.header("Content-Type").orEmpty()
-                if (ct.contains("text/html", ignoreCase = true) && text.trimStart().startsWith("<")) throw BadResponseException()
+                val ms = System.currentTimeMillis() - started
+                if (!resp.isSuccessful) {
+                    com.streamarc.tv.util.AppLog.e("Api", "GET $safe -> HTTP ${resp.code} ($ct, ${text.length} chars, ${ms}ms) body: ${text.take(300).replace('\n', ' ')}")
+                    throw HttpException(resp.code)
+                }
+                if (text.isBlank()) {
+                    com.streamarc.tv.util.AppLog.e("Api", "GET $safe -> HTTP ${resp.code} but an empty body (${ms}ms)")
+                    throw BadResponseException()
+                }
+                if (ct.contains("text/html", ignoreCase = true) && text.trimStart().startsWith("<")) {
+                    com.streamarc.tv.util.AppLog.e("Api", "GET $safe -> HTTP ${resp.code} returned a web page instead of data ($ct, ${ms}ms): ${text.take(300).replace('\n', ' ')}")
+                    throw BadResponseException()
+                }
+                com.streamarc.tv.util.AppLog.i("Api", "GET $safe -> HTTP ${resp.code} ($ct, ${text.length} chars, ${ms}ms)")
                 return text
             }
         } catch (e: IOException) {
+            com.streamarc.tv.util.AppLog.e("Api", "GET $safe failed after ${System.currentTimeMillis() - started}ms: ${e.javaClass.simpleName}: ${e.message}" +
+                (e.cause?.let { " <- ${it.javaClass.simpleName}: ${it.message}" } ?: ""))
             throw NetworkException("Can't reach server: ${e.message ?: "network error"}", e)
         }
     }

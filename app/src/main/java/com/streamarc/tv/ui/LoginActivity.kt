@@ -61,6 +61,7 @@ class LoginActivity : AppCompatActivity() {
                     else BrowseActivity.intent(this@LoginActivity, service))
                 finish()
             } catch (e: Exception) {
+                com.streamarc.tv.util.AppLog.e("Login", "sign-in to ${service.name} failed for user '${user.take(3)}…'", e)
                 showError(com.streamarc.tv.data.Diagnose.explain(this@LoginActivity, e))
                 setBusy(false)
             }

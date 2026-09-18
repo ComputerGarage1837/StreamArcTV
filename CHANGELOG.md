@@ -14,6 +14,10 @@ version is shown to users inside the app when an update is available.
   disabled; too many connections. The home screen shows the reason under the Live TV / Video on
   Demand button whenever the account check fails, and the sign-in screen, guide, catalogue and
   settings all use the same wording.
+- The exportable log now records every request to the service with its outcome and timing,
+  the full sign-in response (status, expiry, connection counts, server), the network type and
+  flags, the internet probe result, the plain-English verdict, and for a failed stream the
+  bytes received, decoder and error chain.
 
 ## v1.0.60 — 2026-09-18
 
