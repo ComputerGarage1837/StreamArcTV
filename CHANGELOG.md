@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.60 — 2026-09-18
+
+### Fixed
+- The round Update, Guide and Settings buttons on the home screen now show a thick white ring
+  with a bright fill when the remote is on them; the Guide button's own blue outline had been
+  hiding the old ring.
+
 ## v1.0.59 — 2026-09-18
 
 ### Changed
