@@ -3,6 +3,12 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.59 — 2026-09-18
+
+### Changed
+- The TV guide grid now starts at the half-hour slot in progress and drops each slot the moment
+  it ends, instead of keeping the previous, finished slot on the left.
+
 ## v1.0.58 — 2026-09-18
 
 ### Added
