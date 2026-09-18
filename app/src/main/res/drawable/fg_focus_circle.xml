@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Round header buttons: the icon sits inside a padding so this ring is always outside it -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
-        <shape android:shape="oval"><solid android:color="#1FFFFFFF" /><stroke android:width="2dp" android:color="#F8FAFC" /></shape>
+        <shape android:shape="oval"><solid android:color="#66FFFFFF" /><stroke android:width="3dp" android:color="#FFFFFF" /></shape>
     </item>
     <item android:state_pressed="true">
-        <shape android:shape="oval"><solid android:color="#1FFFFFFF" /><stroke android:width="2dp" android:color="#F8FAFC" /></shape>
+        <shape android:shape="oval"><solid android:color="#66FFFFFF" /><stroke android:width="3dp" android:color="#FFFFFF" /></shape>
     </item>
     <item><color android:color="#00000000" /></item>
 </selector>
