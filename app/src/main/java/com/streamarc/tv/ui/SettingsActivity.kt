@@ -355,7 +355,7 @@ class SettingsActivity : AppCompatActivity() {
                 renderLiveCategories()
                 then(cats)
             } catch (e: Exception) {
-                Toast.makeText(this@SettingsActivity, e.message ?: getString(R.string.load_failed), Toast.LENGTH_LONG).show()
+                Toast.makeText(this@SettingsActivity, com.streamarc.tv.data.Diagnose.explain(this@SettingsActivity, e), Toast.LENGTH_LONG).show()
             }
         }
     }

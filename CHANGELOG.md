@@ -3,6 +3,18 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.61 — 2026-09-18
+
+### Added
+- Plain-English failure messages everywhere the app talks to a service. Instead of a code it now
+  tells you what is actually wrong: no network on the device; network but no internet; internet
+  fine but the service's server can't be found or isn't answering (with the VPN / DNS hint for
+  blocked providers); a failed secure connection (check date and time); a block or maintenance
+  page instead of data; wrong username or password; account expired (with the date); account
+  disabled; too many connections. The home screen shows the reason under the Live TV / Video on
+  Demand button whenever the account check fails, and the sign-in screen, guide, catalogue and
+  settings all use the same wording.
+
 ## v1.0.60 — 2026-09-18
 
 ### Fixed

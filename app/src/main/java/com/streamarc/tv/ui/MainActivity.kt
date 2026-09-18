@@ -231,8 +231,11 @@ class MainActivity : AppCompatActivity() {
                 val updated = info.toAccount(account.username, account.password)
                 prefs.saveAccount(service, updated)
                 render(updated, view)
-            } catch (_: Exception) {
-                // Offline or server hiccup: keep showing the cached values.
+            } catch (e: Exception) {
+                // Keep the cached expiry, but say plainly why the service can't be reached right now.
+                val why = com.streamarc.tv.data.Diagnose.explain(this@MainActivity, e)
+                view.text = why
+                view.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.danger))
             }
         }
     }

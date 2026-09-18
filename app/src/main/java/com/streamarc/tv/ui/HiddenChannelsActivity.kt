@@ -92,7 +92,7 @@ class HiddenChannelsActivity : AppCompatActivity() {
                 categories.firstOrNull()?.let { select(it) } ?: run { b.progress.visibility = View.GONE }
             } catch (e: Exception) {
                 b.progress.visibility = View.GONE
-                Toast.makeText(this@HiddenChannelsActivity, e.message ?: getString(R.string.load_failed), Toast.LENGTH_LONG).show()
+                Toast.makeText(this@HiddenChannelsActivity, com.streamarc.tv.data.Diagnose.explain(this@HiddenChannelsActivity, e), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -109,7 +109,7 @@ class HiddenChannelsActivity : AppCompatActivity() {
                 cache[id] = list
                 if (selected?.id == id) { channels = list; applyFilter() }
             } catch (e: Exception) {
-                Toast.makeText(this@HiddenChannelsActivity, e.message ?: getString(R.string.load_failed), Toast.LENGTH_LONG).show()
+                Toast.makeText(this@HiddenChannelsActivity, com.streamarc.tv.data.Diagnose.explain(this@HiddenChannelsActivity, e), Toast.LENGTH_LONG).show()
             } finally {
                 b.progress.visibility = View.GONE
             }

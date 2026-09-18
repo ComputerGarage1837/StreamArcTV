@@ -132,7 +132,7 @@ class MultiViewActivity : AppCompatActivity() {
                 channels = all.filter { it.id !in hidden }.sortedWith(compareBy({ !favs.contains(it.id) }, { it.name?.lowercase() ?: "" }))
                 applyPending()
             } catch (e: Exception) {
-                Toast.makeText(this@MultiViewActivity, e.message ?: getString(R.string.load_failed), Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MultiViewActivity, com.streamarc.tv.data.Diagnose.explain(this@MultiViewActivity, e), Toast.LENGTH_LONG).show()
             }
         }
     }

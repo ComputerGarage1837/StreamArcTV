@@ -70,7 +70,7 @@ class SeriesActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 b.progress.visibility = View.GONE
-                b.txtError.text = e.message ?: getString(R.string.load_failed)
+                b.txtError.text = com.streamarc.tv.data.Diagnose.explain(this@SeriesActivity, e)
                 b.txtError.visibility = View.VISIBLE
             }
         }

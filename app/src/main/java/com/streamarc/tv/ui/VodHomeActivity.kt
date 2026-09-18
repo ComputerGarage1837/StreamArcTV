@@ -182,7 +182,7 @@ class VodHomeActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 b.progress.visibility = View.GONE
                 if (movies.isEmpty()) {
-                    b.txtError.text = e.message ?: getString(R.string.load_failed)
+                    b.txtError.text = com.streamarc.tv.data.Diagnose.explain(this@VodHomeActivity, e)
                     b.txtError.visibility = View.VISIBLE
                 }
             }
