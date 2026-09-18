@@ -95,7 +95,7 @@ object TransferDialogs {
     /** Start and end clock times (to the minute) on hour / minute / AM-PM wheels, then folder and schedule. */
     fun record(activity: AppCompatActivity, picker: FolderPicker, channelName: String, url: String) {
         val vb = DialogRecordBinding.inflate(LayoutInflater.from(activity))
-        val now = java.util.Calendar.getInstance()
+        val now = com.streamarc.tv.data.Format.calendar()
         val startCal = (now.clone() as java.util.Calendar).apply { add(java.util.Calendar.MINUTE, 1) }
         val endCal = (startCal.clone() as java.util.Calendar).apply { add(java.util.Calendar.HOUR_OF_DAY, 1) }
 
@@ -107,11 +107,10 @@ object TransferDialogs {
         fun times(): Pair<Long, Long> = resolve(start.hour24(), start.minute(), end.hour24(), end.minute())
         fun summarize() {
             val (st, en) = times()
-            val day = SimpleDateFormat("EEE MMM d", Locale.getDefault())
-            val t = SimpleDateFormat("h:mm a", Locale.getDefault())
-            val sameDay = day.format(Date(st)) == day.format(Date(en))
-            vb.txtSummary.text = if (sameDay) "${day.format(Date(st))}   ${t.format(Date(st))} – ${t.format(Date(en))}"
-            else "${day.format(Date(st))} ${t.format(Date(st))} – ${day.format(Date(en))} ${t.format(Date(en))}"
+            val f = com.streamarc.tv.data.Format
+            val sameDay = f.dayMs(st) == f.dayMs(en)
+            vb.txtSummary.text = if (sameDay) "${f.dayMs(st)}   ${f.timeMs(st)} – ${f.timeMs(en)}"
+            else "${f.dayMs(st)} ${f.timeMs(st)} – ${f.dayMs(en)} ${f.timeMs(en)}"
         }
         start.onChange = { summarize() }
         end.onChange = { summarize() }
@@ -171,13 +170,13 @@ object TransferDialogs {
      */
     private fun resolve(sh: Int, sm: Int, eh: Int, em: Int): Pair<Long, Long> {
         val now = System.currentTimeMillis()
-        val start = java.util.Calendar.getInstance().apply {
+        val start = com.streamarc.tv.data.Format.calendar().apply {
             set(java.util.Calendar.HOUR_OF_DAY, sh); set(java.util.Calendar.MINUTE, sm); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
         }
         var st = start.timeInMillis
         if (st < now - 90_000) st += 24 * 3600 * 1000L
         if (st < now) st = now
-        val end = java.util.Calendar.getInstance().apply {
+        val end = com.streamarc.tv.data.Format.calendar().apply {
             timeInMillis = st
             set(java.util.Calendar.HOUR_OF_DAY, eh); set(java.util.Calendar.MINUTE, em); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
         }
@@ -188,13 +187,13 @@ object TransferDialogs {
 
     private fun schedule(activity: AppCompatActivity, channel: String, url: String, startAt: Long, endAt: Long, folder: String?) {
         ensureNotifications(activity)
-        val stamp = SimpleDateFormat("yyyy-MM-dd HH.mm", Locale.getDefault()).format(Date(startAt))
-        val t = SimpleDateFormat("h:mm a", Locale.getDefault())
+        val f = com.streamarc.tv.data.Format
+        val stamp = f.fmt("yyyy-MM-dd HH.mm").format(Date(startAt))
         val job = TransferJob(
             id = UUID.randomUUID().toString(),
             type = TransferType.RECORDING,
             title = channel,
-            subtitle = "${SimpleDateFormat("EEE MMM d", Locale.getDefault()).format(Date(startAt))} · ${t.format(Date(startAt))} – ${t.format(Date(endAt))}",
+            subtitle = "${f.dayMs(startAt)} · ${f.timeMs(startAt)} – ${f.timeMs(endAt)}",
             url = url,
             fileName = Folders.safeName("$channel $stamp") + ".ts",
             folder = folder,
@@ -205,7 +204,7 @@ object TransferDialogs {
         TransferService.enqueue(activity, job)
         val startsNow = startAt <= System.currentTimeMillis() + 60_000
         val msg = if (startsNow) activity.getString(R.string.recording_started_fmt, channel)
-        else activity.getString(R.string.recording_scheduled_fmt, channel, t.format(Date(startAt)))
+        else activity.getString(R.string.recording_scheduled_fmt, channel, f.timeMs(startAt))
         Toast.makeText(activity, msg, Toast.LENGTH_LONG).show()
         if (!startsNow) checkRecordingReadiness(activity)
     }

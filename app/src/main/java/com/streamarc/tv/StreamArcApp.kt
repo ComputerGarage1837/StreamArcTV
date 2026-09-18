@@ -7,6 +7,7 @@ class StreamArcApp : Application() {
         super.onCreate()
         instance = this
         com.streamarc.tv.util.AppLog.init(this)
+        com.streamarc.tv.data.Format.init(this)
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             try {

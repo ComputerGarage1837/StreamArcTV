@@ -168,6 +168,11 @@ class Prefs(context: Context) {
         get() = sp.getString("multiview_slots", "")!!.split('|').let { l -> List(4) { l.getOrNull(it) ?: "" } }
         set(value) { sp.edit().putString("multiview_slots", value.take(4).joinToString("|")).apply() }
 
+    /** Time zone every clock time is shown in: a zone id, or [Format.DEVICE_ZONE]. Eastern by default. */
+    var timeZoneId: String
+        get() = sp.getString("time_zone", Format.DEFAULT_ZONE) ?: Format.DEFAULT_ZONE
+        set(value) { sp.edit().putString("time_zone", value).apply() }
+
     /** One of [BufferLevel.key]; how much live video the player keeps buffered. */
     var bufferLevel: String
         get() = sp.getString("buffer_level", BufferLevel.MAX.key) ?: BufferLevel.MAX.key
