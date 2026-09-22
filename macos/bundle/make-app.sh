@@ -49,7 +49,7 @@ echo -n "APPL????" > "$APP/Contents/PkgInfo"
 # 3. Icon (.icns from the branding PNG).
 ICONSET="$WORK/AppIcon.iconset"
 mkdir -p "$ICONSET"
-SRC_ICON="$ROOT/macos/StreamArcTV/Assets/app_icon.png"
+SRC_ICON="$ROOT/desktop/Shared/Assets/app_icon.png"
 for s in 16 32 64 128 256 512; do
   sips -z $s $s "$SRC_ICON" --out "$ICONSET/icon_${s}x${s}.png" >/dev/null
   d=$((s*2)); sips -z $d $d "$SRC_ICON" --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
