@@ -75,6 +75,9 @@ if [[ -d "$VLCAPP/Contents/MacOS/share" ]]; then ditto "$VLCAPP/Contents/MacOS/s
 hdiutil detach "$MNT" >/dev/null
 # The plugin cache belongs to the original layout; VLC rebuilds its own.
 rm -f "$FW/plugins/plugins.dat"
+# libvlccore on macOS also looks for plugins in lib/vlc/plugins next to itself; point that there too.
+mkdir -p "$FW/lib/vlc"
+ln -sfn ../../plugins "$FW/lib/vlc/plugins"
 echo "libvlc: $(otool -L "$FW/lib/libvlc.dylib" | head -3 | tr '\n' ' ')"
 
 # 5. Ad-hoc signature (Apple silicon refuses unsigned code; no certificate is needed for this).

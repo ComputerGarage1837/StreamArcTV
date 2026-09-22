@@ -109,7 +109,13 @@ public static class Platform
         var found = _found = LibVlc();
         if (found is { } loc)
         {
+            // .NET's Environment.SetEnvironmentVariable only updates the managed copy on Unix; VLC
+            // reads the variable with getenv(), so it has to be set natively. Without it, libvlccore
+            // on macOS looks for plugins in lib/vlc/plugins next to itself and finds no modules
+            // ("unknown option" for every module option, and libvlc_new fails).
             Environment.SetEnvironmentVariable("VLC_PLUGIN_PATH", loc.Plugins);
+            try { setenv("VLC_PLUGIN_PATH", loc.Plugins, 1); }
+            catch (Exception e) { AppLog.W("Player", "setenv failed: " + e.Message); }
             var core = Path.Combine(loc.Lib, "libvlccore.dylib");
             var lib = Path.Combine(loc.Lib, "libvlc.dylib");
             NativeLibrary.Load(core);
@@ -125,6 +131,9 @@ public static class Platform
             Core.Initialize();
         }
     }
+
+    [DllImport("libSystem.dylib", CharSet = CharSet.Ansi, SetLastError = true)]
+    private static extern int setenv(string name, string value, int overwrite);
 
     // ---- Notifications and URLs -----------------------------------------------------
 
