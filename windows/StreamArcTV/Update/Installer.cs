@@ -37,6 +37,7 @@ public static class Installer
         if (_active) { Dialogs.Toast("An update is already downloading."); return; }
         _active = true;
         var package = IsInstalled && release.Setup != null ? release.Setup : release.Zip;
+        AppLog.I("Update", $"download {package.AssetName} ({Format.Size(package.SizeBytes)}) installed={IsInstalled} from {package.Url}");
         var dir = Path.Combine(AppPaths.Data, "updates");
         Directory.CreateDirectory(dir);
         var file = Path.Combine(dir, package.AssetName);
@@ -76,28 +77,33 @@ public static class Installer
                     }
                 }
                 progress.Report(null, "Verifying download…");
+                AppLog.I("Update", $"downloaded {Format.Size(done)}; verifying");
                 return Verify(file, package);
             });
             progress.Close();
             if (!ok)
             {
+                AppLog.W("Update", $"verify failed for {file} (size {new FileInfo(file).Length}, expected {package.SizeBytes}, sha {package.Sha256 ?? "none"})");
                 try { File.Delete(file); } catch { }
-                Dialogs.Toast("The downloaded update didn't match the release. Please try again.");
+                Dialogs.Alert("Update failed", "The downloaded update didn't match the release. Please try again.");
                 return;
             }
+            AppLog.I("Update", "verified; installing");
             if (file.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) RunSetup(file);
             else Install(file);
         }
         catch (OperationCanceledException)
         {
+            AppLog.I("Update", "download cancelled");
             progress.Close();
             try { File.Delete(file); } catch { }
         }
         catch (Exception e)
         {
+            AppLog.E("Update", "download failed", e);
             progress.Close();
             try { File.Delete(file); } catch { }
-            Dialogs.Toast($"Update download failed ({e.Message}). Please try again.");
+            Dialogs.Alert("Update failed", $"The update could not be downloaded: {e.Message}\n\nPlease try again.");
         }
         finally { _active = false; }
     }

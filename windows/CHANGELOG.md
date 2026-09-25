@@ -3,6 +3,12 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.13 — 2026-09-25
+
+### Changed
+- Every step of an update (check, offer, download, verify, install) is written to the app log,
+  and a failed download or verify now shows a message box instead of a brief toast.
+
 ## v1.1.12 — 2026-09-25
 
 ### Fixed

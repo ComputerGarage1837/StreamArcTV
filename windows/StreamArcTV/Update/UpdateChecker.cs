@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using StreamArcTV.Data;
 using StreamArcTV.UI;
+using StreamArcTV.Util;
 
 namespace StreamArcTV.Update;
 
@@ -44,12 +45,15 @@ public static class UpdateChecker
         var prefs = Prefs.Instance;
         if (manual) Dialogs.Toast("Checking for updates…");
         Release release;
+        AppLog.I("Update", $"check (manual={manual}) from v{BuildInfo.VersionName} ({BuildInfo.VersionCode})");
         try { release = await Task.Run(FetchLatest); }
         catch (Exception e)
         {
+            AppLog.W("Update", "check failed: " + e.Message);
             if (manual) Dialogs.Toast($"Couldn't check for updates: {e.Message}");
             return;
         }
+        AppLog.I("Update", $"feed says v{release.VersionName} ({release.VersionCode}) setup={(release.Setup != null ? release.Setup.AssetName : "none")} zip={release.AssetName}");
         if (release.VersionCode <= BuildInfo.VersionCode)
         {
             if (manual) Dialogs.Toast($"You're on the latest version (v{BuildInfo.VersionName})");
@@ -126,6 +130,7 @@ public static class UpdateChecker
         var message = $"Version {release.VersionName}{size} is available (you have v{BuildInfo.VersionName}).\n\n" +
                       "What's new:\n\n" + PlainTextFromMarkdown(notes);
         var r = Dialogs.Alert($"Update available — v{release.VersionName}", message, "Update now", "Skip this version", "Later");
+        AppLog.I("Update", $"offer v{release.VersionName}: user chose {r}");
         if (r == DialogResultKind.Positive) Installer.Download(release);
         else if (r == DialogResultKind.Negative)
         {
