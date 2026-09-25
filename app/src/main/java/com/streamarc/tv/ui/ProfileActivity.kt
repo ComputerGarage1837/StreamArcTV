@@ -30,6 +30,7 @@ class ProfileActivity : AppCompatActivity() {
 
         b.txtTitle.text = getString(R.string.profile_title_fmt, service.title)
         b.txtServer.text = service.baseUrl
+        if (service == Service.VOD) b.txtServer.visibility = android.view.View.GONE
         b.txtUsername.text = a.username
         b.txtStatus.text = a.status ?: "—"
         b.txtExpiry.text = Format.expiry(a.expDate)

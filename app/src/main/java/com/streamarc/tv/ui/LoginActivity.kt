@@ -3,6 +3,7 @@ package com.streamarc.tv.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import androidx.appcompat.app.AppCompatActivity
@@ -29,6 +30,15 @@ class LoginActivity : AppCompatActivity() {
         service = Service.valueOf(intent.getStringExtra(EXTRA_SERVICE) ?: Service.LIVE.name)
         b.txtTitle.text = getString(R.string.sign_in_to_fmt, service.title)
         b.txtServer.text = if (service.isConfigured) service.baseUrl else getString(R.string.server_not_configured)
+        if (service == Service.VOD) {
+            b.lblServer.visibility = View.GONE
+            b.txtServer.visibility = View.GONE
+        }
+        b.chkShowPassword.setOnCheckedChangeListener { _, shown ->
+            val variation = if (shown) InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_TEXT_VARIATION_PASSWORD
+            b.inputPassword.inputType = InputType.TYPE_CLASS_TEXT or variation
+            b.inputPassword.setSelection(b.inputPassword.text?.length ?: 0)
+        }
         if (!service.isConfigured) {
             showError(getString(R.string.service_not_configured_fmt, service.title))
             b.btnSignIn.isEnabled = false
@@ -78,6 +88,7 @@ class LoginActivity : AppCompatActivity() {
         b.btnSignIn.isEnabled = !busy
         b.inputUsername.isEnabled = !busy
         b.inputPassword.isEnabled = !busy
+        b.chkShowPassword.isEnabled = !busy
         if (busy) b.txtError.visibility = View.GONE
     }
 
