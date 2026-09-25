@@ -50,7 +50,7 @@
             android:layout_height="0dp"
             android:gravity="center_vertical"
             android:orientation="vertical"
-            app:layout_constraintBottom_toTopOf="@id/cards"
+            app:layout_constraintBottom_toTopOf="@id/noticeBox"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/header">
 
@@ -84,6 +84,16 @@
                 android:textColor="#CBD5E1"
                 android:textSize="11sp" />
         </LinearLayout>
+
+        <include
+            android:id="@+id/noticeBox"
+            layout="@layout/view_announcement"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            app:layout_constraintBottom_toTopOf="@id/cards"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
 
         <LinearLayout
             android:id="@+id/cards"

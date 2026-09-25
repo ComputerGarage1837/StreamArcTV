@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "active": false,
+  "level": "info",
+  "title": "",
+  "message": "",
+  "until": "",
+  "link": "",
+  "platforms": ["android", "windows"]
+}

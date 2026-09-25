@@ -89,6 +89,13 @@
                         android:textSize="11sp" />
                 </LinearLayout>
 
+                <include
+                    android:id="@+id/noticeBox"
+                    layout="@layout/view_announcement"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp" />
+
                 <LinearLayout
                     android:id="@+id/cards"
                     android:layout_width="match_parent"

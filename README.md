@@ -16,6 +16,9 @@ This repository holds the application source, the GitHub Actions release pipelin
   release feed, shows the changelog, downloads the APK with a progress dialog, verifies its
   SHA-256, and hands it to Android to install. You can skip any version.
 - Remote/D-pad friendly UI with clear focus states; touch-friendly on phones.
+- **Service notices without an update**: edit `release/announcement.json` on `main` to show a
+  banner above the two big buttons on every device (outage warnings, planned maintenance, …) and
+  set it inactive to take it down. Hidden when empty. Format in [`ANNOUNCEMENT_FORMAT.md`](ANNOUNCEMENT_FORMAT.md).
 
 ## Windows
 
@@ -37,7 +40,7 @@ build and release steps; its releases are tagged `windows-v…` and its update f
 The version, update repository and the two Xtream Codes server addresses live in `gradle.properties`:
 
 ```
-VERSION_NAME=1.0.61
+VERSION_NAME=1.0.62
 GITHUB_REPO=ComputerGarage1837/StreamArcTV
 LIVE_URL=https://mediahere.ca/
 VOD_URL=https://onlypuds.fans:2083/
