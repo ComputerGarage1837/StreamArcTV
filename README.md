@@ -40,7 +40,7 @@ build and release steps; its releases are tagged `windows-v…` and its update f
 The version, update repository and the two Xtream Codes server addresses live in `gradle.properties`:
 
 ```
-VERSION_NAME=1.0.63
+VERSION_NAME=1.0.64
 GITHUB_REPO=ComputerGarage1837/StreamArcTV
 LIVE_URL=https://mediahere.ca/
 VOD_URL=https://onlypuds.fans:2083/

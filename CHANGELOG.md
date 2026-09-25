@@ -3,6 +3,11 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.64 — 2026-09-25
+
+### Changed
+- Sign-in and profile screens tidied.
+
 ## v1.0.63 — 2026-09-25
 
 ### Added
