@@ -65,24 +65,29 @@ public static class Installer
                 if (!resp.IsSuccessStatusCode) throw new InvalidOperationException($"server error (HTTP {(int)resp.StatusCode})");
                 var total = resp.Content.Headers.ContentLength ?? package.SizeBytes;
                 await using var input = await resp.Content.ReadAsStreamAsync(cts.Token);
-                await using var output = File.Create(file);
-                var buf = new byte[256 * 1024];
                 long done = 0;
-                var lastUi = 0L;
-                while (true)
+                // The output stream must be closed before the file is verified: an open writer
+                // keeps the file locked and the verify step fails with "used by another process".
+                await using (var output = File.Create(file))
                 {
-                    var n = await input.ReadAsync(buf, cts.Token);
-                    if (n <= 0) break;
-                    await output.WriteAsync(buf.AsMemory(0, n), cts.Token);
-                    done += n;
-                    var now = Environment.TickCount64;
-                    if (now - lastUi > 200)
+                    var buf = new byte[256 * 1024];
+                    var lastUi = 0L;
+                    while (true)
                     {
-                        lastUi = now;
-                        var d = done;
-                        progress.Report(total > 0 ? d / (double)total : null,
-                            total > 0 ? $"{Format.Size(d)} of {Format.Size(total)}" : Format.Size(d));
+                        var n = await input.ReadAsync(buf, cts.Token);
+                        if (n <= 0) break;
+                        await output.WriteAsync(buf.AsMemory(0, n), cts.Token);
+                        done += n;
+                        var now = Environment.TickCount64;
+                        if (now - lastUi > 200)
+                        {
+                            lastUi = now;
+                            var d = done;
+                            progress.Report(total > 0 ? d / (double)total : null,
+                                total > 0 ? $"{Format.Size(d)} of {Format.Size(total)}" : Format.Size(d));
+                        }
                     }
+                    await output.FlushAsync(cts.Token);
                 }
                 progress.Report(null, "Verifying download…");
                 AppLog.I("Update", $"downloaded {Format.Size(done)}; verifying");

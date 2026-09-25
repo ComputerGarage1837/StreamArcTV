@@ -3,6 +3,14 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.16 — 2026-09-25
+
+### Fixed
+- In-app updates failed with "The process cannot access the file … because it is being used by
+  another process" right after the download: the app verified the downloaded package while its
+  own writer still held the file open. The file is now closed before it is verified. This was the
+  cause of every failed update so far.
+
 ## v1.1.15 — 2026-09-25
 
 ### Changed
