@@ -23,7 +23,11 @@ import com.streamarc.tv.data.Service
 import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.data.toAccount
 import com.streamarc.tv.transfer.TransferType
+import com.streamarc.tv.update.Announcement
 import com.streamarc.tv.update.UpdateChecker
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -38,6 +42,9 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var txtLiveStatus: TextView
     private lateinit var txtVodStatus: TextView
+
+    private var noticeJob: Job? = null
+    private var lastNoticeFetch = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,6 +101,70 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.navDownloads).setOnClickListener { startActivity(TransfersActivity.intent(this, TransferType.DOWNLOAD)) }
         findViewById<View>(R.id.navRecordings).setOnClickListener { startActivity(TransfersActivity.intent(this, TransferType.RECORDING)) }
         findViewById<View>(R.id.navProfile).setOnClickListener { pickProfile() }
+
+        // Service notice: show the last one seen straight away, then refresh from the repository.
+        showNotice(Announcement.cached(this))
+    }
+
+    /** Renders (or hides) the service notice banner above the two big buttons. */
+    private fun showNotice(notice: Announcement.Notice?) {
+        val box = findViewById<View>(R.id.noticeBox) ?: return
+        if (notice == null || !notice.isActive()) {
+            box.visibility = View.GONE
+            box.isFocusable = false
+            box.isClickable = false
+            return
+        }
+        val (stroke, fill) = when (notice.level) {
+            Announcement.Level.OUTAGE -> 0xFFEF4444.toInt() to 0x33EF4444
+            Announcement.Level.WARNING -> 0xFFF59E0B.toInt() to 0x2EF59E0B
+            Announcement.Level.INFO -> 0xFF3B82F6.toInt() to 0x1F3B82F6
+        }
+        (box.background.mutate() as? android.graphics.drawable.GradientDrawable)?.let {
+            it.setColor(fill)
+            it.setStroke((2 * resources.displayMetrics.density).toInt(), stroke)
+        }
+        box.findViewById<TextView>(R.id.txtNoticeIcon).setTextColor(stroke)
+        box.findViewById<TextView>(R.id.txtNoticeTitle).apply {
+            text = notice.title
+            visibility = if (notice.title.isBlank()) View.GONE else View.VISIBLE
+        }
+        box.findViewById<TextView>(R.id.txtNoticeMessage).text = notice.message
+        val link = notice.link
+        box.findViewById<TextView>(R.id.txtNoticeLink).visibility = if (link == null) View.GONE else View.VISIBLE
+        box.isFocusable = link != null
+        box.isClickable = link != null
+        box.setOnClickListener(if (link == null) null else View.OnClickListener {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(link)))
+            } catch (_: Exception) {
+                android.widget.Toast.makeText(this, R.string.notice_no_browser, android.widget.Toast.LENGTH_SHORT).show()
+            }
+        })
+        box.visibility = View.VISIBLE
+    }
+
+    /**
+     * Fetches the notice now (unless fetched in the last minute) and keeps refreshing it every
+     * few minutes while the home screen stays open, so an outage notice appears without any
+     * action on the box, and disappears the same way once it is taken down.
+     */
+    private fun watchNotice() {
+        noticeJob?.cancel()
+        noticeJob = lifecycleScope.launch {
+            while (isActive) {
+                val now = System.currentTimeMillis()
+                if (now - lastNoticeFetch >= 60_000L) {
+                    lastNoticeFetch = now
+                    val notice = Announcement.fetch(this@MainActivity)
+                    if (notice != null) showNotice(notice)
+                } else {
+                    // Even without a fetch, an "until" time may have passed.
+                    showNotice(Announcement.cached(this@MainActivity))
+                }
+                delay(5 * 60_000L)
+            }
+        }
     }
 
     /** "Stream Arc" in white with "TV" in the logo's cyan. */
@@ -180,7 +251,14 @@ class MainActivity : AppCompatActivity() {
         findViewById<android.widget.TextClock>(R.id.txtClock)?.timeZone =
             if (com.streamarc.tv.data.Format.zoneId() == com.streamarc.tv.data.Format.DEVICE_ZONE) null else com.streamarc.tv.data.Format.zoneId()
         refreshAll()
+        watchNotice()
         if (currentFocus == null) findViewById<View>(R.id.btnLive).requestFocus()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        noticeJob?.cancel()
+        noticeJob = null
     }
 
     private fun refreshAll() {

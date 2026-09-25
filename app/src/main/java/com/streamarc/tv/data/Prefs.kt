@@ -104,6 +104,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("auto_check_updates", true)
         set(value) { sp.edit().putBoolean("auto_check_updates", value).apply() }
 
+    /** Last service notice JSON fetched from the repository, shown while offline. */
+    var announcementJson: String?
+        get() = sp.getString("announcement_json", null)
+        set(value) { sp.edit().putString("announcement_json", value).apply() }
+
     // ---- First-run ---------------------------------------------------------
 
     /** True once the "allow installing updates" prompt has been shown (or the permission is held). */

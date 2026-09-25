@@ -3,6 +3,18 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.62 — 2026-09-25
+
+### Added
+- Service notice on the home screen. A banner just above the Live TV and Video on Demand buttons
+  shows whatever is written in `release/announcement.json` in this repository, so a server outage
+  or any other message can be posted, changed and removed at any time without anyone installing
+  an update. The banner is hidden completely when there is no notice. It comes in three colours
+  (info, warning, outage), can carry a title and a link, can take itself down at a set time, and
+  is refreshed every time the home screen is shown and every five minutes while it stays open.
+  The last notice seen is kept so it still shows while offline. See `ANNOUNCEMENT_FORMAT.md`
+  for the file format; the Windows app reads the same file.
+
 ## v1.0.61 — 2026-09-18
 
 ### Added

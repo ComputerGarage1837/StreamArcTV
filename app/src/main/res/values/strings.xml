@@ -304,6 +304,9 @@
     <string name="install_permission_message">Stream Arc TV updates itself from inside the app. Android needs your permission once: on the next screen, turn on \"Allow from this source\" for Stream Arc TV, then press Back.</string>
     <string name="open_setting">Open setting</string>
     <string name="later">Later</string>
+    <string name="notice_open_link">Press for more information</string>
+    <string name="notice_mark">!</string>
+    <string name="notice_no_browser">No web browser on this device</string>
     <string name="allow_installing_updates">Allow installing updates (system setting)</string>
     <string name="layout_phone">Phone</string>
     <string name="layout_tv">TV or tablet</string>
