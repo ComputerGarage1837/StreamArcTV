@@ -3,6 +3,12 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.63 — 2026-09-25
+
+### Added
+- "Show password" tick box on the Live TV and Video on Demand sign-in screens, so the password
+  can be checked before signing in.
+
 ## v1.0.62 — 2026-09-25
 
 ### Added

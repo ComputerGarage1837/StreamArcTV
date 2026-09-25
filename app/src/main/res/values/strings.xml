@@ -21,6 +21,7 @@
     <string name="sign_in_failed">Sign in failed.</string>
     <string name="server">Server</string>
     <string name="server_not_configured">Not configured</string>
+    <string name="show_password">Show password</string>
     <string name="service_not_configured_fmt">%1$s isn\'t configured in this build. Rebuild the app with the server address set.</string>
 
     <string name="all_categories">All</string>
