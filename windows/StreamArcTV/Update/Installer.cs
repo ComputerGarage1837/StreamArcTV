@@ -143,8 +143,7 @@ public static class Installer
             return;
         }
         AppLog.I("Update", $"handed {Path.GetFileName(setupFile)} to the update helper; closing");
-        App.Window?.ForceClose();
-        System.Windows.Application.Current.Shutdown();
+        Quit();
     }
 
     private static string Ps(string s) => s.Replace("'", "''");
@@ -160,6 +159,7 @@ public static class Installer
             if (!int.TryParse(text, out var code) || code == 0) return;
             var why = code switch
             {
+                1 => "the new files could not be copied into the app folder",
                 2 => "it was cancelled",
                 3 => "a fatal error occurred while preparing",
                 5 => "it could not replace a file that was still in use",
@@ -172,11 +172,10 @@ public static class Installer
         catch { }
     }
 
-    /// Unpacks the package into a staging folder, then swaps the files into the app's own folder
-    /// while the app is still running: Windows allows a running program's files to be renamed, so
-    /// each old file is moved aside to "*.old" and the new one put in its place, and the app simply
-    /// restarts. No scripts, no waiting for the process to exit. Leftover "*.old" files are removed
-    /// on the next start. If the folder needs administrator rights, an elevated helper does the swap.
+    /// Unpacks the package into a staging folder, then hands over to a helper that waits for
+    /// this process to exit (ending it if it lingers), copies the new files over the app's folder
+    /// with retries, and starts the app again. Nothing is touched while the app is running, so
+    /// no file can be "in use". If the folder needs administrator rights the helper asks once.
     public static async void Install(string zipFile)
     {
         var exe = Environment.ProcessPath ?? "";
@@ -198,19 +197,18 @@ public static class Installer
                 Directory.CreateDirectory(staged);
                 System.IO.Compression.ZipFile.ExtractToDirectory(zipFile, staged, true);
             });
-            progress.Report(null, "Installing…");
-            if (Writable(installDir))
-            {
-                await Task.Run(() => Swap(staged, installDir));
-            }
-            else
-            {
-                // Program Files and the like: run ourselves elevated to do the swap.
-                var psi = new ProcessStartInfo(exe, $"--apply-update \"{staged}\" \"{installDir}\"") { UseShellExecute = true, Verb = "runas" };
-                using var p = Process.Start(psi) ?? throw new InvalidOperationException("Windows did not start the elevated installer");
-                await p.WaitForExitAsync();
-                if (p.ExitCode != 0) throw new InvalidOperationException($"the elevated installer reported code {p.ExitCode}");
-            }
+            try { File.Delete(ResultFile); } catch { }
+            var pid = Environment.ProcessId;
+            var script =
+                $"try {{ Wait-Process -Id {pid} -Timeout 60 -ErrorAction SilentlyContinue }} catch {{}}; " +
+                $"Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 800; " +
+                $"$ok = $false; $tries = 0; while (-not $ok -and $tries -lt 30) {{ try {{ Copy-Item -Path '{Ps(staged)}\\*' -Destination '{Ps(installDir)}' -Recurse -Force -ErrorAction Stop; $ok = $true }} catch {{ $tries++; Start-Sleep -Seconds 1 }} }}; " +
+                $"if ($ok) {{ Remove-Item -LiteralPath '{Ps(staged)}' -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -LiteralPath '{Ps(zipFile)}' -Force -ErrorAction SilentlyContinue; Set-Content -Path '{Ps(ResultFile)}' -Value 0; Start-Process -FilePath '{Ps(exe)}' -WorkingDirectory '{Ps(installDir)}' }} else {{ Set-Content -Path '{Ps(ResultFile)}' -Value 1 }}";
+            var args = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"{script}\"";
+            var psi = Writable(installDir)
+                ? new ProcessStartInfo("powershell.exe", args) { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = updatesDir }
+                : new ProcessStartInfo("powershell.exe", args) { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden, WorkingDirectory = updatesDir };
+            if (Process.Start(psi) == null) throw new InvalidOperationException("Windows did not start the update helper");
         }
         catch (Exception e)
         {
@@ -220,15 +218,21 @@ public static class Installer
         progress.Close();
         if (failure != null)
         {
-            Dialogs.Alert("Update failed", $"The update could not be installed: {failure}\n\nApp folder: {installDir}\n\nPlease try again later.");
+            Dialogs.Alert("Update failed", $"The update could not be started: {failure}\n\nApp folder: {installDir}\n\nPlease try again later.");
             return;
         }
-        try { Directory.Delete(staged, true); } catch { }
-        try { File.Delete(zipFile); } catch { }
-        AppLog.I("Update", $"installed {Path.GetFileName(zipFile)} into {installDir}; restarting");
-        try { Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, WorkingDirectory = installDir }); } catch { }
-        App.Window?.ForceClose();
-        System.Windows.Application.Current.Shutdown();
+        AppLog.I("Update", $"handed {Path.GetFileName(zipFile)} to the update helper for {installDir}; closing");
+        Quit();
+    }
+
+    /// Closes the window and ends the process for certain, so the helper never waits on a
+    /// lingering background thread.
+    private static void Quit()
+    {
+        try { Prefs.Flush(); } catch { }
+        try { App.Window?.ForceClose(); } catch { }
+        try { System.Windows.Application.Current.Shutdown(); } catch { }
+        new Thread(() => { Thread.Sleep(3000); try { Prefs.Flush(); } catch { } Environment.Exit(0); }) { IsBackground = true }.Start();
     }
 
     /// Moves every staged file into place, renaming the existing (possibly running) file aside first.

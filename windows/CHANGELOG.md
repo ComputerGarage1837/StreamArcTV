@@ -3,6 +3,15 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.10 — 2026-09-25
+
+### Fixed
+- In-app updates of a copy run from the zip (not the installer) failed with "file in use" and
+  left the app open: they tried to swap files while the app was running. They now work like the
+  installed copy: the app closes, a helper waits until the process has ended, copies the new
+  files in with retries, and starts the app again. The app is also ended for certain when an
+  update begins, so nothing in the background can hold it open.
+
 ## v1.1.9 — 2026-09-25
 
 ### Changed
