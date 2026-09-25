@@ -3,6 +3,14 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.14 — 2026-09-25
+
+### Fixed
+- An update could fail before it even started, with a brief "file is in use" message: the
+  download tried to overwrite the package left by an earlier attempt while something still held
+  it open. The download and the unpack folder now use a fresh name whenever the old one is
+  locked, and old packages are cleaned up when they can be.
+
 ## v1.1.13 — 2026-09-25
 
 ### Changed

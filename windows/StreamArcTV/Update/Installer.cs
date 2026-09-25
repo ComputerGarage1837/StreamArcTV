@@ -41,7 +41,15 @@ public static class Installer
         var dir = Path.Combine(AppPaths.Data, "updates");
         Directory.CreateDirectory(dir);
         var file = Path.Combine(dir, package.AssetName);
-        try { if (File.Exists(file)) File.Delete(file); } catch { }
+        // A leftover from an earlier attempt can still be held open (a setup or helper that never
+        // finished); never let that block a new download: use a fresh name instead.
+        try { if (File.Exists(file)) File.Delete(file); }
+        catch (Exception e)
+        {
+            AppLog.W("Update", $"previous package is locked ({e.Message}); using a new file name");
+            file = Path.Combine(dir, Path.GetFileNameWithoutExtension(package.AssetName) + "-" + DateTime.Now.ToString("HHmmss") + Path.GetExtension(package.AssetName));
+        }
+        try { foreach (var old in Directory.EnumerateFiles(dir)) { if (old != file) { try { File.Delete(old); } catch { } } } } catch { }
 
         var cts = new CancellationTokenSource();
         var progress = Dialogs.Progress($"Downloading v{release.VersionName}", "Starting download…", () => cts.Cancel());
@@ -195,7 +203,12 @@ public static class Installer
         {
             await Task.Run(() =>
             {
-                if (Directory.Exists(staged)) Directory.Delete(staged, true);
+                try { if (Directory.Exists(staged)) Directory.Delete(staged, true); }
+                catch (Exception e)
+                {
+                    AppLog.W("Update", $"previous staged folder is locked ({e.Message}); using a new one");
+                    staged = Path.Combine(updatesDir, "staged-" + DateTime.Now.ToString("HHmmss"));
+                }
                 Directory.CreateDirectory(staged);
                 System.IO.Compression.ZipFile.ExtractToDirectory(zipFile, staged, true);
             });
@@ -243,8 +256,9 @@ public static class Installer
         catch { }
         try
         {
-            var staged = Path.Combine(AppPaths.Data, "updates", "staged");
-            if (Directory.Exists(staged)) Directory.Delete(staged, true);
+            var updates = Path.Combine(AppPaths.Data, "updates");
+            if (Directory.Exists(updates))
+                foreach (var d in Directory.EnumerateDirectories(updates, "staged*")) { try { Directory.Delete(d, true); } catch { } }
         }
         catch { }   // the helper that ran from it may not have exited yet; next start gets it
     }
