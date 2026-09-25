@@ -3,7 +3,7 @@
   "active": true,
   "level": "warning",
   "title": "Video on Demand",
-  "message": "VOD is currently experiencing technical issues, they hope to have it resolved soon.",
+  "message": "VOD is currently experiencing technical issues, they hope to have it resolved soon. Update: login is possible now but movies and shows are not yet connected.",
   "until": "",
   "link": "",
   "platforms": ["android", "windows"]
