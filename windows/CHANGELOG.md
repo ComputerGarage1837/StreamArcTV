@@ -3,6 +3,11 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.11 — 2026-09-25
+
+### Changed
+- Maintenance release to confirm the reworked in-app update from 1.1.10. No feature changes.
+
 ## v1.1.10 — 2026-09-25
 
 ### Fixed
