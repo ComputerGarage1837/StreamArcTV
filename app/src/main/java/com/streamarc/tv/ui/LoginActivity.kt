@@ -30,10 +30,8 @@ class LoginActivity : AppCompatActivity() {
         service = Service.valueOf(intent.getStringExtra(EXTRA_SERVICE) ?: Service.LIVE.name)
         b.txtTitle.text = getString(R.string.sign_in_to_fmt, service.title)
         b.txtServer.text = if (service.isConfigured) service.baseUrl else getString(R.string.server_not_configured)
-        if (service == Service.VOD) {
-            b.lblServer.visibility = View.GONE
-            b.txtServer.visibility = View.GONE
-        }
+        b.lblServer.visibility = View.GONE
+        b.txtServer.visibility = View.GONE
         b.chkShowPassword.setOnCheckedChangeListener { _, shown ->
             val variation = if (shown) InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_TEXT_VARIATION_PASSWORD
             b.inputPassword.inputType = InputType.TYPE_CLASS_TEXT or variation
