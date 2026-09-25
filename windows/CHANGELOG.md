@@ -3,6 +3,16 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.8 — 2026-09-25
+
+### Added
+- "Show password" switch on the Live TV and Video on Demand sign-in pages.
+
+### Fixed
+- In-app updates on an installed copy could stop with a "file in use" error: the setup program
+  was started while the app was still shutting down. A small helper now waits until the app has
+  fully exited before running the setup, and if a setup still fails the next start says why.
+
 ## v1.1.7 — 2026-09-25
 
 ### Added

@@ -29,6 +29,7 @@ public partial class App : Application
         AppPaths.Ensure();
         AppLog.Init();
         Update.Installer.CleanLeftovers();
+        Update.Installer.ReportSetupResult();
         StartInTray = e.Args.Any(a => string.Equals(a, "--tray", StringComparison.OrdinalIgnoreCase));
 
         // Crash safety net: log it and offer the log on the next start.

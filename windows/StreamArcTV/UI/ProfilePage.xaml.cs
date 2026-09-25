@@ -16,7 +16,6 @@ public partial class ProfilePage : AppPage
         var a = _prefs.Account(service);
         if (a == null) { Loaded += (_, _) => Finish(); return; }
         TxtTitle.Text = $"{service.Title()} account";
-        TxtServer.Text = service.BaseUrl();
         TxtUsername.Text = a.Username;
         TxtStatus.Text = a.Status ?? "—";
         TxtExpiry.Text = Format.Expiry(a.ExpDate);

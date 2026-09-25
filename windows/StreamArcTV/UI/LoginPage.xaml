@@ -9,13 +9,13 @@
             <Border Style="{StaticResource Card}" Width="480" Padding="24" Margin="0,24,0,0">
                 <StackPanel>
                     <TextBlock x:Name="TxtTitle" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
-                    <TextBlock Text="Server" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,6,0,0" />
-                    <TextBlock x:Name="TxtServer" FontSize="14" Foreground="{StaticResource AccentBrush}" />
                     <TextBox x:Name="InputUsername" Style="{StaticResource InputBox}" Tag="Username" Margin="0,20,0,0" />
                     <Grid Margin="0,12,0,0">
                         <PasswordBox x:Name="InputPassword" Style="{StaticResource PasswordInput}" />
+                        <TextBox x:Name="InputPasswordPlain" Style="{StaticResource InputBox}" Tag="Password" Visibility="Collapsed" />
                         <TextBlock x:Name="PasswordHint" Text="Password" Foreground="{StaticResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="14,0,0,0" IsHitTestVisible="False" />
                     </Grid>
+                    <CheckBox x:Name="SwitchShowPassword" Content="Show password" Style="{StaticResource Switch}" Margin="0,8,0,0" />
                     <TextBlock x:Name="TxtError" Foreground="{StaticResource DangerBrush}" FontSize="14" TextWrapping="Wrap" Margin="0,12,0,0" Visibility="Collapsed" />
                     <Control x:Name="Progress" Style="{StaticResource Spinner}" HorizontalAlignment="Center" Margin="0,12,0,0" Visibility="Collapsed" />
                     <Button x:Name="BtnSignIn" Content="Sign in" Style="{StaticResource PrimaryButton}" Margin="0,20,0,0" />

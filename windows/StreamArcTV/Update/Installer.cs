@@ -115,15 +115,26 @@ public static class Installer
         return actual == expected;
     }
 
-    /// Runs the downloaded setup program silently: it closes the app, replaces the files, updates
-    /// the Apps & features entry and starts the app again. Nothing else to do here but quit.
+    private static string ResultFile => Path.Combine(AppPaths.Data, "updates", "setup-result.txt");
+
+    /// Runs the downloaded setup program silently, but only once this process has fully exited:
+    /// a small PowerShell helper waits for our process id (and ends it if it lingers), then runs
+    /// the setup, which replaces the files, updates Apps & features and starts the app again.
+    /// Running the setup while the app is still shutting down made it find files in use and give up.
     public static void RunSetup(string setupFile)
     {
         try
         {
-            var psi = new ProcessStartInfo(setupFile, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /NOCANCEL")
-            { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(setupFile) };
-            if (Process.Start(psi) == null) throw new InvalidOperationException("Windows did not start the setup program");
+            try { File.Delete(ResultFile); } catch { }
+            var pid = Environment.ProcessId;
+            var script =
+                $"try {{ Wait-Process -Id {pid} -Timeout 60 -ErrorAction SilentlyContinue }} catch {{}}; " +
+                $"Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 800; " +
+                $"$p = Start-Process -FilePath '{Ps(setupFile)}' -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/CLOSEAPPLICATIONS','/FORCECLOSEAPPLICATIONS','/NOCANCEL' -PassThru -Wait; " +
+                $"Set-Content -Path '{Ps(ResultFile)}' -Value $p.ExitCode";
+            var psi = new ProcessStartInfo("powershell.exe", $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"{script}\"")
+            { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = Path.GetDirectoryName(setupFile) };
+            if (Process.Start(psi) == null) throw new InvalidOperationException("Windows did not start the update helper");
         }
         catch (Exception e)
         {
@@ -131,9 +142,34 @@ public static class Installer
             Dialogs.Alert("Update failed", $"The setup program could not be started: {e.Message}\n\nIt was saved as {setupFile}; you can run it yourself.");
             return;
         }
-        AppLog.I("Update", $"started {Path.GetFileName(setupFile)}; closing so it can replace the files");
+        AppLog.I("Update", $"handed {Path.GetFileName(setupFile)} to the update helper; closing");
         App.Window?.ForceClose();
         System.Windows.Application.Current.Shutdown();
+    }
+
+    private static string Ps(string s) => s.Replace("'", "''");
+
+    /// Called at start-up: reports a setup run that failed after the app had closed.
+    public static void ReportSetupResult()
+    {
+        try
+        {
+            if (!File.Exists(ResultFile)) return;
+            var text = File.ReadAllText(ResultFile).Trim();
+            File.Delete(ResultFile);
+            if (!int.TryParse(text, out var code) || code == 0) return;
+            var why = code switch
+            {
+                2 => "it was cancelled",
+                3 => "a fatal error occurred while preparing",
+                5 => "it could not replace a file that was still in use",
+                8 => "it needed a restart of Windows to finish",
+                _ => $"setup code {code}",
+            };
+            AppLog.W("Update", $"setup finished with code {code}");
+            Ui.Post(() => Dialogs.Alert("Update didn't finish", $"The last update did not install: {why}. Close the app completely (also from the tray icon), then press Update again."));
+        }
+        catch { }
     }
 
     /// Unpacks the package into a staging folder, then swaps the files into the app's own folder
