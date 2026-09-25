@@ -117,24 +117,20 @@ public static class Installer
 
     private static string ResultFile => Path.Combine(AppPaths.Data, "updates", "setup-result.txt");
 
-    /// Runs the downloaded setup program silently, but only once this process has fully exited:
-    /// a small PowerShell helper waits for our process id (and ends it if it lingers), then runs
-    /// the setup, which replaces the files, updates Apps & features and starts the app again.
-    /// Running the setup while the app is still shutting down made it find files in use and give up.
+    /// Runs the downloaded setup program silently and quits. The setup closes anything still
+    /// holding files (Restart Manager, forced if needed), replaces them, updates Apps & features
+    /// and starts the app again; its exit code is read on the next start.
     public static void RunSetup(string setupFile)
     {
         try
         {
             try { File.Delete(ResultFile); } catch { }
-            var pid = Environment.ProcessId;
-            var script =
-                $"try {{ Wait-Process -Id {pid} -Timeout 60 -ErrorAction SilentlyContinue }} catch {{}}; " +
-                $"Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 800; " +
-                $"$p = Start-Process -FilePath '{Ps(setupFile)}' -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/CLOSEAPPLICATIONS','/FORCECLOSEAPPLICATIONS','/NOCANCEL' -PassThru -Wait; " +
-                $"Set-Content -Path '{Ps(ResultFile)}' -Value $p.ExitCode";
-            var psi = new ProcessStartInfo("powershell.exe", $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"{script}\"")
-            { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = Path.GetDirectoryName(setupFile) };
-            if (Process.Start(psi) == null) throw new InvalidOperationException("Windows did not start the update helper");
+            var psi = new ProcessStartInfo(setupFile,
+                $"/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS /NOCANCEL /LOG=\"{Path.Combine(AppPaths.Data, "updates", "setup.log")}\"")
+            { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(setupFile) };
+            var p = Process.Start(psi) ?? throw new InvalidOperationException("Windows did not start the setup program");
+            // Record the outcome for the next start without holding the app open.
+            new Thread(() => { try { p.WaitForExit(); File.WriteAllText(ResultFile, p.ExitCode.ToString()); } catch { } }) { IsBackground = true }.Start();
         }
         catch (Exception e)
         {
@@ -142,11 +138,10 @@ public static class Installer
             Dialogs.Alert("Update failed", $"The setup program could not be started: {e.Message}\n\nIt was saved as {setupFile}; you can run it yourself.");
             return;
         }
-        AppLog.I("Update", $"handed {Path.GetFileName(setupFile)} to the update helper; closing");
+        AppLog.I("Update", $"started {Path.GetFileName(setupFile)}; closing so it can replace the files");
         Quit();
     }
 
-    private static string Ps(string s) => s.Replace("'", "''");
 
     /// Called at start-up: reports a setup run that failed after the app had closed.
     public static void ReportSetupResult()
@@ -159,7 +154,7 @@ public static class Installer
             if (!int.TryParse(text, out var code) || code == 0) return;
             var why = code switch
             {
-                1 => "the new files could not be copied into the app folder",
+                1 => "the new files could not be copied into the app folder (see the log)",
                 2 => "it was cancelled",
                 3 => "a fatal error occurred while preparing",
                 5 => "it could not replace a file that was still in use",
@@ -172,10 +167,11 @@ public static class Installer
         catch { }
     }
 
-    /// Unpacks the package into a staging folder, then hands over to a helper that waits for
-    /// this process to exit (ending it if it lingers), copies the new files over the app's folder
-    /// with retries, and starts the app again. Nothing is touched while the app is running, so
-    /// no file can be "in use". If the folder needs administrator rights the helper asks once.
+    /// Unpacks the package into a staging folder, then starts the NEW version's own exe from
+    /// that folder with --apply-update: it waits for this process to exit (ending it if it
+    /// lingers), copies the files into the app's folder with retries, and starts the app from
+    /// there. Nothing outside the app is involved and every step is logged. If the folder needs
+    /// administrator rights the helper asks once.
     public static async void Install(string zipFile)
     {
         var exe = Environment.ProcessPath ?? "";
@@ -198,16 +194,11 @@ public static class Installer
                 System.IO.Compression.ZipFile.ExtractToDirectory(zipFile, staged, true);
             });
             try { File.Delete(ResultFile); } catch { }
-            var pid = Environment.ProcessId;
-            var script =
-                $"try {{ Wait-Process -Id {pid} -Timeout 60 -ErrorAction SilentlyContinue }} catch {{}}; " +
-                $"Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 800; " +
-                $"$ok = $false; $tries = 0; while (-not $ok -and $tries -lt 30) {{ try {{ Copy-Item -Path '{Ps(staged)}\\*' -Destination '{Ps(installDir)}' -Recurse -Force -ErrorAction Stop; $ok = $true }} catch {{ $tries++; Start-Sleep -Seconds 1 }} }}; " +
-                $"if ($ok) {{ Remove-Item -LiteralPath '{Ps(staged)}' -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -LiteralPath '{Ps(zipFile)}' -Force -ErrorAction SilentlyContinue; Set-Content -Path '{Ps(ResultFile)}' -Value 0; Start-Process -FilePath '{Ps(exe)}' -WorkingDirectory '{Ps(installDir)}' }} else {{ Set-Content -Path '{Ps(ResultFile)}' -Value 1 }}";
-            var args = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"{script}\"";
-            var psi = Writable(installDir)
-                ? new ProcessStartInfo("powershell.exe", args) { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = updatesDir }
-                : new ProcessStartInfo("powershell.exe", args) { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden, WorkingDirectory = updatesDir };
+            var helper = Path.Combine(staged, Path.GetFileName(exe));
+            if (!File.Exists(helper)) throw new InvalidOperationException("the package has no " + Path.GetFileName(exe));
+            var psi = new ProcessStartInfo(helper, $"--apply-update \"{staged}\" \"{installDir}\" {Environment.ProcessId}")
+            { UseShellExecute = true, WorkingDirectory = staged };
+            if (!Writable(installDir)) psi.Verb = "runas";
             if (Process.Start(psi) == null) throw new InvalidOperationException("Windows did not start the update helper");
         }
         catch (Exception e)
@@ -235,24 +226,6 @@ public static class Installer
         new Thread(() => { Thread.Sleep(3000); try { Prefs.Flush(); } catch { } Environment.Exit(0); }) { IsBackground = true }.Start();
     }
 
-    /// Moves every staged file into place, renaming the existing (possibly running) file aside first.
-    public static void Swap(string staged, string installDir)
-    {
-        foreach (var src in Directory.EnumerateFiles(staged, "*", SearchOption.AllDirectories))
-        {
-            var rel = Path.GetRelativePath(staged, src);
-            var dest = Path.Combine(installDir, rel);
-            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-            if (File.Exists(dest))
-            {
-                var old = dest + ".old";
-                try { if (File.Exists(old)) File.Delete(old); } catch { old = dest + "." + Guid.NewGuid().ToString("N")[..6] + ".old"; }
-                File.Move(dest, old);
-            }
-            File.Move(src, dest);
-        }
-    }
-
     /// Called at start-up: removes files left behind by the previous update.
     public static void CleanLeftovers()
     {
@@ -262,22 +235,77 @@ public static class Installer
             foreach (var f in Directory.EnumerateFiles(dir, "*.old", SearchOption.AllDirectories)) { try { File.Delete(f); } catch { } }
         }
         catch { }
+        try
+        {
+            var staged = Path.Combine(AppPaths.Data, "updates", "staged");
+            if (Directory.Exists(staged)) Directory.Delete(staged, true);
+        }
+        catch { }   // the helper that ran from it may not have exited yet; next start gets it
     }
 
-    /// Entry for the elevated helper started with --apply-update <staged> <installDir>.
+    /// Entry for the update helper: --apply-update <staged> <installDir> <pid>. Runs from the
+    /// staged copy of the new version, so nothing in the app's folder is in use once <pid> is gone.
     public static int ApplyFromArgs(string[] args)
     {
         try
         {
             var i = Array.IndexOf(args, "--apply-update");
             if (i < 0 || i + 2 >= args.Length) return 2;
-            Swap(args[i + 1], args[i + 2]);
+            var staged = args[i + 1];
+            var installDir = args[i + 2];
+            var pid = i + 3 < args.Length && int.TryParse(args[i + 3], out var p) ? p : 0;
+            AppLog.I("Update", $"helper: staged={staged} target={installDir} wait for pid {pid}");
+            if (pid > 0)
+            {
+                try
+                {
+                    using var old = Process.GetProcessById(pid);
+                    if (!old.WaitForExit(60_000)) { AppLog.W("Update", "helper: app still running after 60 s; ending it"); old.Kill(true); old.WaitForExit(10_000); }
+                }
+                catch (ArgumentException) { /* already gone */ }
+            }
+            Thread.Sleep(500);
+            Exception? last = null;
+            for (var attempt = 1; attempt <= 30; attempt++)
+            {
+                try { CopyTree(staged, installDir); last = null; break; }
+                catch (Exception e) { last = e; AppLog.W("Update", $"helper: copy attempt {attempt} failed: {e.Message}"); Thread.Sleep(1000); }
+            }
+            if (last != null) throw last;
+            var exe = Path.Combine(installDir, Path.GetFileName(Environment.ProcessPath ?? "StreamArcTV.exe"));
+            AppLog.I("Update", $"helper: files in place; starting {exe}");
+            File.WriteAllText(ResultFile, "0");
+            Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, WorkingDirectory = installDir });
             return 0;
         }
         catch (Exception e)
         {
-            try { File.WriteAllText(Path.Combine(AppPaths.Data, "updates", "elevated-error.txt"), e.ToString()); } catch { }
+            AppLog.E("Update", "helper failed", e);
+            try { File.WriteAllText(ResultFile, "1"); } catch { }
             return 1;
+        }
+    }
+
+    /// Copies every file under src into dst, replacing what is there (a rename-aside first, so a
+    /// file that still refuses to be overwritten is reported rather than half-written).
+    private static void CopyTree(string src, string dst)
+    {
+        foreach (var file in Directory.EnumerateFiles(src, "*", SearchOption.AllDirectories))
+        {
+            var rel = Path.GetRelativePath(src, file);
+            var target = Path.Combine(dst, rel);
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            if (File.Exists(target))
+            {
+                try { File.Delete(target); }
+                catch
+                {
+                    var aside = target + ".old";
+                    try { if (File.Exists(aside)) File.Delete(aside); } catch { aside = target + "." + Guid.NewGuid().ToString("N")[..6] + ".old"; }
+                    File.Move(target, aside);
+                }
+            }
+            File.Copy(file, target, true);
         }
     }
 

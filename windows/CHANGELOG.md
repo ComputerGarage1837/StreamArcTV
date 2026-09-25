@@ -3,6 +3,17 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.12 — 2026-09-25
+
+### Fixed
+- In-app updates no longer depend on PowerShell or any script. A copy run from the zip unpacks
+  the new version and starts the new version's own program from that folder as the helper: it
+  waits for the old one to exit (ending it if it lingers), copies the files in with retries, and
+  starts the app again, logging every step to the app log. An installed copy hands over to the
+  setup program, which closes the app itself (forced if needed), replaces the files and restarts
+  it; the setup keeps a log next to the app's own. The exact reason for any failure is shown on
+  the next start.
+
 ## v1.1.11 — 2026-09-25
 
 ### Changed

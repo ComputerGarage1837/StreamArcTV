@@ -22,7 +22,9 @@ public partial class App : Application
         base.OnStartup(e);
         if (e.Args.Contains("--apply-update"))
         {
-            // Elevated helper started by the updater: swap the files and exit.
+            // Update helper (the new version's exe run from the staged folder): copy the files in and exit.
+            AppPaths.Ensure();
+            AppLog.Init();
             Shutdown(Update.Installer.ApplyFromArgs(e.Args));
             return;
         }
