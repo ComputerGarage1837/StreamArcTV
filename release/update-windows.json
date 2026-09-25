@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "packageName": "com.computergarage.streamarctv.windows",
-  "versionName": "1.1.8",
-  "versionCode": 10108,
+  "versionName": "1.1.9",
+  "versionCode": 10109,
   "setup": {
-    "assetName": "Stream-Arc-TV-Setup-1.1.8.exe",
-    "sha256": "a196d4dc8823e35c97f56b2cf9ec2ffd988e51d74da6195e576c7a754c17c763",
-    "sizeBytes": 105511617
+    "assetName": "Stream-Arc-TV-Setup-1.1.9.exe",
+    "sha256": "b7b58fb2fefbada0abf6f12ae57006ad25992d5d0296c88779b6bb6d9ef06042",
+    "sizeBytes": 105509423
   },
   "zip": {
-    "assetName": "Stream-Arc-TV-Windows-1.1.8-x64.zip",
-    "sha256": "6089329c34eea127019c0330c78520143a9d9f46770d583efe703475a9167fb3",
-    "sizeBytes": 152841385
+    "assetName": "Stream-Arc-TV-Windows-1.1.9-x64.zip",
+    "sha256": "81b06cbb871c1dcfc8dbcedac7809a47aa687a1c76aba7740f0a4078624eb3d4",
+    "sizeBytes": 152841389
   }
 }
