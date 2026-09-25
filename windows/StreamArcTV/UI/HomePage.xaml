@@ -21,8 +21,11 @@
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <ui:HomeHeader x:Name="HeaderTv" Grid.Row="0" />
+            <!-- Service notice (release/announcement.json); hidden when there is none -->
+            <ui:NoticeBanner x:Name="NoticeTv" Grid.Row="2" />
             <TextBlock x:Name="TxtVersionTv" Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,0,0" FontSize="10" Foreground="#64748B" />
 
             <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Left">
@@ -32,7 +35,7 @@
                 <TextBlock Text="E N T E R T A I N M E N T   W I T H O U T   L I M I T S" FontSize="11" Foreground="#CBD5E1" Margin="0,8,0,0" />
             </StackPanel>
 
-            <Grid Grid.Row="2" Margin="0,0,0,12">
+            <Grid Grid.Row="3" Margin="0,0,0,12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="24" />
@@ -58,7 +61,7 @@
                 </ui:FocusCard>
             </Grid>
 
-            <ContentControl x:Name="NavHostTv" Grid.Row="3" Focusable="False" />
+            <ContentControl x:Name="NavHostTv" Grid.Row="4" Focusable="False" />
         </Grid>
 
         <!-- Phone layout -->
@@ -77,6 +80,7 @@
                         <Border Height="4" CornerRadius="2" Background="{StaticResource HeroAccentBarBrush}" VerticalAlignment="Center" MaxWidth="200" HorizontalAlignment="Left" />
                         <TextBlock Grid.Column="1" Text="Entertainment&#10;Without Limits" FontSize="11" Foreground="#CBD5E1" TextAlignment="Right" Margin="16,0,0,0" />
                     </Grid>
+                    <ui:NoticeBanner x:Name="NoticePhone" Margin="0,16,0,0" />
                     <Grid x:Name="PhoneCards" Margin="0,22,0,12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />

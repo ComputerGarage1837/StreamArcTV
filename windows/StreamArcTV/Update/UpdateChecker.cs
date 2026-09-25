@@ -107,7 +107,7 @@ public static class UpdateChecker
     }
 
     /// GET a JSON document; returns null on 404.
-    private static JsonDocument? GetJson(string url, string accept)
+    internal static JsonDocument? GetJson(string url, string accept)
     {
         var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Accept.ParseAdd(accept);

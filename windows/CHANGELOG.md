@@ -3,6 +3,17 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.7 — 2026-09-25
+
+### Added
+- Service notice on the home screen, just above the Live TV and Video on Demand cards, read from
+  `release/announcement.json` in the repository so it can be posted and taken down without an
+  app update (same file and format as the Android app, see ANNOUNCEMENT_FORMAT.md). It is
+  checked whenever the home screen is shown and every five minutes while it stays open, remembers
+  the last notice for offline use, and is hidden completely when there is nothing to show.
+  Levels info / warning / outage colour it blue / amber / red; an optional title, link and
+  automatic take-down time are supported.
+
 ## v1.1.6 — 2026-09-15
 
 ### Fixed

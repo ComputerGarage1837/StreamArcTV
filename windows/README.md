@@ -39,6 +39,9 @@ Everything the Android app does, on a Windows PC:
   Windows release feed, shows the changelog, downloads the package with a progress dialog, verifies
   its SHA-256, and installs it (silently through the setup program, or in place for a portable
   copy). You can skip any version.
+- **Service notice**: a banner above the Live TV / Video on Demand cards, read from
+  `release/announcement.json` on `main` (see `ANNOUNCEMENT_FORMAT.md`), so an outage or other
+  notice can be posted and removed without shipping an update. Hidden when there is none.
 - **Crash safety net**: if the app ever crashes, the next start offers to save or copy the log.
 
 Keyboard: arrow keys move the highlight (like a remote), Enter is OK, **holding Enter** (or a

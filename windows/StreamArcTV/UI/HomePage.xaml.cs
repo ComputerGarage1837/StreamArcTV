@@ -21,6 +21,7 @@ public partial class HomePage : AppPage
     private string? _appliedLayout;
     private static bool _checkedUpdatesThisLaunch;
     private NavBar? _navBar;
+    private readonly System.Windows.Threading.DispatcherTimer _noticeTimer = new() { Interval = TimeSpan.FromMinutes(5) };
 
     public HomePage()
     {
@@ -41,6 +42,8 @@ public partial class HomePage : AppPage
             c.LostKeyboardFocus += (_, _) => Grow(c, false);
         }
         SizeChanged += (_, _) => ApplyLayout();
+        ShowNotice(Announcement.Cached());
+        _noticeTimer.Tick += (_, _) => RefreshNotice();
         Loaded += (_, _) =>
         {
             ApplyLayout();
@@ -127,8 +130,25 @@ public partial class HomePage : AppPage
 
     public override void OnResume()
     {
+        RefreshNotice();
+        _noticeTimer.Start();
         if (_prefs.LayoutMode != null && _prefs.LayoutMode != _appliedLayout) ApplyLayout();
         RefreshAll();
+    }
+
+    public override void OnPause() => _noticeTimer.Stop();
+
+    private async void RefreshNotice()
+    {
+        Announcement.Notice? notice;
+        try { notice = await Announcement.Fetch(); } catch { return; }
+        if (!Finished) ShowNotice(notice);
+    }
+
+    private void ShowNotice(Announcement.Notice? notice)
+    {
+        NoticeTv.Show(notice);
+        NoticePhone.Show(notice);
     }
 
     private void RefreshAll()
