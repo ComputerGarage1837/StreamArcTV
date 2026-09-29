@@ -115,7 +115,9 @@ class SettingsActivity : AppCompatActivity() {
         b.switchDeleteWatched.isChecked = prefs.deleteAfterWatched
         b.switchDeleteWatched.setOnCheckedChangeListener { _, on -> prefs.deleteAfterWatched = on }
         b.rowSubtitles.setOnClickListener { pickSubtitles() }
+        b.rowDolby.setOnClickListener { pickDolby() }
         renderSubtitles()
+        renderDolby()
         b.rowLayout.setOnClickListener { pickLayout() }
         renderLayout()
         b.rowDiagnostics.setOnClickListener { runDiagnostics() }
@@ -189,6 +191,26 @@ class SettingsActivity : AppCompatActivity() {
                 prefs.subtitles = which == 1
                 renderSubtitles()
                 d.dismiss()
+            }
+            .show()
+    }
+
+    private fun renderDolby() {
+        b.txtDolbyValue.text = getString(if (prefs.dolbyPassthrough) R.string.dolby_passthrough else R.string.dolby_decode)
+    }
+
+    private fun pickDolby() {
+        val options = arrayOf(getString(R.string.dolby_decode), getString(R.string.dolby_passthrough))
+        FocusDialog(this)
+            .setTitle(R.string.dolby_audio)
+            .setSingleChoiceItems(options, if (prefs.dolbyPassthrough) 1 else 0) { d, which ->
+                prefs.dolbyPassthrough = which == 1
+                renderDolby()
+                d.dismiss()
+            }
+            .setNeutralButton(R.string.about_this) { _, _ ->
+                FocusDialog(this).setTitle(R.string.dolby_audio)
+                    .setMessage(R.string.dolby_help).setPositiveButton(android.R.string.ok, null).show()
             }
             .show()
     }

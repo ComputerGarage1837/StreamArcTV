@@ -235,7 +235,7 @@ class MultiViewActivity : AppCompatActivity() {
             .setDefaultRequestProperties(mapOf("Connection" to "close"))
         // Small buffers: four of these must fit beside each other in memory.
         val load = DefaultLoadControl.Builder().setBufferDurationsMs(5_000, 20_000, 1_000, 1_000).build()
-        val p = ExoPlayer.Builder(this)
+        val p = ExoPlayer.Builder(this, com.streamarc.tv.player.AppRenderersFactory(this))
             .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(DefaultDataSource.Factory(this, http)))
             .setLoadControl(load)
             .setWakeMode(C.WAKE_MODE_NETWORK)

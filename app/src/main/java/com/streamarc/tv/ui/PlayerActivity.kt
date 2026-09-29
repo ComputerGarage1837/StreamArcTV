@@ -328,7 +328,7 @@ class PlayerActivity : AppCompatActivity() {
             .setDataSourceFactory(DefaultDataSource.Factory(this, httpFactory))
             .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(2))
 
-        val renderers = DefaultRenderersFactory(this)
+        val renderers = com.streamarc.tv.player.AppRenderersFactory(this)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
             .setEnableDecoderFallback(true)
         if (preferSoftware) {
