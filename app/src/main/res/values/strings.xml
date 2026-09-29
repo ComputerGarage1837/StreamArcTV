@@ -83,7 +83,6 @@
     <string name="log_saved_title">Log saved</string>
     <string name="log_saved_msg">Saved to:\n%1$s\n\nOpen it with a file manager, or copy it to a USB stick, to send it on.</string>
     <string name="log_save_failed_fmt">Couldn\'t save the log: %1$s</string>
-    <string name="save_file">Save file</string>
     <string name="share">Share…</string>
     <string name="copy">Copy</string>
     <string name="clear_log">Clear</string>
