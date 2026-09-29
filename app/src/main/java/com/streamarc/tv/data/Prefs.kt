@@ -145,6 +145,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("subtitles", false)
         set(value) { sp.edit().putBoolean("subtitles", value).apply() }
 
+    /** Send raw Dolby / DTS bitstreams to the TV or receiver instead of decoding on the device. Off by default. */
+    var dolbyPassthrough: Boolean
+        get() = sp.getBoolean("dolby_passthrough", false)
+        set(value) { sp.edit().putBoolean("dolby_passthrough", value).apply() }
+
     /** Start the next episode automatically when one ends. */
     var autoPlayNext: Boolean
         get() = sp.getBoolean("auto_play_next", true)

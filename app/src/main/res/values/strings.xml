@@ -150,6 +150,11 @@
     <string name="time_zone_set_fmt">Time zone set. It is now %1$s.</string>
     <string name="subtitles">Subtitles</string>
     <string name="subtitles_on">On when available</string>
+    <string name="dolby_audio">Dolby / surround audio</string>
+    <string name="about_this">About</string>
+    <string name="dolby_decode">Decode on this device</string>
+    <string name="dolby_passthrough">Pass through to TV or receiver</string>
+    <string name="dolby_help">Some boxes send raw Dolby sound straight to the TV, and when the TV can\'t decode it those channels are silent. "Decode on this device" (recommended) avoids that on every box. Choose passthrough only with an AV receiver or soundbar that decodes Dolby / DTS itself.</string>
     <string name="subtitles_off">Off</string>
     <string name="resume_title">Resume?</string>
     <string name="resume_msg_fmt">You stopped at %1$s last time.</string>

@@ -3,6 +3,16 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.66 — 2026-09-29
+
+### Fixed
+- Silent channels: channels with Dolby Digital (AC3) sound could play with no audio on boxes
+  that hand the raw Dolby bitstream to the TV over HDMI when the TV can't decode it. The app
+  now decodes Dolby / surround audio on the device itself, for every box regardless of its
+  HDMI sound setting. A new Settings → Playback → "Dolby / surround audio" option switches
+  passthrough back on for setups with an AV receiver or soundbar that decodes Dolby / DTS.
+  Multi-view uses the same setting.
+
 ## v1.0.65 — 2026-09-29
 
 ### Added
