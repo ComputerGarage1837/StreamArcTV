@@ -3,6 +3,25 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.67 — 2026-09-29
+
+### Fixed
+- TV guide no longer floods the provider. Opening Live TV used to ask the provider for a
+  programme listing one channel at a time for every channel in the list (thousands of requests,
+  about four a second for twenty-five minutes on a big list), and repeated it on every visit even
+  when the provider had nothing to give. Now only the first screens are fetched up front and the
+  rest as you scroll, and after forty empty answers in a row the per-channel lookups are paused
+  for six hours. The whole-guide download now writes what it did (channels, programmes, time,
+  or the failure) to the exportable log.
+- Live TV with a storage buffer: when the provider's stream stalled, the player used to reload
+  from the very start of the stored buffer, throwing you back up to an hour behind live without
+  warning. A reload now lands at the live point.
+- Live TV with a storage buffer: after the provider dropped and re-established the stream, the
+  new stream was spliced onto the old one, which confused the player's clock (hours of phantom
+  buffer, then a burst of dropped frames to catch up). The player now restarts cleanly at live
+  when the stream comes back, and waits through a stall for up to 90 seconds showing "Buffering"
+  instead of erroring after 20.
+
 ## v1.0.66 — 2026-09-29
 
 ### Fixed

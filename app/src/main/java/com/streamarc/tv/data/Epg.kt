@@ -231,6 +231,7 @@ object EpgCache {
             // current guide when it is at least as complete, so a bad fetch can't lose data.
             synchronized(guides) { guideFailedAt.remove(service) }
             clear()
+            appContext?.let { Prefs(it).setShortEpgOffUntil(service, 0L) }
             return guideMutex.withLock { download(service, account, onProgress) }
         }
         synchronized(guides) { guides[service] }?.let { (at, _) ->
@@ -243,11 +244,17 @@ object EpgCache {
             val disk = if (ctx != null) withContext(Dispatchers.IO) { readDisk(ctx, service) } else null
             if (disk != null) {
                 synchronized(guides) { guides[service] = disk }
-                if (System.currentTimeMillis() - disk.first > REFRESH_MS) refreshInBackground(service, account)
+                val age = System.currentTimeMillis() - disk.first
+                com.streamarc.tv.util.AppLog.i("Epg", "${service.name} guide from disk: ${disk.second.byId.size} channels, " +
+                    "${disk.second.byId.values.sumOf { it.size }} programmes, ${age / 60_000} min old")
+                if (age > REFRESH_MS) refreshInBackground(service, account)
                 return@withLock true
             }
             val failed = synchronized(guides) { guideFailedAt[service] }
-            if (failed != null && System.currentTimeMillis() - failed < RETRY_MS) return@withLock false
+            if (failed != null && System.currentTimeMillis() - failed < RETRY_MS) {
+                com.streamarc.tv.util.AppLog.w("Epg", "${service.name} guide: not retrying yet (last attempt failed ${(System.currentTimeMillis() - failed) / 1000}s ago)")
+                return@withLock false
+            }
             download(service, account, onProgress)
         }
     }
@@ -257,12 +264,19 @@ object EpgCache {
         val now = System.currentTimeMillis() / 1000
         val from = (now / 1800) * 1800 - 2 * 3600
         val to = from + 50 * 3600      // two days so a disk copy still covers the grid later
+        val started = System.currentTimeMillis()
+        com.streamarc.tv.util.AppLog.i("Epg", "${service.name} guide: downloading whole listing (xmltv)")
         return try {
             val guide = XtreamApi.fullGuide(service, account, from, to, onProgress)
             val current = synchronized(guides) { guides[service] }?.second
+            val programmes = guide.byId.values.sumOf { it.size }
+            com.streamarc.tv.util.AppLog.i("Epg", "${service.name} guide downloaded: ${guide.byId.size} channels, $programmes programmes " +
+                "in ${(System.currentTimeMillis() - started) / 1000}s")
             if (guide.byId.isEmpty()) throw IllegalStateException("Empty guide")
             if (current != null && !atLeastAsComplete(guide, current)) {
                 // The panel is probably regenerating its EPG; keep the good copy and try later.
+                com.streamarc.tv.util.AppLog.w("Epg", "${service.name} guide: new listing is less complete than the kept one " +
+                    "(${current.byId.size} channels); keeping the old copy")
                 synchronized(guides) { guideFailedAt[service] = System.currentTimeMillis() }
                 return current.byId.isNotEmpty()
             }
@@ -272,9 +286,11 @@ object EpgCache {
             true
         } catch (e: XtreamApi.GuideTooLarge) {
             // Caller decided the file is too big; don't retry the full download for a while.
+            com.streamarc.tv.util.AppLog.w("Epg", "${service.name} guide: too large (${e.bytes / (1024 * 1024)} MB); using per-channel lookups")
             synchronized(guides) { guideFailedAt[service] = System.currentTimeMillis() + 6 * 60 * 60 * 1000L }
             guideLoaded(service)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            com.streamarc.tv.util.AppLog.e("Epg", "${service.name} guide download failed after ${(System.currentTimeMillis() - started) / 1000}s", e)
             synchronized(guides) { guideFailedAt[service] = System.currentTimeMillis() }
             guideLoaded(service)
         }
@@ -342,15 +358,48 @@ object EpgCache {
         return if (System.currentTimeMillis() - e.first < TTL_MS) e.second else null
     }
 
+    // Some panels have no per-channel listings at all and answer every request with an empty
+    // list. Asking for each of thousands of channels anyway is pure load on the panel (and can
+    // get a customer rate-limited), so after a run of empty answers the lookups are paused.
+    private const val EMPTY_STREAK_LIMIT = 40
+    private const val SHORT_EPG_PAUSE_MS = 6 * 60 * 60 * 1000L
+    private val emptyStreak = HashMap<Service, Int>()
+    private val requestCount = HashMap<Service, Int>()
+
+    /** True while per-channel lookups are paused for this service (the panel had nothing for any channel). */
+    fun shortEpgPaused(service: Service): Boolean {
+        val ctx = appContext ?: return false
+        return Prefs(ctx).shortEpgOffUntil(service) > System.currentTimeMillis()
+    }
+
     /** Programmes for the channel, fetching (at most 6 at a time) when not cached. */
     suspend fun get(service: Service, account: Account, streamId: String): List<EpgProgramme> {
         peek(service, streamId)?.let { return it }
+        if (shortEpgPaused(service)) return emptyList()
         return gate.withPermit {
             peek(service, streamId)?.let { return@withPermit it }
+            if (shortEpgPaused(service)) return@withPermit emptyList()
             val list = try {
                 XtreamApi.shortEpg(service, account, streamId)
             } catch (_: Exception) {
                 emptyList()
+            }
+            synchronized(emptyStreak) {
+                val n = (requestCount[service] ?: 0) + 1
+                requestCount[service] = n
+                if (n % 500 == 0) com.streamarc.tv.util.AppLog.w("Epg", "${service.name}: $n per-channel programme requests this session")
+                if (list.isEmpty()) {
+                    val streak = (emptyStreak[service] ?: 0) + 1
+                    emptyStreak[service] = streak
+                    if (streak >= EMPTY_STREAK_LIMIT) {
+                        appContext?.let { Prefs(it).setShortEpgOffUntil(service, System.currentTimeMillis() + SHORT_EPG_PAUSE_MS) }
+                        emptyStreak[service] = 0
+                        com.streamarc.tv.util.AppLog.w("Epg", "${service.name}: the panel returned no programme data for $EMPTY_STREAK_LIMIT channels in a row; " +
+                            "per-channel lookups paused for ${SHORT_EPG_PAUSE_MS / 3_600_000} h")
+                    }
+                } else {
+                    emptyStreak[service] = 0
+                }
             }
             // A panel hiccup that returns nothing must not wipe programmes we already had.
             val previous = synchronized(cache) { cache[key(service, streamId)] }?.second
