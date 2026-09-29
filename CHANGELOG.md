@@ -3,6 +3,14 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.65 — 2026-09-29
+
+### Added
+- Settings → Export logs now offers "Save as a file": the log is written to the device's
+  Downloads folder (and to the folder chosen for downloads, if one is set), then the exact
+  location is shown. Nothing else needs to be installed on the box; open it with a file manager
+  or copy it to a USB stick. Share and Copy are still there, and the crash prompt offers Save too.
+
 ## v1.0.64 — 2026-09-25
 
 ### Changed

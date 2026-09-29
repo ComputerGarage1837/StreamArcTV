@@ -94,6 +94,67 @@ object AppLog {
         }
     }
 
+    /**
+     * Writes the log as a text file somewhere a file manager can reach without any other app:
+     * the device's public Downloads folder (Android 10+), plus a copy in the folder chosen for
+     * downloads in Settings when there is one. Returns a description of where it went.
+     */
+    fun save(context: Context): String {
+        val stamp = SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date())
+        val name = "streamarc-log-${BuildConfig.VERSION_NAME}-$stamp.txt"
+        val body = text()
+        val places = ArrayList<String>()
+        val errors = ArrayList<String>()
+
+        // 1. Public Downloads via MediaStore (no permission needed on Android 10+).
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            try {
+                val values = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.Downloads.DISPLAY_NAME, name)
+                    put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain")
+                    put(android.provider.MediaStore.Downloads.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
+                }
+                val uri = context.contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    ?: throw IllegalStateException("no entry")
+                context.contentResolver.openOutputStream(uri, "w")?.use { it.write(body.toByteArray()) }
+                    ?: throw IllegalStateException("can't open")
+                places.add("Downloads/$name")
+            } catch (e: Exception) {
+                errors.add("Downloads: ${e.message}")
+            }
+        } else {
+            // Older Android: the public Downloads folder is writable without a runtime prompt
+            // only when the legacy storage permission is held, so use the app's own external folder.
+            try {
+                val dir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS)
+                    ?: throw IllegalStateException("no external storage")
+                File(dir, name).writeText(body)
+                places.add("Android/data/${context.packageName}/files/Download/$name")
+            } catch (e: Exception) {
+                errors.add("App folder: ${e.message}")
+            }
+        }
+
+        // 2. The folder chosen for downloads in Settings (USB stick, SD card…), if any.
+        val folder = com.streamarc.tv.data.Prefs(context).downloadFolder
+        if (folder != null) {
+            try {
+                val tree = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, android.net.Uri.parse(folder))
+                    ?: throw IllegalStateException("folder unavailable")
+                val doc = tree.createFile("text/plain", name) ?: throw IllegalStateException("can't create file")
+                context.contentResolver.openOutputStream(doc.uri, "w")?.use { it.write(body.toByteArray()) }
+                    ?: throw IllegalStateException("can't open")
+                places.add("${tree.name ?: "download folder"}/$name")
+            } catch (e: Exception) {
+                errors.add("Download folder: ${e.message}")
+            }
+        }
+
+        i("Log", "saved log to ${places.joinToString()}${if (errors.isEmpty()) "" else " (failed: ${errors.joinToString()})"}")
+        if (places.isEmpty()) throw IllegalStateException(errors.joinToString("\n").ifEmpty { "nowhere to save" })
+        return places.joinToString("\n")
+    }
+
     fun copy(context: Context) {
         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         cm.setPrimaryClip(ClipData.newPlainText("Stream Arc TV log", text().takeLast(200_000)))

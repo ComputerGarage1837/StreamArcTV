@@ -257,12 +257,23 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun exportLogs() {
+        val items = arrayOf(
+            getString(R.string.save_log_file),
+            getString(R.string.share_log),
+            getString(R.string.copy_log),
+            getString(R.string.clear_log_item)
+        )
         FocusDialog(this)
             .setTitle(R.string.export_logs)
-            .setMessage(R.string.export_logs_msg)
-            .setPositiveButton(R.string.share) { _, _ -> com.streamarc.tv.util.AppLog.share(this) }
-            .setNeutralButton(R.string.copy) { _, _ -> com.streamarc.tv.util.AppLog.copy(this) }
-            .setNegativeButton(R.string.clear_log) { _, _ -> com.streamarc.tv.util.AppLog.clear(); Toast.makeText(this, R.string.log_cleared, Toast.LENGTH_SHORT).show() }
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> saveLog(this)
+                    1 -> com.streamarc.tv.util.AppLog.share(this)
+                    2 -> com.streamarc.tv.util.AppLog.copy(this)
+                    else -> { com.streamarc.tv.util.AppLog.clear(); Toast.makeText(this, R.string.log_cleared, Toast.LENGTH_SHORT).show() }
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 

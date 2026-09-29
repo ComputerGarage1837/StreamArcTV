@@ -57,8 +57,8 @@ class MainActivity : AppCompatActivity() {
             FocusDialog(this)
                 .setTitle(R.string.crash_title)
                 .setMessage(R.string.crash_msg)
-                .setPositiveButton(R.string.share) { _, _ -> com.streamarc.tv.util.AppLog.share(this) }
-                .setNeutralButton(R.string.copy) { _, _ -> com.streamarc.tv.util.AppLog.copy(this) }
+                .setPositiveButton(R.string.save_file) { _, _ -> saveLog(this) }
+                .setNeutralButton(R.string.share) { _, _ -> com.streamarc.tv.util.AppLog.share(this) }
                 .setNegativeButton(R.string.not_now, null)
                 .show()
         }
