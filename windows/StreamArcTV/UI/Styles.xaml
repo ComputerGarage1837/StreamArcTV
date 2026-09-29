@@ -695,7 +695,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Control">
                     <Grid x:Name="G" RenderTransformOrigin="0.5,0.5">
-                        <Grid.RenderTransform><RotateTransform x:Name="Rot" /></Grid.RenderTransform>
+                        <Grid.RenderTransform><RotateTransform /></Grid.RenderTransform>
                         <Ellipse Stroke="#334155" StrokeThickness="4" />
                         <Path Stroke="{StaticResource AccentBrush}" StrokeThickness="4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Stretch="None"
                               Data="M20,2 A18,18 0 0 1 38,20" />
@@ -704,7 +704,9 @@
                         <EventTrigger RoutedEvent="Loaded">
                             <BeginStoryboard>
                                 <Storyboard RepeatBehavior="Forever">
-                                    <DoubleAnimation Storyboard.TargetName="Rot" Storyboard.TargetProperty="Angle" From="0" To="360" Duration="0:0:0.9" />
+                                    <!-- Target the Grid by name and reach the transform through the property path: a
+                                         named transform inside a template is not always findable in its name scope. -->
+                                    <DoubleAnimation Storyboard.TargetName="G" Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)" From="0" To="360" Duration="0:0:0.9" />
                                 </Storyboard>
                             </BeginStoryboard>
                         </EventTrigger>

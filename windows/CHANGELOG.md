@@ -3,6 +3,14 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.18 — 2026-09-29
+
+### Fixed
+- "The app crashed last time" could appear after a screen with a loading spinner had been shown:
+  the spinner's animation sometimes could not find its rotation target and threw an error. The
+  animation now reaches the rotation through the spinner itself. Errors the app recovers from on
+  its own are also no longer reported as crashes on the next start; only real crashes are.
+
 ## v1.1.17 — 2026-09-25
 
 ### Changed

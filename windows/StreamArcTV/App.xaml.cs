@@ -38,8 +38,8 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += (_, ev) => Crash(ev.ExceptionObject as Exception ?? new Exception(ev.ExceptionObject?.ToString()));
         DispatcherUnhandledException += (_, ev) =>
         {
-            Crash(ev.Exception);
-            // Keep the app alive for recoverable UI errors; the log has the details.
+            // Recoverable: the app keeps running, so it is logged as an error, not marked as a crash.
+            AppLog.E("App", "unhandled UI error (recovered)", ev.Exception);
             ev.Handled = true;
             try { Dialogs.Toast("Something went wrong: " + ev.Exception.Message); } catch { }
         };
