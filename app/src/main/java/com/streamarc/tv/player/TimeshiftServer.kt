@@ -35,7 +35,11 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
 
     private val dir = File(context.cacheDir, DIR).apply { mkdirs() }
     private val socket = ServerSocket(0, 4, InetAddress.getByName("127.0.0.1"))
-    /** Plays from the start of what has been stored (the point the channel was opened). */
+    /**
+     * Plays from just behind the newest data. At the moment the channel is opened that is the
+     * start of the stored stream; on any later (re)connection it is the live point, so a player
+     * that reloads after a stall lands at live instead of at the oldest stored minute.
+     */
     val localUrl = "http://127.0.0.1:${socket.localPort}/live.ts"
 
     /** Plays from an absolute byte offset into the stored stream. */
@@ -55,6 +59,12 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
     @Volatile var readerPos = 0L; private set
     /** Set when a reader had to skip forward because the data it wanted was already dropped. */
     @Volatile var jumped = false
+    /** Absolute byte offset the most recent reader connection started from. */
+    @Volatile var lastStart = 0L; private set
+    /** Bumped when the upstream connection was re-established after a drop (see [serve]). */
+    @Volatile private var generation = 0
+    private var lastResetAt = 0L
+    private var reconnecting = false
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -98,6 +108,23 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
                         synchronized(lock) {
                             if (firstByteAt == 0L) firstByteAt = SystemClock.elapsedRealtime()
                             written += n
+                            if (reconnecting) {
+                                reconnecting = false
+                                // A fresh upstream connection restarts the stream's clock. Splicing it
+                                // onto the old bytes confuses the player (hours of phantom buffer,
+                                // then frame-dropping to catch up), so readers are told to reconnect
+                                // and start a clean timeline at the live point. Rate-limited so a
+                                // panel that drops the stream every few seconds doesn't cause a
+                                // restart storm.
+                                val now = SystemClock.elapsedRealtime()
+                                if (now - lastResetAt > RESET_MIN_INTERVAL_MS) {
+                                    lastResetAt = now
+                                    generation++
+                                    AppLog.i(TAG, "upstream reconnected; readers restart at live (generation $generation)")
+                                } else {
+                                    AppLog.i(TAG, "upstream reconnected; spliced (reset ${(now - lastResetAt) / 1000}s ago)")
+                                }
+                            }
                             lock.notifyAll()
                         }
                         attempt = 0
@@ -108,8 +135,10 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
                 val now = SystemClock.elapsedRealtime()
                 if (attempt == 0) lastFailure = now
                 attempt++
+                synchronized(lock) { reconnecting = true }
                 AppLog.w(TAG, "upstream dropped (attempt $attempt): ${e.message}")
                 if (now - lastFailure > GIVE_UP_MS) {
+                    AppLog.e(TAG, "upstream gone for ${(now - lastFailure) / 1000}s; giving up")
                     failed = true
                     synchronized(lock) { lock.notifyAll() }
                     break
@@ -162,15 +191,16 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
                     if (line.isEmpty()) break
                     if (first) {
                         first = false
-                        Regex("[?&]from=(\\d+|live)").find(line)?.groupValues?.get(1)?.let { v ->
-                            start = if (v == "live") liveOffset() else v.toLong()
-                        }
+                        val from = Regex("[?&]from=(\\d+|live)").find(line)?.groupValues?.get(1)
+                        start = if (from == null || from == "live") liveOffset() else from.toLong()
                         continue
                     }
                     if (line.startsWith("Range:", ignoreCase = true)) {
                         Regex("bytes=(\\d+)-").find(line)?.groupValues?.get(1)?.toLongOrNull()?.let { start += it; ranged = true }
                     }
                 }
+                lastStart = start
+                val myGeneration = generation
                 val out = sock.getOutputStream()
                 val status = if (ranged) "206 Partial Content" else "200 OK"
                 out.write(("HTTP/1.1 $status\r\nContent-Type: video/mp2t\r\nAccept-Ranges: bytes\r\n" +
@@ -184,8 +214,14 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
                     val chunk: Chunk
                     val avail: Long
                     synchronized(lock) {
-                        while (!closed && !failed && pos >= written) lock.wait(250)
-                        if (closed || (failed && pos >= written)) return
+                        while (!closed && !failed && pos >= written && generation == myGeneration) lock.wait(250)
+                        if (closed) return
+                        if ((failed && pos >= written) || generation != myGeneration) {
+                            // Cut the connection hard (RST rather than a clean end of stream) so the
+                            // player treats it as an error and reloads at live, instead of "ended".
+                            try { sock.setSoLinger(true, 0) } catch (_: Exception) {}
+                            return
+                        }
                         if (pos < base) { pos = base; jumped = true }
                         chunk = chunks.last { it.start <= pos }
                         val chunkEnd = chunks.getOrNull(chunks.indexOf(chunk) + 1)?.start ?: written
@@ -245,6 +281,7 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
         private const val MIN_FREE_BYTES = 1L * 1024 * 1024 * 1024   // keep at least 1 GB free
         private const val MAX_TOTAL_BYTES = 8L * 1024 * 1024 * 1024  // hard ceiling per channel
         private const val GIVE_UP_MS = 90_000L
+        private const val RESET_MIN_INTERVAL_MS = 10_000L
         private const val LIVE_HEADROOM = 512L * 1024
 
         /** Removes leftovers from a previous run (crash, task kill). */

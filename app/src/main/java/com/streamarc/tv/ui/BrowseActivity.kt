@@ -28,6 +28,7 @@ import com.streamarc.tv.data.Service
 import com.streamarc.tv.data.Stream
 import com.streamarc.tv.data.WatchProgress
 import com.streamarc.tv.data.XtreamApi
+import com.streamarc.tv.util.AppLog
 import com.streamarc.tv.databinding.ActivityBrowseBinding
 import com.streamarc.tv.databinding.ItemCategoryBinding
 import com.streamarc.tv.databinding.ItemCategoryChipBinding
@@ -237,6 +238,8 @@ class BrowseActivity : AppCompatActivity() {
                 val mode = prefs.guideMode
                 val remembered = prefs.guideSize(service)
                 val usePerChannel = mode == "channel" || (mode == "auto" && remembered > FULL_GUIDE_LIMIT)
+                AppLog.i("Epg", "guide mode=$mode remembered=${remembered / (1024 * 1024)}MB perChannel=$usePerChannel forced=$forced " +
+                    "channels=${allStreams.size} shortEpgPaused=${EpgCache.shortEpgPaused(service)}")
                 var lastBytes = 0L
                 val ok = if (usePerChannel) {
                     false   // rows are filled channel by channel below
@@ -614,7 +617,9 @@ class BrowseActivity : AppCompatActivity() {
      */
     private fun prefetchEpg() {
         prefetchJob?.cancel()
-        val channels = allStreams
+        // Only the first screens' worth up front; the grid asks for the rest as rows scroll into
+        // view. Sweeping every channel of a big list meant thousands of requests per visit.
+        val channels = allStreams.take(PREFETCH_LIMIT)
         prefetchJob = lifecycleScope.launch {
             val total = channels.size
             var done = 0
@@ -812,6 +817,7 @@ class BrowseActivity : AppCompatActivity() {
         const val GENRE_PREFIX = "__genre__:"
         /** Above this, the whole-guide file is not worth downloading; channels are fetched individually. */
         private const val FULL_GUIDE_LIMIT = 60L * 1024 * 1024
+        private const val PREFETCH_LIMIT = 60
         fun intent(ctx: Context, service: Service): Intent =
             Intent(ctx, BrowseActivity::class.java).putExtra(EXTRA_SERVICE, service.name)
 

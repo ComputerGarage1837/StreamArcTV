@@ -76,6 +76,10 @@ class Prefs(context: Context) {
     fun guideSize(service: Service): Long = sp.getLong(k(service, "guide_size"), 0L)
     fun setGuideSize(service: Service, bytes: Long) { sp.edit().putLong(k(service, "guide_size"), bytes).apply() }
 
+    /** Until this time (epoch ms) per-channel programme lookups are skipped: the panel answered empty for every channel asked. */
+    fun shortEpgOffUntil(service: Service): Long = sp.getLong(k(service, "short_epg_off_until"), 0L)
+    fun setShortEpgOffUntil(service: Service, until: Long) { sp.edit().putLong(k(service, "short_epg_off_until"), until).apply() }
+
     // ---- Favorites -----------------------------------------------------
 
     private fun favKey(service: Service, kind: ContentKind) = k(service, "favs_${kind.name.lowercase()}")

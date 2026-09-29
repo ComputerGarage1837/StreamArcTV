@@ -49,6 +49,7 @@ import com.streamarc.tv.transfer.Folders
 import com.streamarc.tv.transfer.TransferStore
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
 import com.streamarc.tv.data.WatchProgress
 import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.databinding.ActivityPlayerBinding
@@ -67,7 +68,7 @@ class PlayerActivity : AppCompatActivity() {
     private var player: ExoPlayer? = null
     private var timeshift: TimeshiftServer? = null
     /** Byte offset into the stored stream where the current media item starts (storage buffer only). */
-    private var itemFromBytes = 0L
+    @Volatile private var itemFromBytes = 0L
     private lateinit var url: String
     private var title: String = ""
     private var isLive: Boolean = false
@@ -314,12 +315,20 @@ class PlayerActivity : AppCompatActivity() {
 
         // The player shares the app's HTTP client (and its connection pool) so a connection can be
         // cut the moment the player closes, and asks the server not to keep it alive at all.
-        val httpFactory = OkHttpDataSource.Factory(playerClient)
+        // With storage timeshift the player only ever talks to the local relay, which keeps the
+        // upstream connection alive itself (reconnecting for up to 90 s). Give the player a long
+        // read timeout there so a provider stall shows as buffering instead of an error.
+        val useRelay = isLive && level.onDisk
+        val httpFactory = OkHttpDataSource.Factory(if (useRelay) relayClient else playerClient)
             .setUserAgent(XtreamApi.USER_AGENT)
             .setDefaultRequestProperties(mapOf("Connection" to "close"))
             .setTransferListener(object : TransferListener {
                 override fun onTransferInitializing(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) {}
-                override fun onTransferStart(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) { loadsStarted++ }
+                override fun onTransferStart(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) {
+                    loadsStarted++
+                    // The relay decides where a (re)connection starts; keep the behind-live maths in step.
+                    timeshift?.let { ts -> if (dataSpec.uri.host == "127.0.0.1") itemFromBytes = ts.lastStart }
+                }
                 override fun onBytesTransferred(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean, bytesTransferred: Int) { bytesLoaded += bytesTransferred }
                 override fun onTransferEnd(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) {}
             })
@@ -810,6 +819,15 @@ class PlayerActivity : AppCompatActivity() {
             abis.contains("x86") || listOf("generic", "vbox", "bluestacks", "genymotion", "goldfish", "ranchu", "emulator", "sdk_gphone", "nox", "ldplayer", "memu")
                 .any { fp.contains(it) }
         }
+        /** For the loopback timeshift relay: it reconnects upstream for up to 90 s, so wait it out. */
+        private val relayClient by lazy {
+            OkHttpClient.Builder()
+                .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+                .callTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS)
+                .build()
+        }
+
         /** Same pool as the API client, with streaming timeouts. */
         private val playerClient by lazy {
             XtreamApi.client.newBuilder()
