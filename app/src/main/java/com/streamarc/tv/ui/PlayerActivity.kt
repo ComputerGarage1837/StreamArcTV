@@ -30,7 +30,6 @@ import androidx.media3.datasource.TransferListener
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
@@ -338,8 +337,6 @@ class PlayerActivity : AppCompatActivity() {
             .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(2))
 
         val renderers = com.streamarc.tv.player.AppRenderersFactory(this)
-            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-            .setEnableDecoderFallback(true)
         if (preferSoftware) {
             // Emulators and some boxes advertise a hardware decoder that never outputs a frame.
             renderers.setMediaCodecSelector { mime, secure, tunneling ->
