@@ -1,0 +1,89 @@
+name: Build FFmpeg audio decoder
+
+# Builds media3's FFmpeg audio decoder extension (not published on Maven) with the audio
+# codecs boxes commonly lack (MPEG Layer II, Dolby AC3 / E-AC3, DTS, TrueHD…) and commits the
+# resulting AAR to app/libs on the branch this ran from. Run by hand, or whenever this file
+# changes.
+on:
+  workflow_dispatch:
+  push:
+    paths: [".github/workflows/ffmpeg-decoder.yml"]
+
+permissions:
+  contents: write
+
+env:
+  MEDIA3_TAG: "1.4.1"
+  FFMPEG_BRANCH: "release/6.0"
+  ANDROID_ABI: "21"
+  ENABLED_DECODERS: "mp2 mp3 ac3 eac3 dca mlp truehd vorbis opus flac alac pcm_mulaw pcm_alaw"
+
+jobs:
+  build:
+    name: Build lib-decoder-ffmpeg
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools cmake;3.22.1
+
+      - name: Set up NDK
+        id: ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26b
+          add-to-path: false
+
+      - name: Fetch media3 and FFmpeg sources
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch "$MEDIA3_TAG" https://github.com/androidx/media.git "$RUNNER_TEMP/media3"
+          git clone --depth 1 --branch "$FFMPEG_BRANCH" https://github.com/FFmpeg/FFmpeg.git "$RUNNER_TEMP/ffmpeg"
+          ln -s "$RUNNER_TEMP/ffmpeg" "$RUNNER_TEMP/media3/libraries/decoder_ffmpeg/src/main/jni/ffmpeg"
+
+      - name: Build FFmpeg (armeabi-v7a, arm64-v8a, x86, x86_64)
+        run: |
+          set -euo pipefail
+          FFMPEG_MODULE_PATH="$RUNNER_TEMP/media3/libraries/decoder_ffmpeg/src/main"
+          cd "$FFMPEG_MODULE_PATH/jni"
+          read -r -a DECODERS <<< "$ENABLED_DECODERS"
+          ./build_ffmpeg.sh "$FFMPEG_MODULE_PATH" "${{ steps.ndk.outputs.ndk-path }}" linux-x86_64 "$ANDROID_ABI" "${DECODERS[@]}"
+
+      - name: Build the decoder AAR
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/media3"
+          ./gradlew --no-daemon :lib-decoder-ffmpeg:assembleRelease
+          AAR=$(find . -path "*decoder_ffmpeg*" -name "*release*.aar" | head -n1)
+          test -n "$AAR" || { echo "::error::No AAR produced"; find . -name "*.aar" | head; exit 1; }
+          echo "Built $AAR ($(stat -c%s "$AAR") bytes)"
+          mkdir -p "$GITHUB_WORKSPACE/app/libs"
+          cp "$AAR" "$GITHUB_WORKSPACE/app/libs/media3-decoder-ffmpeg-$MEDIA3_TAG.aar"
+          unzip -l "$GITHUB_WORKSPACE/app/libs/media3-decoder-ffmpeg-$MEDIA3_TAG.aar" | grep -E "\.so|classes.jar" || true
+
+      - name: Upload AAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: media3-decoder-ffmpeg-${{ env.MEDIA3_TAG }}
+          path: app/libs/media3-decoder-ffmpeg-${{ env.MEDIA3_TAG }}.aar
+
+      - name: Commit the AAR to this branch
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/libs/media3-decoder-ffmpeg-$MEDIA3_TAG.aar
+          if git diff --cached --quiet; then echo "AAR unchanged"; exit 0; fi
+          git commit -m "Add media3 FFmpeg audio decoder $MEDIA3_TAG (decoders: $ENABLED_DECODERS)"
+          git push origin HEAD:"${GITHUB_REF_NAME}"
