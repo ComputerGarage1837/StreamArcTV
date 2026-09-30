@@ -87,4 +87,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-hls:1.4.1")
     implementation("androidx.media3:media3-datasource-okhttp:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
+    // media3's FFmpeg audio decoder (built by .github/workflows/ffmpeg-decoder.yml, not on Maven):
+    // MPEG Layer II, Dolby AC3 / E-AC3, DTS, TrueHD… decoded in software on every box.
+    implementation(files("libs/media3-decoder-ffmpeg-1.4.1.aar"))
 }

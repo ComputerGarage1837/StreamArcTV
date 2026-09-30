@@ -3,6 +3,19 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.68 — 2026-09-30
+
+### Fixed
+- Silent channels, round two. The app now carries its own audio decoders (FFmpeg) for the
+  formats boxes so often lack or get wrong: MPEG Layer II (the "can't decode audio/mpeg-L2"
+  message on the NHL channels), Dolby Digital and Dolby Digital Plus (BBC News, Sky Cinema,
+  IFC, BBC America and the like, where the box's own Dolby decoder started but produced no
+  sound), DTS and TrueHD. These are decoded in software on every box, so the result no longer
+  depends on what decoders the box happens to ship. AAC still uses the box's decoder.
+- Surround sound is mixed down to stereo inside the app, so a 5.1 channel plays the same on a
+  box whose sound output only really handles two channels. Settings → Playback → "Dolby /
+  surround audio" set to passthrough still sends the original bitstream to an AV receiver.
+
 ## v1.0.67 — 2026-09-29
 
 ### Fixed
