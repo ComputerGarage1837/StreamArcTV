@@ -1,7 +1,6 @@
 package com.streamarc.tv.update
 
 import android.app.Activity
-import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -15,10 +14,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import com.streamarc.tv.BuildConfig
+import com.streamarc.tv.data.XtreamApi
 import com.streamarc.tv.databinding.DialogDownloadBinding
+import com.streamarc.tv.util.AppLog
+import okhttp3.Call
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -26,13 +28,23 @@ import java.io.FileInputStream
 import java.security.MessageDigest
 
 /**
- * Downloads a release APK with DownloadManager, shows the progress in a
+ * Downloads a release APK inside the app, shows the progress in a
  * dialog, verifies the SHA-256 from the update feed, and hands the file to
  * the package installer.
  */
 object ApkInstaller {
 
-    private var activeDownloadId: Long = -1L
+    @Volatile private var active = false
+    @Volatile private var call: Call? = null
+
+    private val client: OkHttpClient by lazy {
+        XtreamApi.client.newBuilder()
+            .connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .callTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS)
+            .followRedirects(true).followSslRedirects(true)
+            .build()
+    }
 
     fun download(activity: Activity, release: UpdateChecker.Release) {
         val app = activity.applicationContext
@@ -61,7 +73,7 @@ object ApkInstaller {
             return
         }
 
-        if (activeDownloadId != -1L) {
+        if (active) {
             Toast.makeText(app, "An update is already downloading.", Toast.LENGTH_SHORT).show()
             return
         }
@@ -71,37 +83,20 @@ object ApkInstaller {
         val file = File(dir, release.assetName)
         if (file.exists()) file.delete()
 
-        val dm = app.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        val req = DownloadManager.Request(Uri.parse(release.apkUrl))
-            .setTitle("Stream Arc TV v${release.versionName}")
-            .setDescription("Downloading update…")
-            .setMimeType("application/vnd.android.package-archive")
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-            .setDestinationUri(Uri.fromFile(file))
-            .addRequestHeader("User-Agent", "StreamArcTV")
-
-        val id = try {
-            dm.enqueue(req)
-        } catch (e: Exception) {
-            Toast.makeText(app, "Couldn't start download: ${e.message}", Toast.LENGTH_LONG).show()
-            return
-        }
-        activeDownloadId = id
-
         if (activity is AppCompatActivity && !activity.isFinishing) {
-            showProgress(activity, dm, id, file, release)
+            showProgress(activity, file, release)
         } else {
-            Toast.makeText(app, "Downloading v${release.versionName}…", Toast.LENGTH_SHORT).show()
+            Toast.makeText(app, "Open Stream Arc TV and press Update to download v${release.versionName}.", Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun showProgress(
-        activity: AppCompatActivity,
-        dm: DownloadManager,
-        id: Long,
-        file: File,
-        release: UpdateChecker.Release
-    ) {
+    /**
+     * The download happens inside the app, over the same kind of connection the sign-in and the
+     * video use. Android's own download manager only runs when the system considers the network
+     * "validated" and sat on "waiting for network" forever on boxes where that check fails even
+     * though the internet works.
+     */
+    private fun showProgress(activity: AppCompatActivity, file: File, release: UpdateChecker.Release) {
         val vb = DialogDownloadBinding.inflate(LayoutInflater.from(activity))
         vb.txtStatus.text = "Starting download…"
         vb.progress.isIndeterminate = true
@@ -110,70 +105,112 @@ object ApkInstaller {
             .setTitle("Downloading v${release.versionName}")
             .setView(vb.root)
             .setCancelable(false)
-            .setNegativeButton("Cancel") { _, _ ->
-                dm.remove(id)
-                activeDownloadId = -1L
-            }
+            .setNegativeButton("Cancel") { _, _ -> call?.cancel() }
             .create()
         dialog.show()
+        active = true
 
         activity.lifecycleScope.launch {
-            var status = DownloadManager.STATUS_PENDING
-            var reason = 0
-            while (isActive) {
-                var downloaded = 0L
-                var total = release.sizeBytes
-                dm.query(DownloadManager.Query().setFilterById(id))?.use { c ->
-                    if (!c.moveToFirst()) {
-                        // Row gone: the download was cancelled/removed.
-                        status = DownloadManager.STATUS_FAILED
-                        reason = -1
-                        return@use
-                    }
-                    status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-                    reason = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
-                    downloaded = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                    val t = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    if (t > 0) total = t
-                }
-                when (status) {
-                    DownloadManager.STATUS_SUCCESSFUL, DownloadManager.STATUS_FAILED -> break
-                    DownloadManager.STATUS_PAUSED -> vb.txtStatus.text = "Waiting for network…"
-                    DownloadManager.STATUS_PENDING -> vb.txtStatus.text = "Starting download…"
-                    else -> {
-                        if (total > 0) {
-                            vb.progress.isIndeterminate = false
-                            vb.progress.max = 1000
-                            vb.progress.progress = ((downloaded * 1000) / total).toInt().coerceIn(0, 1000)
-                            vb.txtStatus.text =
-                                "${UpdateChecker.formatSize(downloaded)} of ${UpdateChecker.formatSize(total)}"
-                        } else {
-                            vb.txtStatus.text = UpdateChecker.formatSize(downloaded)
+            var failure: Exception? = null
+            val ok = try {
+                withContext(Dispatchers.IO) {
+                    fetch(release, file) { downloaded, total ->
+                        activity.runOnUiThread {
+                            if (total > 0) {
+                                vb.progress.isIndeterminate = false
+                                vb.progress.max = 1000
+                                vb.progress.progress = ((downloaded * 1000) / total).toInt().coerceIn(0, 1000)
+                                vb.txtStatus.text = "${UpdateChecker.formatSize(downloaded)} of ${UpdateChecker.formatSize(total)}"
+                            } else {
+                                vb.txtStatus.text = UpdateChecker.formatSize(downloaded)
+                            }
                         }
                     }
                 }
-                delay(500)
+            } catch (e: Exception) {
+                failure = e
+                false
+            } finally {
+                active = false
+                call = null
             }
-            activeDownloadId = -1L
 
-            if (status != DownloadManager.STATUS_SUCCESSFUL) {
+            if (!ok) {
                 dialog.dismiss()
-                if (reason != -1) {
-                    Toast.makeText(activity, "Update download failed (${describe(reason)}). Please try again.", Toast.LENGTH_LONG).show()
+                file.delete()
+                val cancelled = failure == null || (failure is java.io.IOException && failure.message?.contains("Canceled", true) == true)
+                if (!cancelled) {
+                    val why = com.streamarc.tv.data.Diagnose.explain(activity, failure!!)
+                    AppLog.e("Update", "download failed: ${failure.javaClass.simpleName}: ${failure.message}", failure)
+                    Toast.makeText(activity, "Update download failed: $why", Toast.LENGTH_LONG).show()
                 }
                 return@launch
             }
 
             vb.progress.isIndeterminate = true
             vb.txtStatus.text = "Verifying download…"
-            val ok = withContext(Dispatchers.IO) { verify(file, release) }
+            val verified = withContext(Dispatchers.IO) { verify(file, release) }
             dialog.dismiss()
-            if (!ok) {
+            if (!verified) {
+                AppLog.e("Update", "downloaded file failed verification (${file.length()} bytes, expected ${release.sizeBytes})")
                 file.delete()
                 Toast.makeText(activity, "The downloaded update didn't match the release. Please try again.", Toast.LENGTH_LONG).show()
                 return@launch
             }
             install(activity, file)
+        }
+    }
+
+    /** Streams the APK into [file], resuming with a Range request after a dropped connection. */
+    private fun fetch(release: UpdateChecker.Release, file: File, onProgress: (Long, Long) -> Unit): Boolean {
+        var attempt = 0
+        var total = release.sizeBytes
+        AppLog.i("Update", "downloading ${release.apkUrl}")
+        while (true) {
+            val have = if (file.exists()) file.length() else 0L
+            val req = Request.Builder().url(release.apkUrl)
+                .header("User-Agent", "StreamArcTV")
+                .apply { if (have > 0) header("Range", "bytes=$have-") }
+                .build()
+            val c = client.newCall(req)
+            call = c
+            try {
+                c.execute().use { resp ->
+                    if (resp.code == 416) return@use   // already have all of it
+                    if (!resp.isSuccessful) throw java.io.IOException("HTTP ${resp.code}")
+                    val resumed = resp.code == 206 && have > 0
+                    val len = resp.body?.contentLength() ?: -1L
+                    if (len > 0) total = if (resumed) have + len else len
+                    val body = resp.body ?: throw java.io.IOException("Empty response")
+                    java.io.FileOutputStream(file, resumed).use { out ->
+                        var done = if (resumed) have else 0L
+                        var last = 0L
+                        val buf = ByteArray(64 * 1024)
+                        body.byteStream().use { input ->
+                            while (true) {
+                                val n = input.read(buf)
+                                if (n < 0) break
+                                out.write(buf, 0, n)
+                                done += n
+                                val now = android.os.SystemClock.elapsedRealtime()
+                                if (now - last >= 250) { last = now; onProgress(done, total) }
+                            }
+                        }
+                        onProgress(done, total)
+                    }
+                }
+                if (total <= 0 || file.length() >= total) {
+                    AppLog.i("Update", "download complete (${file.length()} bytes)")
+                    return true
+                }
+                throw java.io.IOException("Connection ended early (${file.length()} of $total bytes)")
+            } catch (e: java.io.IOException) {
+                if (c.isCanceled()) return false
+                attempt++
+                AppLog.w("Update", "download interrupted (attempt $attempt): ${e.message}")
+                if (attempt >= 5) throw e
+                try { Thread.sleep(1500L * attempt) } catch (_: InterruptedException) { return false }
+            }
         }
     }
 
@@ -193,19 +230,6 @@ object ApkInstaller {
         }
         val actual = md.digest().joinToString("") { "%02x".format(it) }
         return actual == expected
-    }
-
-    private fun describe(reason: Int): String = when (reason) {
-        DownloadManager.ERROR_CANNOT_RESUME -> "cannot resume"
-        DownloadManager.ERROR_DEVICE_NOT_FOUND -> "storage not available"
-        DownloadManager.ERROR_FILE_ALREADY_EXISTS -> "file already exists"
-        DownloadManager.ERROR_FILE_ERROR -> "file error"
-        DownloadManager.ERROR_HTTP_DATA_ERROR -> "network data error"
-        DownloadManager.ERROR_INSUFFICIENT_SPACE -> "not enough space"
-        DownloadManager.ERROR_TOO_MANY_REDIRECTS -> "too many redirects"
-        DownloadManager.ERROR_UNHANDLED_HTTP_CODE -> "server error"
-        404 -> "APK not found on the release"
-        else -> "error $reason"
     }
 
     fun install(context: Context, file: File) {
