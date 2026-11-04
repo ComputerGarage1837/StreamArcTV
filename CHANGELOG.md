@@ -3,6 +3,16 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.70 — 2026-11-04
+
+### Fixed
+- Sign-in failing on older boxes (Android 6 and below) with "the service's server is not
+  answering". Those Android versions carry an out-of-date list of trusted security
+  certificates and reject servers that use newer ones (Let's Encrypt, Google), even though the
+  internet works. The app now carries the missing public root certificates and uses them on those
+  versions, for sign-in, the guide, video, downloads and posters. The sign-in message also now says
+  plainly when a device doesn't trust a service's certificate, instead of blaming the server.
+
 ## v1.0.69 — 2026-11-04
 
 ### Fixed

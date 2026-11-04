@@ -66,7 +66,7 @@ class TimeshiftServer(context: Context, private val upstream: String, private va
     private var lastResetAt = 0L
     private var reconnecting = false
 
-    private val client = OkHttpClient.Builder()
+    private val client = com.streamarc.tv.util.Tls.withExtraRoots(OkHttpClient.Builder())
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
         .followRedirects(true).followSslRedirects(true)

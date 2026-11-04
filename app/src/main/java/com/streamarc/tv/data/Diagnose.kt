@@ -28,7 +28,8 @@ object Diagnose {
             e is XtreamApi.BadResponseException -> "The service sent back a web page instead of data. That usually means a block page, a maintenance page or a wrong address. Try again in a few minutes."
             !hasNetwork(context) -> "This device is not connected to any network. Check the Wi-Fi or the Ethernet cable."
             root is UnknownHostException -> "Can't find the service's server. The internet may be down, or your internet provider may be blocking it; a VPN or a different DNS often fixes that."
-            root is SSLException -> "Secure connection to the service failed. Check that the device's date and time are correct, then try again."
+            isCertTrust(e) -> CERT_TRUST_MESSAGE
+            hasCause<SSLException>(e) -> "Secure connection to the service failed. Check that the device's date and time are correct, then try again."
             root is SocketTimeoutException -> "The service's server is not answering. It may be down or overloaded, or your internet provider may be blocking it. Try again shortly."
             root is ConnectException -> "Can't connect to the service's server. It may be down, or your connection may be blocking it."
             e is XtreamApi.NetworkException -> "Network problem: ${root.message ?: "connection failed"}."
@@ -48,8 +49,10 @@ object Diagnose {
 
     private suspend fun explainInner(context: Context, e: Throwable): String {
         val root = rootCause(e)
+        // A certificate the device doesn't trust is not a network problem: say so before probing the internet.
+        if (isCertTrust(e)) return CERT_TRUST_MESSAGE
         val networkish = e is XtreamApi.NetworkException || root is UnknownHostException || root is SocketTimeoutException ||
-            root is ConnectException || root is SSLException
+            root is ConnectException || hasCause<SSLException>(e)
         if (!networkish) return quick(context, e)
         if (!hasNetwork(context)) return "This device is not connected to any network. Check the Wi-Fi or the Ethernet cable."
         val internet = withContext(Dispatchers.IO) { internetReachable() }
@@ -58,9 +61,31 @@ object Diagnose {
             "Connected to the network, but there is no internet access. Restart the router or check with your internet provider."
         } else when (root) {
             is UnknownHostException -> "The internet works, but the service's server can't be found. Your internet provider may be blocking it (a VPN or a different DNS such as 1.1.1.1 usually fixes that), or the service's address has changed."
-            is SSLException -> "The internet works, but the secure connection to the service failed. Check the device's date and time, then try again."
-            else -> "The internet works, but the service's server is not answering. It may be down or overloaded, or your internet provider may be blocking it. Try again in a few minutes, or try a VPN."
+            else -> if (hasCause<SSLException>(e)) "The internet works, but the secure connection to the service failed. Check the device's date and time, then try again." else "The internet works, but the service's server is not answering. It may be down or overloaded, or your internet provider may be blocking it. Try again in a few minutes, or try a VPN."
         }
+    }
+
+    private const val CERT_TRUST_MESSAGE =
+        "This device doesn't trust the service's security certificate. Its built-in list of trusted certificates is out of date " +
+            "(common on Android 6 and older), or the device's date and time are wrong. Check the date and time first; if they are right, " +
+            "the device needs a newer Android version or a system update."
+
+    private inline fun <reified T : Throwable> hasCause(e: Throwable): Boolean {
+        var t: Throwable? = e
+        var n = 0
+        while (t != null && n++ < 10) { if (t is T) return true; t = if (t.cause === t) null else t.cause }
+        return false
+    }
+
+    /** True when the chain contains a certificate-trust failure ("Trust anchor for certification path not found" and the like). */
+    private fun isCertTrust(e: Throwable): Boolean {
+        var t: Throwable? = e
+        var n = 0
+        while (t != null && n++ < 10) {
+            if (t is java.security.cert.CertPathValidatorException || t is java.security.cert.CertificateException) return true
+            t = if (t.cause === t) null else t.cause
+        }
+        return false
     }
 
     private fun http(code: Int): String = when (code) {
@@ -78,7 +103,7 @@ object Diagnose {
     }
 
     private val probeClient by lazy {
-        OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(5, TimeUnit.SECONDS).build()
+        com.streamarc.tv.util.Tls.withExtraRoots(OkHttpClient.Builder()).connectTimeout(5, TimeUnit.SECONDS).readTimeout(5, TimeUnit.SECONDS).build()
     }
 
     /** True if a well-known public endpoint answers; false when the box has a network but no way out. */
