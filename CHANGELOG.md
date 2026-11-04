@@ -3,6 +3,15 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.69 — 2026-11-04
+
+### Fixed
+- In-app updates no longer get stuck on "Waiting for network". The update was handed to
+  Android's own download manager, which only runs when the system itself considers the network
+  "validated"; on some boxes that check fails even though the internet works, so the download
+  never started. The app now downloads the update itself, with live progress, automatic
+  resume if the connection drops, and a plain-English reason if it fails.
+
 ## v1.0.68 — 2026-09-30
 
 ### Fixed
