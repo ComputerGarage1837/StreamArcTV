@@ -29,7 +29,7 @@ object XtreamApi {
 
     const val USER_AGENT = "StreamArcTV"
 
-    val client: OkHttpClient = OkHttpClient.Builder()
+    val client: OkHttpClient = com.streamarc.tv.util.Tls.withExtraRoots(OkHttpClient.Builder())
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(40, TimeUnit.SECONDS)
         .followRedirects(true)

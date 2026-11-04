@@ -17,6 +17,17 @@ class StreamArcApp : Application() {
             previous?.uncaughtException(thread, error)
         }
         com.streamarc.tv.data.EpgCache.init(this)
+        if (android.os.Build.VERSION.SDK_INT < 25) {
+            // Poster and logo downloads go through the shared client too, so the extra trusted roots apply to them.
+            try {
+                com.bumptech.glide.Glide.get(this).registry.replace(
+                    com.bumptech.glide.load.model.GlideUrl::class.java, java.io.InputStream::class.java,
+                    com.bumptech.glide.integration.okhttp3.OkHttpUrlLoader.Factory(com.streamarc.tv.data.XtreamApi.client)
+                )
+            } catch (e: Exception) {
+                com.streamarc.tv.util.AppLog.w("Tls", "Glide client not replaced: ${e.message}")
+            }
+        }
         com.streamarc.tv.data.WatchProgress.init(this)
         Thread { com.streamarc.tv.player.TimeshiftServer.cleanup(this) }.start()
     }
