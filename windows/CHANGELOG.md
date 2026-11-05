@@ -3,6 +3,12 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.20 — 2026-11-05
+
+### Fixed
+- The "24/7 Channels" entry in Video on Demand was cut off at both ends (it read "4/7") because
+  its label was wider than the navigation rail. Navigation labels now wrap onto two lines.
+
 ## v1.1.19 — 2026-11-05
 
 ### Added

@@ -99,6 +99,7 @@ public partial class VodHomePage : AppPage
             if (png != null) stack.Children.Add(new Image { Source = new BitmapImage(new Uri($"pack://application:,,,/Assets/{png}")), Width = 22, Height = 22, Stretch = Stretch.Uniform });
             else stack.Children.Add(new System.Windows.Shapes.Path { Data = icon, Fill = new SolidColorBrush(Color.FromRgb(0xCB, 0xD5, 0xE1)), Width = 22, Height = 22, Stretch = Stretch.Uniform });
             var text = new TextBlock { Text = label, FontSize = 13, Margin = new Thickness(0, 4, 0, 0), HorizontalAlignment = HorizontalAlignment.Center,
+                TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center,
                 Foreground = selected ? Ui.Brush("PurpleBrush") : new SolidColorBrush(Color.FromRgb(0xCB, 0xD5, 0xE1)) };
             stack.Children.Add(text);
             var card = new FocusCard { Content = stack, Style = Ui.Res<Style>("VodNavItem"), Selected = selected };
