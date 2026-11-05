@@ -38,6 +38,10 @@ public class EpgGridView : FrameworkElement
     private readonly Dictionary<string, BitmapSource?> _logos = new();
 
     private double _channelColW = 170;
+    private bool _wideNames;
+    /// A wider channel column (used for the long names of 24/7 channels).
+    public bool WideNames { get => _wideNames; set { _wideNames = value; _channelColW = ColumnWidth(ActualWidth); InvalidateVisual(); } }
+    private double ColumnWidth(double w) => w < 520 ? 118 : (_wideNames ? 240 : 170);
     private const double RowH = 58;
     private const double HeaderH = 32;
     /// Scale chosen so about two hours fit across the programme area (never tighter than 3.4px/min).
@@ -139,7 +143,7 @@ public class EpgGridView : FrameworkElement
         base.OnRenderSizeChanged(sizeInfo);
         var w = ActualWidth;
         // Narrow windows: a slimmer channel column so the programmes get the width.
-        _channelColW = w < 520 ? 118 : 170;
+        _channelColW = ColumnWidth(w);
         var area = w - _channelColW;
         if (area > 0)
         {
@@ -248,11 +252,11 @@ public class EpgGridView : FrameworkElement
 
     // ---- Drawing -------------------------------------------------------
 
-    private FormattedText Text(string s, double size, Brush brush, double maxWidth, FontWeight? weight = null)
+    private FormattedText Text(string s, double size, Brush brush, double maxWidth, FontWeight? weight = null, int maxLines = 1)
     {
         var ft = new FormattedText(s, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, Face, size, brush, VisualTreeHelper.GetDpi(this).PixelsPerDip)
         {
-            MaxLineCount = 1, Trimming = TextTrimming.CharacterEllipsis, MaxTextWidth = Math.Max(1, maxWidth)
+            MaxLineCount = maxLines, Trimming = TextTrimming.CharacterEllipsis, MaxTextWidth = Math.Max(1, maxWidth)
         };
         if (weight != null) ft.SetFontWeight(weight.Value);
         return ft;
@@ -371,7 +375,8 @@ public class EpgGridView : FrameworkElement
             }
             var name = (ch.StreamId != null && _favorites.Contains(ch.StreamId) ? "★ " : "") + (ch.Name ?? "");
             var nameAvail = _channelColW - lx - logoW - (narrow ? 10 : 16);
-            var txt = Text(name, narrow ? 11.5 : 13, Brushes.White, nameAvail);
+            // Long names take a second line instead of ending in "…" after a few letters.
+            var txt = Text(name, narrow ? 11.5 : 13, Brushes.White, nameAvail, maxLines: 2);
             c.DrawText(txt, new Point(lx + logoW + (narrow ? 5 : 8), top + RowH / 2 - txt.Height / 2));
         }
         c.Pop();

@@ -3,6 +3,18 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.74 — 2026-11-05
+
+### Changed
+- 24/7 channels: the Video on Demand menu (Home, Search, Categories, 24/7 Channels, Downloads,
+  Profile) now stays on the left instead of being replaced by a category list; the categories
+  are a row above the guide, and only Favorites and the provider's 24/7 group are listed.
+  The duplicate category label next to the title is gone.
+
+### Fixed
+- Channel names in the TV guide are no longer cut off after a few letters: long names take a
+  second line, and the channel column is wider for 24/7 channels. This applies to Live TV too.
+
 ## v1.0.73 — 2026-11-05
 
 ### Fixed

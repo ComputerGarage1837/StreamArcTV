@@ -54,6 +54,11 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
     private val d = resources.displayMetrics.density
     private var channelColW = 170 * d
+    /** A wider channel column (used for the long names of 24/7 channels). */
+    var wideNames = false
+        set(value) { field = value; channelColW = columnWidth(width); invalidate() }
+
+    private fun columnWidth(w: Int): Float = if (w < 520 * d) 118 * d else (if (wideNames) 240 else 170) * d
     private val rowH = 58 * d
     private val headerH = 32 * d
     /** Scale chosen so about two hours fit across the programme area (never tighter than 3.4dp/min). */
@@ -145,7 +150,7 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         // Phones held upright: a slimmer channel column so the programmes get the width.
-        channelColW = if (w < 520 * d) 118 * d else 170 * d
+        channelColW = columnWidth(w)
         val area = w - channelColW
         if (area > 0) {
             val focusMinutes = (scrollX / pxPerMin)
@@ -336,12 +341,32 @@ class EpgGridView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             val name = (if (favorites.contains(ch.streamId)) "★ " else "") + (ch.name ?: "")
             val nameAvail = channelColW - lx - logoW - (if (narrow) 10 else 16) * d
             channelPaint.textSize = (if (narrow) 11.5f else 13f) * d
-            val txt = TextUtils.ellipsize(name, channelPaint, nameAvail, TextUtils.TruncateAt.END)
-            c.drawText(txt, 0, txt.length, lx + logoW + (if (narrow) 5 else 8) * d, top + rowH / 2 + 5 * d, channelPaint)
+            val nx = lx + logoW + (if (narrow) 5 else 8) * d
+            val lines = wrapName(name, nameAvail)
+            if (lines.second == null) {
+                c.drawText(lines.first, 0, lines.first.length, nx, top + rowH / 2 + 5 * d, channelPaint)
+            } else {
+                // Long names take a second line instead of ending in "…" after a few letters.
+                c.drawText(lines.first, 0, lines.first.length, nx, top + rowH / 2 - 3 * d, channelPaint)
+                c.drawText(lines.second!!, 0, lines.second!!.length, nx, top + rowH / 2 + 13 * d, channelPaint)
+            }
         }
         c.restore()
         c.drawLine(channelColW, 0f, channelColW, height.toFloat(), linePaint)
         c.drawLine(0f, headerH, width.toFloat(), headerH, linePaint)
+    }
+
+    /** Splits a channel name over at most two lines (breaking at a space when possible); the second line is ellipsized. */
+    private fun wrapName(name: String, avail: Float): Pair<CharSequence, CharSequence?> {
+        if (channelPaint.measureText(name) <= avail) return name to null
+        val fit = channelPaint.breakText(name, true, avail, null)
+        var cut = fit
+        val space = name.lastIndexOf(' ', fit - 1)
+        if (space > fit / 2) cut = space
+        val first = name.substring(0, cut).trimEnd()
+        val rest = name.substring(cut).trimStart()
+        if (rest.isEmpty()) return first to null
+        return first to TextUtils.ellipsize(rest, channelPaint, avail, TextUtils.TruncateAt.END)
     }
 
     private fun logoFor(ch: Stream): Bitmap? {
