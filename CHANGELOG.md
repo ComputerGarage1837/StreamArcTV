@@ -3,6 +3,11 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.72 — 2026-11-05
+
+### Changed
+- The Video on Demand entry for the provider's 24/7 channels is now labelled "24/7 Channels".
+
 ## v1.0.71 — 2026-11-05
 
 ### Added
