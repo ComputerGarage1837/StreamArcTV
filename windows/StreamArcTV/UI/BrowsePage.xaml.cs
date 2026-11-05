@@ -28,6 +28,8 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
     private readonly Account _account = null!;
     private ContentKind _kind;
     private bool IsLive => _kind == ContentKind.LIVE;
+    /// The live guide running on the VOD account: the provider's 24/7 channels.
+    private bool TwentyFourSeven => IsLive && _service.Kind() != ContentKind.LIVE;
 
     private List<Data.Stream> _allStreams = new();
     private readonly Dictionary<string, List<Data.Stream>> _streamCache = new();
@@ -69,13 +71,13 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         _pendingCategory = category;
         _openSearch = search;
 
-        TxtTitle.Text = IsLive ? "TV Guide" : service.Title();
+        TxtTitle.Text = TwentyFourSeven ? "24/7 Channels" : IsLive ? "TV Guide" : service.Title();
         BtnBack.Click += (_, _) => Finish();
         BtnProfile.Click += (_, _) => Nav.Push(new ProfilePage(service));
-        BtnMulti.Visibility = IsLive ? Visibility.Visible : Visibility.Collapsed;
+        BtnMulti.Visibility = IsLive && !TwentyFourSeven ? Visibility.Visible : Visibility.Collapsed;
         BtnMulti.Click += (_, _) => Nav.Push(new MultiViewPage(service));
 
-        if (service.Kind() != ContentKind.LIVE)
+        if (service.Kind() != ContentKind.LIVE && !IsLive)
         {
             BtnTabMovies.Click += (_, _) => SwitchKind(ContentKind.MOVIE);
             BtnTabSeries.Click += (_, _) => SwitchKind(ContentKind.SERIES);
@@ -140,7 +142,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
     private void StartPreview(Data.Stream stream)
     {
         string url;
-        try { url = XtreamApi.StreamUrl(_service, _account, stream, _prefs.LiveFormat); } catch { return; }
+        try { url = XtreamApi.StreamUrl(_service, _account, stream, _prefs.LiveFormat, IsLive); } catch { return; }
         _previewStream = stream;
         try
         {
@@ -208,7 +210,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
     /// Tabs live in the top bar on wide screens and on their own full-width row on narrow ones.
     private void PlaceTabs(bool compact)
     {
-        var showTabs = _service.Kind() != ContentKind.LIVE;
+        var showTabs = _service.Kind() != ContentKind.LIVE && !IsLive;
         var buttons = new[] { BtnTabMovies, BtnTabSeries, BtnTabDownloads };
         foreach (var b in buttons)
         {
@@ -285,7 +287,8 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         try
         {
             var fetched = await XtreamApi.Categories(_service, _account, _kind);
-            var cats = IsLive ? fetched.Where(c => c.Id == null || !_prefs.HiddenLiveCategories.Contains(c.Id)).ToList() : fetched;
+            // Hidden categories are the Live TV account's choice; they don't apply to 24/7 channels.
+            var cats = IsLive && !TwentyFourSeven ? fetched.Where(c => c.Id == null || !_prefs.HiddenLiveCategories.Contains(c.Id)).ToList() : fetched;
             _providerCategories = cats;
             // With the catalogue already on disk the genre / extra groups are known now;
             // otherwise they are added as soon as it arrives (see AugmentCategories).
@@ -300,7 +303,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
             RenderCategories();
             var wanted = _pendingCategory;
             _pendingCategory = null;
-            if (IsLive) SelectCategory(DefaultLiveCategory(all));
+            if (IsLive) SelectCategory(TwentyFourSeven ? all[1] : DefaultLiveCategory(all));
             else if (wanted != null)
             {
                 // Opened from the VOD home on a particular group (a genre row's "See all", say).
@@ -424,7 +427,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         var q = InputSearch.Text.Trim();
         var favs = _prefs.Favorites(_service, _kind);
         var list = _favoritesMode ? _allStreams.Where(s => s.Id != null && favs.Contains(s.Id)).ToList() : _allStreams;
-        if (IsLive)
+        if (IsLive && !TwentyFourSeven)
         {
             var hidden = _prefs.HiddenLiveCategories;
             if (hidden.Count > 0) list = list.Where(s => s.CategoryId == null || !hidden.Contains(s.CategoryId)).ToList();
@@ -487,7 +490,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
             return;
         }
         string url;
-        try { url = XtreamApi.StreamUrl(_service, _account, stream, _prefs.LiveFormat); }
+        try { url = XtreamApi.StreamUrl(_service, _account, stream, _prefs.LiveFormat, IsLive); }
         catch (Exception e) { ShowError(string.IsNullOrWhiteSpace(e.Message) ? "Couldn't load content." : e.Message); return; }
         var key = _kind == ContentKind.MOVIE && stream.StreamId != null ? WatchProgress.MovieKey(_service, stream.StreamId) : null;
         if (key != null) WatchProgress.Describe(key, WatchProgress.KIND_MOVIE, stream.Name ?? "", stream.Image, stream.ContainerExtension, stream.StreamId!);
@@ -558,7 +561,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
     {
         // Recordings always use the MPEG-TS stream so the file plays back directly.
         string url;
-        try { url = XtreamApi.StreamUrl(_service, _account, stream, "ts"); }
+        try { url = XtreamApi.StreamUrl(_service, _account, stream, "ts", true); }
         catch (Exception e) { Dialogs.Toast(e.Message); return; }
         TransferDialogs.Record(stream.Name ?? "Channel", url);
     }

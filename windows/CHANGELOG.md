@@ -3,6 +3,16 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.19 — 2026-11-05
+
+### Added
+- 24/7 channels in Video on Demand. When the provider supplies live "24/7" channels on the
+  Video on Demand account, a new "24/7 Channels" entry appears in the Video on Demand navigation
+  (next to Categories). It opens the same TV guide as Live TV: category list, programme grid,
+  preview, favourites, recording, full-guide or per-channel programme data, and the storage
+  buffer with pause and skip. The entry only shows when the provider has such channels and
+  disappears when it doesn't.
+
 ## v1.1.18 — 2026-09-29
 
 ### Fixed

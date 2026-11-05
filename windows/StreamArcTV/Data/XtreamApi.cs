@@ -225,11 +225,12 @@ public static class XtreamApi
     public static string MovieUrl(Service service, Account account, string streamId, string? ext) =>
         $"{ServerUrl(service)}/movie/{Seg(account.Username)}/{Seg(account.Password)}/{Seg(streamId + "." + (string.IsNullOrWhiteSpace(ext) ? "mp4" : ext))}";
 
-    public static string StreamUrl(Service service, Account account, Stream stream, string liveFormat)
+    /// `live` says the stream is a live channel even on the VOD account (24/7 channels).
+    public static string StreamUrl(Service service, Account account, Stream stream, string liveFormat, bool? live = null)
     {
         var baseUrl = ServerUrl(service);
         var id = stream.StreamId ?? throw new ApiException("Stream has no id");
-        if (service.Kind() == ContentKind.LIVE)
+        if (live ?? service.Kind() == ContentKind.LIVE)
             return $"{baseUrl}/live/{Seg(account.Username)}/{Seg(account.Password)}/{Seg(id + "." + liveFormat)}";
         var ext = !string.IsNullOrWhiteSpace(stream.ContainerExtension) ? stream.ContainerExtension! : "mp4";
         return $"{baseUrl}/movie/{Seg(account.Username)}/{Seg(account.Password)}/{Seg(id + "." + ext)}";

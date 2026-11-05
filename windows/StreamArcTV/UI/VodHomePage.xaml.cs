@@ -7,6 +7,7 @@ using System.Windows.Threading;
 using StreamArcTV.Data;
 using StreamArcTV.Transfer;
 using StreamArcTV.Update;
+using StreamArcTV.Util;
 
 namespace StreamArcTV.UI;
 
@@ -59,6 +60,7 @@ public partial class VodHomePage : AppPage
         Header.UpdateButton.Click += (_, _) => UpdateChecker.Check(manual: true);
 
         BuildNav();
+        ProbeChannels();
         _heroTicker.Tick += (_, _) =>
         {
             if (_featured.Count > 1)
@@ -108,8 +110,33 @@ public partial class VodHomePage : AppPage
         Add("home", "img_nav_home.png", null, "Home", true, () => RowsScroll.ScrollToTop());
         Add("search", "img_nav_search.png", null, "Search", false, () => Nav.Push(new BrowsePage(_service, ContentKind.MOVIE, search: true)));
         Add("categories", null, Ui.Res<Geometry>("IconVod"), "Categories", false, () => Nav.Push(new BrowsePage(_service, ContentKind.MOVIE)));
+        Add("channels", null, Ui.Res<Geometry>("IconLive"), "24/7 Channels", false, () => Nav.Push(new BrowsePage(_service, ContentKind.LIVE)));
+        SetChannelsVisible(_prefs.VodChannelsAvailable);
         Add("downloads", "img_nav_downloads.png", null, "Downloads", false, () => Nav.Push(new TransfersPage(TransferType.DOWNLOAD)));
         Add("profile", "img_nav_profile.png", null, "Profile", false, () => Nav.Push(new ProfilePage(_service)));
+    }
+
+    /// Shows or hides the 24/7 Channels entry (the provider may or may not supply live channels on this account).
+    private void SetChannelsVisible(bool visible)
+    {
+        foreach (var (card, key) in _navItems)
+            if (key == "channels") card.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// Asks the VOD panel for live categories; the entry shows only when it has some and hides again when it doesn't.
+    private async void ProbeChannels()
+    {
+        try
+        {
+            var has = (await XtreamApi.Categories(_service, _account, ContentKind.LIVE)).Count > 0;
+            AppLog.I("Vod", $"24/7 channels offered by the panel: {has}");
+            _prefs.VodChannelsAvailable = has;
+            SetChannelsVisible(has);
+        }
+        catch (Exception e)
+        {
+            AppLog.W("Vod", $"24/7 channel probe failed: {e.Message}");   // keep whatever was shown last time
+        }
     }
 
     /// Side rail in landscape, a row of tabs under the header when the window is taller than wide.
