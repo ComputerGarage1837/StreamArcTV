@@ -222,11 +222,12 @@ object XtreamApi {
             .addPathSegment("$streamId.${ext?.takeIf { it.isNotBlank() } ?: "mp4"}")
             .build().toString()
 
-    fun streamUrl(service: Service, account: Account, stream: Stream, liveFormat: String): String {
+    /** [live] says the stream is a live channel even when [service] is the VOD account (24/7 channels). */
+    fun streamUrl(service: Service, account: Account, stream: Stream, liveFormat: String, live: Boolean = service.kind == ContentKind.LIVE): String {
         val base = serverUrl(service)
         val id = stream.streamId ?: throw ApiException("Stream has no id")
         val b = base.newBuilder()
-        when (if (service.kind == ContentKind.LIVE) ContentKind.LIVE else ContentKind.MOVIE) {
+        when (if (live) ContentKind.LIVE else ContentKind.MOVIE) {
             ContentKind.LIVE -> {
                 b.addPathSegment("live")
                     .addPathSegment(account.username)

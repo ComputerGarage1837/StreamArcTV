@@ -108,6 +108,9 @@ class VodHomeActivity : AppCompatActivity() {
         b.navHome.setOnClickListener { b.listRows.smoothScrollToPosition(0) }
         b.navSearch.setOnClickListener { startActivity(BrowseActivity.intent(this, service, ContentKind.MOVIE, search = true)) }
         b.navCategories.setOnClickListener { startActivity(BrowseActivity.intent(this, service, ContentKind.MOVIE)) }
+        b.navChannels.setOnClickListener { startActivity(BrowseActivity.intent(this, service, ContentKind.LIVE)) }
+        b.navChannels.visibility = if (prefs.vodChannelsAvailable) View.VISIBLE else View.GONE
+        probeChannels()
         b.navDownloads.setOnClickListener { startActivity(TransfersActivity.intent(this, TransferType.DOWNLOAD)) }
         b.navProfile.setOnClickListener { startActivity(ProfileActivity.intent(this, service)) }
 
@@ -162,6 +165,26 @@ class VodHomeActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 if (land) 0f else 1f
             ).apply { bottomMargin = (4 * d).toInt() }
+        }
+    }
+
+    // ---- 24/7 channels ----------------------------------------------------------
+
+    /**
+     * The provider may supply 24/7 live channels on this account. Ask its panel for live
+     * categories; the "24/7" entry shows only when it has some and hides again when it doesn't.
+     */
+    private fun probeChannels() {
+        lifecycleScope.launch {
+            val has = try {
+                XtreamApi.categories(service, account, ContentKind.LIVE).isNotEmpty()
+            } catch (e: Exception) {
+                com.streamarc.tv.util.AppLog.w("Vod", "24/7 channel probe failed: ${e.message}")
+                return@launch   // keep whatever was shown last time
+            }
+            com.streamarc.tv.util.AppLog.i("Vod", "24/7 channels offered by the panel: $has")
+            prefs.vodChannelsAvailable = has
+            b.navChannels.visibility = if (has) View.VISIBLE else View.GONE
         }
     }
 

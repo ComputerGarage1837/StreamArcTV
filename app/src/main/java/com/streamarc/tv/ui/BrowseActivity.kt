@@ -56,6 +56,8 @@ class BrowseActivity : AppCompatActivity() {
     /** What is being browsed: LIVE for the guide, MOVIE or SERIES for the VOD tabs. */
     private var kind: ContentKind = ContentKind.LIVE
     private val isLive: Boolean get() = kind == ContentKind.LIVE
+    /** The live guide running on the VOD account: the provider's 24/7 channels. */
+    private val twentyFourSeven: Boolean get() = isLive && service.kind != ContentKind.LIVE
 
     private val picker = FolderPicker(this)
     private val categoryAdapter = CategoryAdapter { cat -> selectCategory(cat) }
@@ -92,16 +94,16 @@ class BrowseActivity : AppCompatActivity() {
         pendingCategory = intent.getStringExtra(EXTRA_CATEGORY)
         if (intent.getBooleanExtra(EXTRA_SEARCH, false)) b.inputSearch.post { b.inputSearch.requestFocus() }
 
-        b.txtTitle.text = if (isLive) getString(R.string.tv_guide) else service.title
+        b.txtTitle.text = if (twentyFourSeven) getString(R.string.channels_247_title) else if (isLive) getString(R.string.tv_guide) else service.title
         b.btnBack.setOnClickListener { finish() }
         b.btnProfile.setOnClickListener { startActivity(ProfileActivity.intent(this, service)) }
-        b.btnMulti.visibility = if (isLive) View.VISIBLE else View.GONE
+        b.btnMulti.visibility = if (isLive && !twentyFourSeven) View.VISIBLE else View.GONE
         b.btnRefreshGuide.visibility = if (isLive) View.VISIBLE else View.GONE
         b.btnMulti.setOnClickListener { startActivity(MultiViewActivity.intent(this, service)) }
 
         applyCategoryLayout()
 
-        if (service.kind != ContentKind.LIVE) {
+        if (service.kind != ContentKind.LIVE && !isLive) {
             b.btnTabMovies.setOnClickListener { switchKind(ContentKind.MOVIE) }
             b.btnTabSeries.setOnClickListener { switchKind(ContentKind.SERIES) }
             b.btnTabDownloads.setOnClickListener { startActivity(TransfersActivity.intent(this, com.streamarc.tv.transfer.TransferType.DOWNLOAD)) }
@@ -176,7 +178,7 @@ class BrowseActivity : AppCompatActivity() {
     }
 
     private fun startPreview(stream: Stream) {
-        val url = try { XtreamApi.streamUrl(service, account, stream, prefs.liveFormat) } catch (_: Exception) { return }
+        val url = try { XtreamApi.streamUrl(service, account, stream, prefs.liveFormat, isLive) } catch (_: Exception) { return }
         previewStream = stream
         val player = preview ?: buildPreviewPlayer().also { preview = it }
         b.previewPlayer.player = player
@@ -310,7 +312,7 @@ class BrowseActivity : AppCompatActivity() {
 
     /** Tabs live in the top bar on wide screens and on their own full-width row on portrait phones. */
     private fun placeTabs(compact: Boolean) {
-        val showTabs = service.kind != ContentKind.LIVE
+        val showTabs = service.kind != ContentKind.LIVE && !isLive
         val buttons = listOf(b.btnTabMovies, b.btnTabSeries, b.btnTabDownloads)
         val target: ViewGroup = if (compact) b.tabsRow else b.tabs
         for (btn in buttons) {
@@ -366,7 +368,8 @@ class BrowseActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val fetched = XtreamApi.categories(service, account, kind)
-                val cats = if (isLive) fetched.filter { it.id !in prefs.hiddenLiveCategories } else fetched
+                // Hidden categories and channels are the Live TV account's choices; they don't apply to 24/7 channels.
+                val cats = if (isLive && !twentyFourSeven) fetched.filter { it.id !in prefs.hiddenLiveCategories } else fetched
                 providerCategories = cats
                 // With the catalogue already on disk the genre / extra groups are known now;
                 // otherwise they are added as soon as it arrives (see augmentCategories).
@@ -387,7 +390,7 @@ class BrowseActivity : AppCompatActivity() {
                 val wanted = pendingCategory
                 pendingCategory = null
                 if (isLive) {
-                    selectCategory(defaultLiveCategory(all))
+                    selectCategory(if (twentyFourSeven) all[1] else defaultLiveCategory(all))
                 } else if (wanted != null) {
                     // Opened from the VOD home on a particular group (a genre row's "See all", say).
                     selectCategory(all.firstOrNull { it.id == wanted }
@@ -490,7 +493,7 @@ class BrowseActivity : AppCompatActivity() {
         val q = b.inputSearch.text?.toString()?.trim().orEmpty()
         val favs = prefs.favorites(service, kind)
         var list = if (favoritesMode) allStreams.filter { favs.contains(it.id) } else allStreams
-        if (isLive) {
+        if (isLive && !twentyFourSeven) {
             val hidden = prefs.hiddenLiveCategories
             if (hidden.isNotEmpty()) list = list.filter { it.categoryId !in hidden }
             val hiddenChannels = prefs.hiddenLiveChannels
@@ -520,7 +523,7 @@ class BrowseActivity : AppCompatActivity() {
             return
         }
         val url = try {
-            XtreamApi.streamUrl(service, account, stream, prefs.liveFormat)
+            XtreamApi.streamUrl(service, account, stream, prefs.liveFormat, isLive)
         } catch (e: Exception) {
             showError(e.message ?: getString(R.string.load_failed)); return
         }
@@ -543,7 +546,7 @@ class BrowseActivity : AppCompatActivity() {
         val watchKey = if (kind == ContentKind.MOVIE) stream.streamId?.let { WatchProgress.movieKey(service, it) } else null
         val options = arrayListOf(first, favLabel, third)
         if (watchKey != null) options.add(getString(if (WatchProgress.isWatched(watchKey)) R.string.mark_unwatched else R.string.mark_watched))
-        if (kind == ContentKind.LIVE) options.add(getString(R.string.hide_channel))
+        if (kind == ContentKind.LIVE && !twentyFourSeven) options.add(getString(R.string.hide_channel))
         FocusDialog(this)
             .setTitle(stream.name ?: "")
             .setItems(options.toTypedArray()) { _, which ->
@@ -605,7 +608,7 @@ class BrowseActivity : AppCompatActivity() {
 
     private fun recordChannel(stream: Stream) {
         // Recordings always use the MPEG-TS stream so the file plays back directly.
-        val url = try { XtreamApi.streamUrl(service, account, stream, "ts") } catch (e: Exception) {
+        val url = try { XtreamApi.streamUrl(service, account, stream, "ts", true) } catch (e: Exception) {
             Toast.makeText(this, e.message, Toast.LENGTH_LONG).show(); return
         }
         TransferDialogs.record(this, picker, stream.name ?: "Channel", url)
