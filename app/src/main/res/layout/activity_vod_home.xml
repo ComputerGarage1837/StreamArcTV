@@ -45,6 +45,11 @@
                 <TextView style="@style/NavLabel" android:text="@string/categories" />
             </LinearLayout>
 
+            <LinearLayout android:id="@+id/navChannels" style="@style/VodNavItem" android:visibility="gone">
+                <ImageView android:layout_width="@dimen/home_nav_icon" android:layout_height="@dimen/home_nav_icon" android:contentDescription="@null" android:src="@drawable/ic_live" />
+                <TextView style="@style/NavLabel" android:text="@string/nav_channels_247" />
+            </LinearLayout>
+
             <LinearLayout android:id="@+id/navDownloads" style="@style/VodNavItem">
                 <ImageView android:layout_width="@dimen/home_nav_icon" android:layout_height="@dimen/home_nav_icon" android:contentDescription="@null" android:src="@drawable/img_nav_downloads" />
                 <TextView style="@style/NavLabel" android:text="@string/nav_downloads" />

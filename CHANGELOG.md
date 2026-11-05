@@ -3,6 +3,16 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.71 — 2026-11-05
+
+### Added
+- 24/7 channels in Video on Demand. When the provider supplies live "24/7" channels on the
+  Video on Demand account, a new "24/7" entry appears in the Video on Demand navigation (next to
+  Categories). It opens the same TV guide as Live TV: category list, programme grid with the
+  slot in progress first, preview, favourites, recording, the full-guide or per-channel
+  programme data, and the storage buffer with pause and skip. The entry only shows when the
+  provider has such channels and disappears when it doesn't.
+
 ## v1.0.70 — 2026-11-04
 
 ### Fixed
