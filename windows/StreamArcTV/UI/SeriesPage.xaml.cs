@@ -80,7 +80,7 @@ public partial class SeriesPage : AppPage
                 List.Children.Add(head);
             }
             var stack = new StackPanel();
-            var title = new TextBlock { FontSize = 15, Foreground = Ui.Brush("TextBrush"), TextTrimming = TextTrimming.CharacterEllipsis };
+            var title = new TextBlock { FontSize = 15, Foreground = Ui.Brush("TextBrush"), TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.Wrap, MaxHeight = 60 };
             var info = string.Join("  ·  ", new[] { ep.Duration, ep.Plot }.Where(s => !string.IsNullOrWhiteSpace(s)));
             var infoText = new TextBlock { Text = info, FontSize = 12, Foreground = Ui.Brush("TextMutedBrush"), TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, MaxHeight = 36, Margin = new Thickness(0, 2, 0, 0), Visibility = string.IsNullOrWhiteSpace(info) ? Visibility.Collapsed : Visibility.Visible };
             var progress = new ProgressBar { Style = Ui.Res<Style>("ThinProgress"), Margin = new Thickness(0, 6, 0, 0), Visibility = Visibility.Collapsed };

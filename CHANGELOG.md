@@ -3,6 +3,14 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.73 — 2026-11-05
+
+### Fixed
+- Show and movie names are no longer cut off. Names on posters, in the lists, on the show page,
+  on the episode rows and in the guide panel now wrap onto up to three lines instead of ending
+  in "…" after one, and the big banner title and the screen heading on the show and browse pages
+  have room for long names too.
+
 ## v1.0.72 — 2026-11-05
 
 ### Changed

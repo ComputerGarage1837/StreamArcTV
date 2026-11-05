@@ -3,6 +3,14 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.21 — 2026-11-05
+
+### Fixed
+- Show and movie names are no longer cut off. Names on the Video on Demand cards, the poster
+  grid, the show page, the episode rows and the guide panel now wrap onto up to three lines
+  instead of ending in "…", and the banner title and the headings on the show and browse pages
+  have room for long names too.
+
 ## v1.1.20 — 2026-11-05
 
 ### Fixed

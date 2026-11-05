@@ -13,7 +13,7 @@
             <Button x:Name="BtnBack" Style="{StaticResource SquareIconButton}" ToolTip="Back">
                 <Path Data="{StaticResource IconBack}" Fill="{StaticResource TextBrush}" Width="22" Height="22" Stretch="Uniform" />
             </Button>
-            <TextBlock x:Name="TxtTitle" Grid.Column="1" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="TxtTitle" Grid.Column="1" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxHeight="76" />
             <Button x:Name="BtnDownloadAll" Grid.Column="2" Content="Download all" Style="{StaticResource SmallButton}" Visibility="Collapsed" />
         </Grid>
         <Grid Grid.Row="1" Margin="16,0,16,0">
