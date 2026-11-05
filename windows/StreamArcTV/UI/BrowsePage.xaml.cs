@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 using LibVLCSharp.Shared;
 using StreamArcTV.Data;
 using StreamArcTV.Player;
@@ -279,27 +278,27 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
     /// The Video on Demand menu, so it doesn't change when opening the 24/7 channels.
     private void RenderRail()
     {
-        void Add(string label, string? png, Geometry? icon, bool selected, Action click)
+        void Add(string label, string? png, System.Windows.Media.Geometry? icon, bool selected, Action click)
         {
             var stack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
-            if (png != null) stack.Children.Add(new Image { Source = new System.Windows.Media.Imaging.BitmapImage(new Uri($"pack://application:,,,/Assets/{png}")), Width = 22, Height = 22, Stretch = Stretch.Uniform });
-            else stack.Children.Add(new System.Windows.Shapes.Path { Data = icon, Fill = new SolidColorBrush(Color.FromRgb(0xCB, 0xD5, 0xE1)), Width = 22, Height = 22, Stretch = Stretch.Uniform });
+            if (png != null) stack.Children.Add(new Image { Source = new System.Windows.Media.Imaging.BitmapImage(new Uri($"pack://application:,,,/Assets/{png}")), Width = 22, Height = 22, Stretch = System.Windows.Media.Stretch.Uniform });
+            else stack.Children.Add(new System.Windows.Shapes.Path { Data = icon, Fill = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xCB, 0xD5, 0xE1)), Width = 22, Height = 22, Stretch = System.Windows.Media.Stretch.Uniform });
             var text = new TextBlock { Text = label, FontSize = 13, Margin = new Thickness(0, 4, 0, 0), HorizontalAlignment = HorizontalAlignment.Center,
                 TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center,
-                Foreground = selected ? Ui.Brush("PurpleBrush") : new SolidColorBrush(Color.FromRgb(0xCB, 0xD5, 0xE1)) };
+                Foreground = selected ? Ui.Brush("PurpleBrush") : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xCB, 0xD5, 0xE1)) };
             stack.Children.Add(text);
             var card = new FocusCard { Content = stack, Style = Ui.Res<Style>("VodNavItem"), Selected = selected };
             card.Click += click;
             card.GotKeyboardFocus += (_, _) => text.Foreground = Ui.Brush("BgBrush");
-            card.LostKeyboardFocus += (_, _) => text.Foreground = selected ? Ui.Brush("PurpleBrush") : new SolidColorBrush(Color.FromRgb(0xCB, 0xD5, 0xE1));
+            card.LostKeyboardFocus += (_, _) => text.Foreground = selected ? Ui.Brush("PurpleBrush") : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xCB, 0xD5, 0xE1));
             card.Margin = _compact ? new Thickness(2, 0, 2, 4) : new Thickness(0, 0, 0, 4);
             if (_compact) TabsRow.Children.Add(card); else CategoryList.Children.Add(card);
         }
         if (_compact) { TabsRow.Children.Clear(); TabsRow.Visibility = Visibility.Visible; }
         Add("Home", "img_nav_home.png", null, false, () => Finish());
         Add("Search", "img_nav_search.png", null, false, () => Nav.Replace(new BrowsePage(_service, ContentKind.MOVIE, search: true)));
-        Add("Categories", null, Ui.Res<Geometry>("IconVod"), false, () => Nav.Replace(new BrowsePage(_service, ContentKind.MOVIE)));
-        Add("24/7 Channels", null, Ui.Res<Geometry>("IconLive"), true, () => { });
+        Add("Categories", null, Ui.Res<System.Windows.Media.Geometry>("IconVod"), false, () => Nav.Replace(new BrowsePage(_service, ContentKind.MOVIE)));
+        Add("24/7 Channels", null, Ui.Res<System.Windows.Media.Geometry>("IconLive"), true, () => { });
         Add("Downloads", "img_nav_downloads.png", null, false, () => Nav.Push(new TransfersPage(TransferType.DOWNLOAD)));
         Add("Profile", "img_nav_profile.png", null, false, () => Nav.Push(new ProfilePage(_service)));
     }
