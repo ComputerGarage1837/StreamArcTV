@@ -354,7 +354,7 @@ public partial class VodHomePage : AppPage
         grid.Children.Add(poster);
         var text = new StackPanel { VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(18, 8, 190, 12) };
         text.Children.Add(new TextBlock { Text = "F E A T U R E D", FontSize = 12, FontWeight = FontWeights.SemiBold, Foreground = Ui.Brush("AccentBrush") });
-        var title = new TextBlock { FontSize = 26, FontWeight = FontWeights.Black, Foreground = Ui.Brush("TextBrush"), TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.Wrap, MaxHeight = 66, Margin = new Thickness(0, 4, 0, 0) };
+        var title = new TextBlock { FontSize = 26, FontWeight = FontWeights.Black, Foreground = Ui.Brush("TextBrush"), TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.Wrap, MaxHeight = 104, Margin = new Thickness(0, 4, 0, 0) };
         var meta = new TextBlock { FontSize = 13, Foreground = Ui.Brush("TextMutedBrush"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 4, 0, 0) };
         var plot = new TextBlock { FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0xD0, 0xD8, 0xE4)), TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.Wrap, MaxHeight = 34, Margin = new Thickness(0, 6, 0, 0) };
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
@@ -493,7 +493,7 @@ public partial class VodHomePage : AppPage
         if (c.Progress != null)
             posterGrid.Children.Add(new ProgressBar { Style = Ui.Res<Style>("ThinProgress"), VerticalAlignment = VerticalAlignment.Bottom, Value = c.Progress.Value * 1000 });
         stack.Children.Add(posterGrid);
-        stack.Children.Add(new TextBlock { Text = c.Title, FontSize = 12, Foreground = Ui.Brush("TextBrush"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 6, 0, 0) });
+        stack.Children.Add(new TextBlock { Text = c.Title, FontSize = 12, Foreground = Ui.Brush("TextBrush"), TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.Wrap, MaxHeight = 54, Margin = new Thickness(0, 6, 0, 0) });
         stack.Children.Add(new TextBlock { Text = c.Subtitle ?? "", FontSize = 10.5, Foreground = Ui.Brush("TextMutedBrush"), TextTrimming = TextTrimming.CharacterEllipsis, Visibility = string.IsNullOrWhiteSpace(c.Subtitle) ? Visibility.Hidden : Visibility.Visible });
         LazyImages.Register(img, c.Image, 320);
         var card = new FocusCard { Content = stack, Style = Ui.Res<Style>("StreamItem"), Padding = new Thickness(5) };

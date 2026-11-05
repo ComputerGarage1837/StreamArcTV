@@ -60,7 +60,7 @@ public class PosterRowView : ContentControl
         {
             Text = (s.Id != null && row.Favorites.Contains(s.Id) ? "★ " : "") + (frac != null && frac >= 1f ? "✓ " : "") + (s.Name ?? "—"),
             FontSize = 13, Foreground = Ui.Brush("TextBrush"), TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis,
-            TextWrapping = TextWrapping.Wrap, MaxHeight = 36, Margin = new Thickness(0, 6, 0, 0)
+            TextWrapping = TextWrapping.Wrap, MaxHeight = 54, Margin = new Thickness(0, 6, 0, 0)
         };
         stack.Children.Add(title);
         if (frac != null) { progress.Visibility = Visibility.Visible; progress.Value = frac.Value * 1000; }

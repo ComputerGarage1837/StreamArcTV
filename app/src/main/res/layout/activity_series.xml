@@ -30,7 +30,7 @@
             android:layout_weight="1"
             android:ellipsize="end"
             android:fontFamily="sans-serif-medium"
-            android:maxLines="1"
+            android:maxLines="3"
             android:textColor="@color/text"
             android:textSize="20sp" />
 
