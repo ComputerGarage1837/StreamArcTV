@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using LibVLCSharp.Shared;
 using StreamArcTV.Data;
 using StreamArcTV.Player;
@@ -30,6 +31,8 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
     private bool IsLive => _kind == ContentKind.LIVE;
     /// The live guide running on the VOD account: the provider's 24/7 channels.
     private bool TwentyFourSeven => IsLive && _service.Kind() != ContentKind.LIVE;
+    /// Categories are shown as a chip row (narrow windows, and 24/7 channels where the left column is the VOD menu).
+    private bool ChipsMode => _compact || TwentyFourSeven;
 
     private List<Data.Stream> _allStreams = new();
     private readonly Dictionary<string, List<Data.Stream>> _streamCache = new();
@@ -187,11 +190,36 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         if (compact == _compact && CategoryList.Children.Count + ChipsRow.Children.Count > 0) return;
         _compact = compact;
         PlaceTabs(compact);
+        EpgGrid.WideNames = TwentyFourSeven;
         // Keep the guide panel short when the window is small so the grid gets the height.
         TxtPanelDesc.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         TxtPanelUpcoming.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         PanelEpg.Padding = new Thickness(12, compact ? 6 : 10, 16, compact ? 6 : 10);
-        if (compact)
+        // Defaults for every mode but 24/7 channels' wide layout (below).
+        Grid.SetRow(Body, 3); Grid.SetRowSpan(Body, 1);
+        GuideArea.Margin = new Thickness(0);
+        ChipsScroll.Margin = new Thickness(12, 0, 4, 8);
+        ChipsScroll.Height = double.NaN;
+        if (TwentyFourSeven)
+        {
+            // The VOD menu keeps the left column; the categories are chips above the guide.
+            ChipsScroll.Visibility = Visibility.Visible;
+            if (compact)
+            {
+                CategoryScroll.Visibility = Visibility.Collapsed;
+                CategoryCol.Width = new GridLength(0);
+            }
+            else
+            {
+                CategoryScroll.Visibility = Visibility.Visible;
+                CategoryCol.Width = new GridLength(96);
+                Grid.SetRow(Body, 2); Grid.SetRowSpan(Body, 2);
+                ChipsScroll.Margin = new Thickness(108, 0, 4, 8);
+                ChipsScroll.Height = 40;
+                GuideArea.Margin = new Thickness(0, 48, 0, 0);
+            }
+        }
+        else if (compact)
         {
             CategoryScroll.Visibility = Visibility.Collapsed;
             CategoryCol.Width = new GridLength(0);
@@ -221,7 +249,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         Tabs.Visibility = showTabs && !compact ? Visibility.Visible : Visibility.Collapsed;
         TabsRow.Visibility = showTabs && compact ? Visibility.Visible : Visibility.Collapsed;
         // The chip row already shows the category; the top-bar label is dropped when narrow.
-        TxtCategory.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        TxtCategory.Visibility = compact || TwentyFourSeven ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void RenderTabs()
@@ -248,27 +276,56 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
 
     private readonly List<(FocusCard Card, Category Cat)> _categoryCards = new();
 
+    /// The Video on Demand menu, so it doesn't change when opening the 24/7 channels.
+    private void RenderRail()
+    {
+        void Add(string label, string? png, Geometry? icon, bool selected, Action click)
+        {
+            var stack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+            if (png != null) stack.Children.Add(new Image { Source = new System.Windows.Media.Imaging.BitmapImage(new Uri($"pack://application:,,,/Assets/{png}")), Width = 22, Height = 22, Stretch = Stretch.Uniform });
+            else stack.Children.Add(new System.Windows.Shapes.Path { Data = icon, Fill = new SolidColorBrush(Color.FromRgb(0xCB, 0xD5, 0xE1)), Width = 22, Height = 22, Stretch = Stretch.Uniform });
+            var text = new TextBlock { Text = label, FontSize = 13, Margin = new Thickness(0, 4, 0, 0), HorizontalAlignment = HorizontalAlignment.Center,
+                TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center,
+                Foreground = selected ? Ui.Brush("PurpleBrush") : new SolidColorBrush(Color.FromRgb(0xCB, 0xD5, 0xE1)) };
+            stack.Children.Add(text);
+            var card = new FocusCard { Content = stack, Style = Ui.Res<Style>("VodNavItem"), Selected = selected };
+            card.Click += click;
+            card.GotKeyboardFocus += (_, _) => text.Foreground = Ui.Brush("BgBrush");
+            card.LostKeyboardFocus += (_, _) => text.Foreground = selected ? Ui.Brush("PurpleBrush") : new SolidColorBrush(Color.FromRgb(0xCB, 0xD5, 0xE1));
+            card.Margin = _compact ? new Thickness(2, 0, 2, 4) : new Thickness(0, 0, 0, 4);
+            if (_compact) TabsRow.Children.Add(card); else CategoryList.Children.Add(card);
+        }
+        if (_compact) { TabsRow.Children.Clear(); TabsRow.Visibility = Visibility.Visible; }
+        Add("Home", "img_nav_home.png", null, false, () => Finish());
+        Add("Search", "img_nav_search.png", null, false, () => Nav.Replace(new BrowsePage(_service, ContentKind.MOVIE, search: true)));
+        Add("Categories", null, Ui.Res<Geometry>("IconVod"), false, () => Nav.Replace(new BrowsePage(_service, ContentKind.MOVIE)));
+        Add("24/7 Channels", null, Ui.Res<Geometry>("IconLive"), true, () => { });
+        Add("Downloads", "img_nav_downloads.png", null, false, () => Nav.Push(new TransfersPage(TransferType.DOWNLOAD)));
+        Add("Profile", "img_nav_profile.png", null, false, () => Nav.Push(new ProfilePage(_service)));
+    }
+
     private void RenderCategories()
     {
         CategoryList.Children.Clear();
         ChipsRow.Children.Clear();
         _categoryCards.Clear();
+        if (TwentyFourSeven) RenderRail();
         foreach (var c in _categories)
         {
             var cat = c;
             var card = new FocusCard
             {
-                Style = Ui.Res<Style>(_compact ? "ChipItem" : "CategoryItem"),
+                Style = Ui.Res<Style>(ChipsMode ? "ChipItem" : "CategoryItem"),
                 Selected = cat.Id == _selectedId,
                 Content = new TextBlock
                 {
-                    Text = cat.Name ?? "—", FontSize = _compact ? 13 : 14, TextTrimming = TextTrimming.CharacterEllipsis,
-                    FontWeight = _compact ? FontWeights.SemiBold : FontWeights.Normal, MaxWidth = _compact ? 200 : double.PositiveInfinity
+                    Text = cat.Name ?? "—", FontSize = ChipsMode ? 13 : 14, TextTrimming = TextTrimming.CharacterEllipsis,
+                    FontWeight = ChipsMode ? FontWeights.SemiBold : FontWeights.Normal, MaxWidth = ChipsMode ? 200 : double.PositiveInfinity
                 }
             };
             card.Click += () => SelectCategory(cat);
             _categoryCards.Add((card, cat));
-            if (_compact) ChipsRow.Children.Add(card); else CategoryList.Children.Add(card);
+            if (ChipsMode) ChipsRow.Children.Add(card); else CategoryList.Children.Add(card);
         }
         // Chips inherit the card foreground from the style trigger.
         foreach (var chip in ChipsRow.Children.OfType<FocusCard>())
@@ -288,13 +345,18 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         {
             var fetched = await XtreamApi.Categories(_service, _account, _kind);
             // Hidden categories are the Live TV account's choice; they don't apply to 24/7 channels.
-            var cats = IsLive && !TwentyFourSeven ? fetched.Where(c => c.Id == null || !_prefs.HiddenLiveCategories.Contains(c.Id)).ToList() : fetched;
+            // 24/7 channels: only the provider's "24/7" categories (not e.g. its Movies group); with no such name, everything.
+            var only247 = TwentyFourSeven ? fetched.Where(c => c.Name?.Contains("24/7") == true).ToList() : new List<Category>();
+            var cats = TwentyFourSeven ? (only247.Count > 0 ? only247 : fetched)
+                : IsLive ? fetched.Where(c => c.Id == null || !_prefs.HiddenLiveCategories.Contains(c.Id)).ToList() : fetched;
             _providerCategories = cats;
             // With the catalogue already on disk the genre / extra groups are known now;
             // otherwise they are added as soon as it arrives (see AugmentCategories).
             var cached = IsLive ? null : CatalogCache.Peek(_service, _kind);
             List<Category> all;
-            if (IsLive)
+            if (TwentyFourSeven && only247.Count > 0)
+                all = new List<Category> { new(FAV_ID, "★ Favorites") }.Concat(cats).ToList();
+            else if (IsLive)
                 all = new List<Category> { new(FAV_ID, "★ Favorites"), new(null, "All") }.Concat(cats).ToList();
             else if (cached != null) { _augmented = true; all = await Task.Run(() => BuildVodCategories(cats, cached)); }
             else

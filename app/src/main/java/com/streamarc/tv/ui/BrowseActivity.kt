@@ -293,7 +293,10 @@ class BrowseActivity : AppCompatActivity() {
         b.panelEpg.setPadding(b.panelEpg.paddingLeft, pad, b.panelEpg.paddingRight, pad)
         b.listCategories.adapter = null
         b.listCategoriesTop.adapter = null
-        if (compact) {
+        b.epgGrid.wideNames = twentyFourSeven
+        if (twentyFourSeven) {
+            applyRailLayout(compact)
+        } else if (compact) {
             b.listCategories.visibility = View.GONE
             b.listCategoriesTop.visibility = View.VISIBLE
             b.listCategoriesTop.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
@@ -308,6 +311,76 @@ class BrowseActivity : AppCompatActivity() {
             b.listCategories.layoutManager = LinearLayoutManager(this)
             b.listCategories.adapter = categoryAdapter
         }
+    }
+
+    // ---- Static VOD menu (24/7 channels) ------------------------------------------
+
+    private class RailEntry(val label: Int, val icon: Int, val selected: Boolean, val go: () -> Unit)
+
+    /** The same menu as the Video on Demand home, so it doesn't change when opening 24/7 channels. */
+    private fun railEntries(): List<RailEntry> = listOf(
+        RailEntry(R.string.nav_home, R.drawable.img_nav_home, false) { finish() },
+        RailEntry(R.string.nav_search, R.drawable.img_nav_search, false) {
+            startActivity(BrowseActivity.intent(this, service, ContentKind.MOVIE, search = true)); finish()
+        },
+        RailEntry(R.string.categories, R.drawable.ic_vod, false) { startActivity(BrowseActivity.intent(this, service, ContentKind.MOVIE)); finish() },
+        RailEntry(R.string.nav_channels_247, R.drawable.ic_live, true) { },
+        RailEntry(R.string.nav_downloads, R.drawable.img_nav_downloads, false) {
+            startActivity(TransfersActivity.intent(this, com.streamarc.tv.transfer.TransferType.DOWNLOAD))
+        },
+        RailEntry(R.string.nav_profile, R.drawable.img_nav_profile, false) { startActivity(ProfileActivity.intent(this, service)) }
+    )
+
+    private fun bindRailEntry(root: View, e: RailEntry) {
+        root.findViewById<android.widget.ImageView>(R.id.imgIcon).setImageResource(e.icon)
+        root.findViewById<android.widget.TextView>(R.id.txtLabel).setText(e.label)
+        root.isSelected = e.selected
+        root.setOnClickListener { e.go() }
+    }
+
+    /**
+     * 24/7 channels: the VOD menu takes the left column (a row under the header on phones held upright)
+     * and the categories (Favorites, 24/7) become a chip row above the guide.
+     */
+    private fun applyRailLayout(compact: Boolean) {
+        val d = resources.displayMetrics.density
+        val rail = b.listCategories.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+        val chips = b.listCategoriesTop.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+        val unset = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
+        categoryAdapter.chips = true
+        b.listCategoriesTop.visibility = View.VISIBLE
+        b.listCategoriesTop.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        b.listCategoriesTop.adapter = categoryAdapter
+        if (compact) {
+            rail.topToBottom = b.listCategoriesTop.id
+            chips.startToEnd = unset; chips.startToStart = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+            b.listCategories.visibility = View.GONE
+            b.tabsRow.removeAllViews()
+            for (e in railEntries()) {
+                val v = LayoutInflater.from(this).inflate(R.layout.item_nav_entry, b.tabsRow, false)
+                v.layoutParams = android.widget.LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                bindRailEntry(v, e)
+                b.tabsRow.addView(v)
+            }
+            b.tabsRow.visibility = View.VISIBLE
+        } else {
+            // The menu runs the full height on the left; the chips sit above the guide, to its right.
+            rail.topToBottom = b.tabsRow.id
+            chips.startToStart = unset; chips.startToEnd = b.listCategories.id
+            b.tabsRow.visibility = View.GONE
+            b.listCategories.visibility = View.VISIBLE
+            b.listCategories.layoutParams = rail.apply { width = (96 * d).toInt() }
+            b.listCategories.layoutManager = LinearLayoutManager(this)
+            val entries = railEntries()
+            b.listCategories.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+                    object : RecyclerView.ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_nav_entry, parent, false)) {}
+                override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) = bindRailEntry(holder.itemView, entries[position])
+                override fun getItemCount() = entries.size
+            }
+        }
+        b.listCategories.layoutParams = rail
+        b.listCategoriesTop.layoutParams = chips
     }
 
     /** Tabs live in the top bar on wide screens and on their own full-width row on portrait phones. */
@@ -329,7 +402,7 @@ class BrowseActivity : AppCompatActivity() {
         b.tabs.visibility = if (showTabs && !compact) View.VISIBLE else View.GONE
         b.tabsRow.visibility = if (showTabs && compact) View.VISIBLE else View.GONE
         // The chip row already shows the category; the top-bar label is dropped on phones.
-        b.txtCategory.visibility = if (compact) View.GONE else View.VISIBLE
+        b.txtCategory.visibility = if (compact || twentyFourSeven) View.GONE else View.VISIBLE
     }
 
     /** Rotation is handled in place (see the manifest) so the category and guide position survive. */
@@ -369,12 +442,19 @@ class BrowseActivity : AppCompatActivity() {
             try {
                 val fetched = XtreamApi.categories(service, account, kind)
                 // Hidden categories and channels are the Live TV account's choices; they don't apply to 24/7 channels.
-                val cats = if (isLive && !twentyFourSeven) fetched.filter { it.id !in prefs.hiddenLiveCategories } else fetched
+                // 24/7 channels: only the provider's "24/7" categories (not e.g. its Movies group); with no such name, everything.
+                val only247 = if (twentyFourSeven) fetched.filter { it.name?.contains("24/7") == true } else emptyList()
+                val cats = when {
+                    twentyFourSeven -> only247.ifEmpty { fetched }
+                    isLive -> fetched.filter { it.id !in prefs.hiddenLiveCategories }
+                    else -> fetched
+                }
                 providerCategories = cats
                 // With the catalogue already on disk the genre / extra groups are known now;
                 // otherwise they are added as soon as it arrives (see augmentCategories).
                 val cached = if (isLive) null else CatalogCache.peek(service, kind)
                 val all = when {
+                    twentyFourSeven && only247.isNotEmpty() -> listOf(Category(FAV_ID, "★ " + getString(R.string.favorites))) + cats
                     isLive -> listOf(
                         Category(FAV_ID, "★ " + getString(R.string.favorites)),
                         Category(null, getString(R.string.all_categories))

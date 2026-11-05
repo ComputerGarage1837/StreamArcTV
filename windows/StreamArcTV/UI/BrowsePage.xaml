@@ -49,7 +49,7 @@
             <StackPanel x:Name="ChipsRow" Orientation="Horizontal" />
         </ScrollViewer>
 
-        <Grid Grid.Row="3">
+        <Grid x:Name="Body" Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="CategoryCol" Width="220" />
                 <ColumnDefinition Width="*" />
@@ -59,7 +59,7 @@
                 <StackPanel x:Name="CategoryList" />
             </ScrollViewer>
 
-            <Grid Grid.Column="1">
+            <Grid x:Name="GuideArea" Grid.Column="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
