@@ -31,6 +31,11 @@
     <string name="back">Back</string>
     <string name="profile">Profile</string>
     <string name="categories">Categories</string>
+    <string name="open_on_boot_setting">Open the app when the box starts</string>
+    <string name="open_on_boot_permission">Allow "Display over other apps" for Stream Arc TV so it can open when the box starts, then switch this on again.</string>
+    <string name="cast">Cast</string>
+    <string name="cast_failed">Couldn\'t connect to the TV.</string>
+    <string name="casting_to_fmt">Casting to %1$s</string>
     <string name="reminders_channel">Reminders</string>
     <string name="reminders_section">Reminders and alerts</string>
     <string name="reminders_setting">Subscription and new episode reminders</string>

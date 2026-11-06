@@ -70,6 +70,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <Button x:Name="BtnPlay" Style="{StaticResource PlayerButton}" ToolTip="Play / pause (Space)">
                             <Path x:Name="IconPlayPause" Data="{StaticResource IconPause}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="20" Height="20" Stretch="Uniform" />
@@ -79,10 +80,13 @@
                         <Button x:Name="BtnCc" Grid.Column="3" Style="{StaticResource PlayerButton}" Margin="12,0,0,0" ToolTip="Audio and subtitles">
                             <Path Data="{StaticResource IconCc}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="20" Height="20" Stretch="Uniform" />
                         </Button>
-                        <Button x:Name="BtnFull" Grid.Column="4" Style="{StaticResource PlayerButton}" Margin="8,0,0,0" ToolTip="Full screen (F11)">
+                        <Button x:Name="BtnMini" Grid.Column="4" Style="{StaticResource PlayerButton}" Margin="8,0,0,0" ToolTip="Mini player, always on top (M)">
+                            <Path Data="{StaticResource IconMini}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="20" Height="20" Stretch="Uniform" />
+                        </Button>
+                        <Button x:Name="BtnFull" Grid.Column="5" Style="{StaticResource PlayerButton}" Margin="8,0,0,0" ToolTip="Full screen (F11)">
                             <Path Data="{StaticResource IconFullscreen}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="20" Height="20" Stretch="Uniform" />
                         </Button>
-                        <Button x:Name="BtnClose" Grid.Column="5" Style="{StaticResource PlayerButton}" Margin="8,0,0,0" ToolTip="Back (Esc)">
+                        <Button x:Name="BtnClose" Grid.Column="6" Style="{StaticResource PlayerButton}" Margin="8,0,0,0" ToolTip="Back (Esc)">
                             <Path Data="{StaticResource IconBack}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="20" Height="20" Stretch="Uniform" />
                         </Button>
                     </Grid>

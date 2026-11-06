@@ -426,7 +426,17 @@ class TransferService : Service() {
 class TransferAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> TransferService.rescheduleAll(context)
+            Intent.ACTION_BOOT_COMPLETED, "android.intent.action.QUICKBOOT_POWERON", Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                TransferService.rescheduleAll(context)
+                // Settings → "Open the app when the box starts".
+                if (intent.action != Intent.ACTION_MY_PACKAGE_REPLACED && com.streamarc.tv.data.Prefs(context).openOnBoot) {
+                    try {
+                        context.startActivity(Intent(context, com.streamarc.tv.ui.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    } catch (e: Exception) {
+                        com.streamarc.tv.util.AppLog.w("Boot", "couldn't open the app at start-up: ${e.message}")
+                    }
+                }
+            }
             else -> TransferService.startService(context)
         }
     }

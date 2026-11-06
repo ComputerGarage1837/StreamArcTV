@@ -3,6 +3,14 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.27 — 2026-11-06
+
+### Added
+- Always-on-top mini player. A new button in the player (or the M key) shrinks the window to a
+  small player in the bottom-right corner that stays above every other window, so a channel can keep
+  playing while you work. Press it again to put the window back where it was; leaving the player does
+  too.
+
 ## v1.1.26 — 2026-11-06
 
 ### Added

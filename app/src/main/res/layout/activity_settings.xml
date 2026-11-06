@@ -446,6 +446,15 @@
                 android:textColor="@color/text"
                 android:textSize="16sp" />
 
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchOpenOnBoot"
+                style="@style/SettingsRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/open_on_boot_setting"
+                android:textColor="@color/text"
+                android:textSize="16sp" />
+
             <LinearLayout
                 android:id="@+id/rowDownloadFolder"
                 style="@style/SettingsRow"

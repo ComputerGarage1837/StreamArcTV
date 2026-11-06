@@ -36,6 +36,45 @@ public partial class MainWindow : Window
         PreviewMouseUp += (_, e) => { if (Nav.SinceNavigationMs < Nav.CLICK_GUARD_MS) e.Handled = true; };
     }
 
+    private bool _mini;
+    private Rect _boundsBeforeMini;
+    private WindowState _stateBeforeMini = WindowState.Normal;
+    private double _minWidthBefore, _minHeightBefore;
+
+    /// True while the window is the small always-on-top mini player.
+    public bool IsMini => _mini;
+
+    /// A small window pinned above everything else in the bottom-right corner, so a channel can keep
+    /// playing while you work. Turning it off puts the window back where it was.
+    public void SetMini(bool on)
+    {
+        if (on == _mini) return;
+        if (on)
+        {
+            if (IsFullScreen) SetFullScreen(false);
+            _stateBeforeMini = WindowState;
+            _boundsBeforeMini = WindowState == WindowState.Normal ? new Rect(Left, Top, Width, Height) : RestoreBounds;
+            _minWidthBefore = MinWidth; _minHeightBefore = MinHeight;
+            WindowState = WindowState.Normal;
+            MinWidth = 320; MinHeight = 200;
+            Width = 480; Height = 300;
+            var wa = SystemParameters.WorkArea;
+            Left = wa.Right - Width - 16;
+            Top = wa.Bottom - Height - 16;
+            Topmost = true;
+            _mini = true;
+        }
+        else
+        {
+            _mini = false;
+            Topmost = false;
+            MinWidth = _minWidthBefore; MinHeight = _minHeightBefore;
+            Left = _boundsBeforeMini.Left; Top = _boundsBeforeMini.Top;
+            Width = _boundsBeforeMini.Width; Height = _boundsBeforeMini.Height;
+            WindowState = _stateBeforeMini == WindowState.Maximized ? WindowState.Maximized : WindowState.Normal;
+        }
+    }
+
     public bool IsFullScreen => WindowStyle == WindowStyle.None && WindowState == WindowState.Maximized;
 
     public void SetFullScreen(bool on)
@@ -124,8 +163,9 @@ public partial class MainWindow : Window
     {
         try
         {
-            var b = RestoreBounds;
-            Prefs.Instance.WindowPlacement = $"{b.Left},{b.Top},{b.Width},{b.Height},{(WindowState == WindowState.Maximized ? "max" : "normal")}";
+            var b = _mini ? _boundsBeforeMini : RestoreBounds;
+            var maximized = _mini ? _stateBeforeMini == WindowState.Maximized : WindowState == WindowState.Maximized;
+            Prefs.Instance.WindowPlacement = $"{b.Left},{b.Top},{b.Width},{b.Height},{(maximized ? "max" : "normal")}";
         }
         catch { }
     }
