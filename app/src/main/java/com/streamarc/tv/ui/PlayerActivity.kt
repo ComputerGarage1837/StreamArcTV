@@ -107,6 +107,12 @@ class PlayerActivity : AppCompatActivity() {
     private var formatChecked = false
     /** Channel up / down is available (opened from the guide with its channel list). */
     private var zap = false
+    /** Opened from the guide: its channel is known, so what's on now can be shown. */
+    private var fromGuide = false
+    private var guideStream: com.streamarc.tv.data.Stream? = null
+    private var guideService: com.streamarc.tv.data.Service? = null
+    private var nowCheckedAt = 0L
+    private var nowFetching = false
     /** The other stream format (HLS / TS) was already tried for this channel. */
     private var triedAlternate = false
     /** Play the plain stream instead of the storage buffer (used when the buffered TS stream failed). */
@@ -137,7 +143,9 @@ class PlayerActivity : AppCompatActivity() {
         isLive = intent.getBooleanExtra(EXTRA_LIVE, false)
         AppLog.i(TAG, "open live=$isLive title='$title' url=${AppLog.safeUrl(url)} emulator=$isEmulator")
         watchKey = intent.getStringExtra(EXTRA_KEY)?.takeIf { !isLive }
-        zap = isLive && intent.getBooleanExtra(EXTRA_ZAP, false) && com.streamarc.tv.player.ChannelQueue.available
+        fromGuide = isLive && intent.getBooleanExtra(EXTRA_ZAP, false)
+        zap = fromGuide && com.streamarc.tv.player.ChannelQueue.available
+        if (fromGuide) { guideStream = com.streamarc.tv.player.ChannelQueue.current(); guideService = com.streamarc.tv.player.ChannelQueue.service }
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         b.txtTitle.text = title
@@ -155,25 +163,21 @@ class PlayerActivity : AppCompatActivity() {
         pv.controllerShowTimeoutMs = 4000
         pv.setControllerVisibilityListener(
             androidx.media3.ui.PlayerView.ControllerVisibilityListener { visibility ->
-                b.txtTitle.visibility = visibility
+                b.topInfo.visibility = visibility
                 b.txtLiveStatus.visibility = if (isLive) visibility else View.GONE
-                b.btnSeekBack.visibility = visibility
-                b.btnSeekFwd.visibility = visibility
-                b.btnTracks.visibility = visibility
-                b.btnCast.visibility = if (castReady) visibility else View.GONE
-                b.channelBox.visibility = if (zap) visibility else View.GONE
+                if (visibility == View.VISIBLE) refreshNowPlaying(force = true)
             }
         )
         b.txtLiveStatus.visibility = View.GONE
-        b.btnSeekBack.visibility = View.GONE
-        b.btnSeekFwd.visibility = View.GONE
-        b.btnTracks.setOnClickListener { showTrackPicker() }
+        // The buttons live in the controller's own layout, along the bottom under the progress bar.
+        pv.findViewById<View>(R.id.btnTracks).setOnClickListener { showTrackPicker() }
+        pv.findViewById<View>(R.id.btnSeekBack).setOnClickListener { seekBy(-SEEK_STEP_MS) }
+        pv.findViewById<View>(R.id.btnSeekFwd).setOnClickListener { seekBy(SEEK_STEP_MS) }
+        pv.findViewById<View>(R.id.btnChannelUp).setOnClickListener { zapBy(1) }
+        pv.findViewById<View>(R.id.btnChannelDown).setOnClickListener { zapBy(-1) }
+        pv.findViewById<View>(R.id.channelBox).visibility = if (zap) View.VISIBLE else View.GONE
         setupCast()
-        b.btnChannelUp.setOnClickListener { zapBy(1) }
-        b.btnChannelDown.setOnClickListener { zapBy(-1) }
         b.txtLiveStatus.setOnClickListener { goLive() }
-        b.btnSeekBack.setOnClickListener { seekBy(-SEEK_STEP_MS) }
-        b.btnSeekFwd.setOnClickListener { seekBy(SEEK_STEP_MS) }
         b.btnRetry.setOnClickListener { retries = 0; nudges = 0; releasePlayer(); initPlayer() }
         b.btnNextCancel.setOnClickListener { hideNext() }
     }
@@ -216,13 +220,14 @@ class PlayerActivity : AppCompatActivity() {
         if (!com.streamarc.tv.player.CastSupport.available(this)) return
         val cc = com.streamarc.tv.player.CastSupport.context(this) ?: return
         try {
-            com.google.android.gms.cast.framework.CastButtonFactory.setUpMediaRouteButton(applicationContext, b.btnCast)
+            com.google.android.gms.cast.framework.CastButtonFactory.setUpMediaRouteButton(applicationContext, pv.findViewById<androidx.mediarouter.app.MediaRouteButton>(R.id.btnCast))
         } catch (e: Exception) {
             AppLog.w(TAG, "cast button unavailable: ${e.message}")
             return
         }
         castContext = cc
         castReady = true
+        pv.findViewById<View>(R.id.btnCast).visibility = View.VISIBLE
         val listener = object : com.google.android.gms.cast.framework.SessionManagerListener<com.google.android.gms.cast.framework.CastSession> {
             override fun onSessionStarted(s: com.google.android.gms.cast.framework.CastSession, id: String) = startCasting(s)
             override fun onSessionResumed(s: com.google.android.gms.cast.framework.CastSession, wasSuspended: Boolean) = startCasting(s)
@@ -790,10 +795,13 @@ class PlayerActivity : AppCompatActivity() {
         b.txtTitle.text = title
         retries = 0; nudges = 0
         triedAlternate = false; noTimeshift = false
+        guideStream = s
+        b.txtNow.visibility = View.GONE
         cancelRetry()
         releasePlayer()
         initPlayer()
         pv.showController()   // brings up the title so the new channel is named
+        refreshNowPlaying(force = true)
     }
 
     // ---- Audio and subtitle tracks ---------------------------------------------------
@@ -967,8 +975,41 @@ class PlayerActivity : AppCompatActivity() {
 
     // ---- Status line -----------------------------------------------------------
 
+    /** What's on now and next for a channel opened from the guide; shown under the title while the controls are up. */
+    private fun refreshNowPlaying(force: Boolean = false) {
+        val s = guideStream ?: return
+        val svc = guideService ?: return
+        val now = SystemClock.elapsedRealtime()
+        if (!force && now - nowCheckedAt < 20_000) return
+        nowCheckedAt = now
+        val id = s.streamId
+        val list = com.streamarc.tv.data.EpgCache.guideFor(svc, s.epgChannelId, s.name)
+            ?: id?.let { com.streamarc.tv.data.EpgCache.peek(svc, it) }
+        if (list == null) {
+            val account = prefs.account(svc)
+            if (id != null && account != null && !nowFetching) {
+                nowFetching = true
+                lifecycleScope.launch {
+                    try { com.streamarc.tv.data.EpgCache.get(svc, account, id) } catch (_: Exception) {} finally { nowFetching = false }
+                    if (!isDestroyed) refreshNowPlaying(force = true)
+                }
+            }
+            return
+        }
+        val sec = System.currentTimeMillis() / 1000
+        val cur = list.firstOrNull { it.isOnNow(sec) }
+        val next = list.filter { it.start >= (cur?.end ?: sec) }.minByOrNull { it.start }
+        val text = listOfNotNull(
+            cur?.let { getString(R.string.on_now_fmt, it.title, com.streamarc.tv.data.Format.timeRange(it.start, it.end)) },
+            next?.let { getString(R.string.on_next_fmt, it.title, com.streamarc.tv.data.Format.time(it.start)) }
+        ).joinToString("\n")
+        b.txtNow.text = text
+        b.txtNow.visibility = if (text.isEmpty()) View.GONE else View.VISIBLE
+    }
+
     private fun updateStatus() {
         val p = player ?: return
+        refreshNowPlaying()
         if (!isLive) saveProgress()
         watchdog(p)
         if (p.playbackState == Player.STATE_BUFFERING && pendingRetry == null) {

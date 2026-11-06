@@ -76,7 +76,8 @@
 
                 <!-- Reminders -->
                 <TextBlock Text="REMINDERS AND ALERTS" Style="{StaticResource SectionHeader}" />
-                <CheckBox x:Name="SwitchReminders" Content="Subscription and new episode reminders" Style="{StaticResource Switch}" />
+                <CheckBox x:Name="SwitchReminders" Content="Subscription expiry reminders" Style="{StaticResource Switch}" />
+                <CheckBox x:Name="SwitchNewEpisodeAlerts" Content="New episode alerts for My List shows" Style="{StaticResource Switch}" />
                 <CheckBox x:Name="SwitchAutoDownloadNew" Content="Download new episodes of My List shows by themselves (overnight)" Style="{StaticResource Switch}" />
 
                 <!-- Storage -->

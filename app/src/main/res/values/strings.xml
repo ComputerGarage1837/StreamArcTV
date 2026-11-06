@@ -34,11 +34,15 @@
     <string name="open_on_boot_setting">Open the app when the box starts</string>
     <string name="open_on_boot_permission">Allow "Display over other apps" for Stream Arc TV so it can open when the box starts, then switch this on again.</string>
     <string name="cast">Cast</string>
+    <string name="on_now_fmt">Now: %1$s  ·  %2$s</string>
+    <string name="on_next_fmt">Next: %1$s  ·  %2$s</string>
     <string name="cast_failed">Couldn\'t connect to the TV.</string>
     <string name="casting_to_fmt">Casting to %1$s</string>
     <string name="reminders_channel">Reminders</string>
     <string name="reminders_section">Reminders and alerts</string>
-    <string name="reminders_setting">Subscription and new episode reminders</string>
+    <string name="reminders_setting">Subscription expiry reminders</string>
+    <string name="new_episode_alerts_setting">New episode alerts for My List shows</string>
+    <string name="new_episodes_channel">New episodes</string>
     <string name="auto_download_new_setting">Download new episodes of My List shows by themselves (Wi-Fi, overnight)</string>
     <string name="expiry_title">Subscription ending</string>
     <string name="expires_soon_fmt">Your %1$s subscription ends on %2$s (in %3$d days). Renew it to keep watching.</string>

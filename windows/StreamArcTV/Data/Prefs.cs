@@ -261,6 +261,7 @@ public sealed class Prefs
 
     /// Reminders and alerts: subscription expiry and new episodes of My List shows.
     public bool RemindersOn { get => GetBool("reminders", true); set => PutBool("reminders", value); }
+    public bool NewEpisodeAlerts { get => GetBool("new_episode_alerts", GetBool("reminders", true)); set => PutBool("new_episode_alerts", value); }
     /// Download new episodes of My List shows by themselves, overnight.
     public bool AutoDownloadNew { get => GetBool("auto_download_new", false); set => PutBool("auto_download_new", value); }
     /// "<expiry epoch seconds>:<stage>" of the last expiry reminder sent for a service.

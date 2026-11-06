@@ -669,9 +669,9 @@ class BrowseActivity : AppCompatActivity() {
         // The preview is a second connection on the same account; many accounts allow only one, so close
         // it before the full-screen stream connects (it was only released in onStop, after the player had started).
         if (isLive) releasePreview()
-        val zap = isLive && visibleStreams.size > 1
-        if (zap) com.streamarc.tv.player.ChannelQueue.set(service, visibleStreams, stream) else com.streamarc.tv.player.ChannelQueue.clear()
-        startActivity(PlayerActivity.intent(this, url, stream.name ?: "", isLive, key, zap))
+        // From the guide the player knows the channel (what's on now) and, with a list, can change channel.
+        if (isLive) com.streamarc.tv.player.ChannelQueue.set(service, visibleStreams.ifEmpty { listOf(stream) }, stream) else com.streamarc.tv.player.ChannelQueue.clear()
+        startActivity(PlayerActivity.intent(this, url, stream.name ?: "", isLive, key, isLive))
     }
 
     /** Context menu opened by holding OK / long-pressing an item. */

@@ -3,6 +3,16 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.80 — 2026-11-06
+
+### Changed
+- Subscription expiry reminders and new episode alerts are now two separate switches in Settings, each with its own notification type, so either can be turned off without the other.
+- The player controls now sit in one row underneath the progress bar: play/pause, skip back and forward, channel up and down, audio and subtitles, and cast. Previously the skip and channel buttons floated in the middle of the screen.
+- Live TV and 24/7 channels opened from the guide now show what is on now and what is next at the top of the player, whenever the controls are up or the video is paused.
+
+### Fixed
+- On phones, the "24/7 Channels" label in the VOD menu is now centred.
+
 ## v1.0.79 — 2026-11-06
 
 ### Added

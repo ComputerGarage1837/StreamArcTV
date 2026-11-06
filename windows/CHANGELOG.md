@@ -3,6 +3,13 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.28 — 2026-11-06
+
+### Changed
+- Subscription expiry reminders and new episode alerts are now two separate switches in Settings, so either can be turned off without the other.
+- The player controls now sit in one row underneath the progress bar: play/pause, skip back and forward, channel up and down, audio and subtitles, mini player, full screen and back. Previously the skip and channel buttons floated over the video.
+- Live TV and 24/7 channels opened from the guide now show what is on now and what is next at the top of the player, whenever the controls are up or the video is paused.
+
 ## v1.1.27 — 2026-11-06
 
 ### Added

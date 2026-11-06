@@ -36,7 +36,7 @@ public static class Reminders
             {
                 try { await CheckExpiry(); } catch (Exception e) { AppLog.W(TAG, "expiry check failed: " + e.Message); }
             }
-            if (prefs.RemindersOn || prefs.AutoDownloadNew)
+            if (prefs.NewEpisodeAlerts || prefs.AutoDownloadNew)
             {
                 try { await CheckNewEpisodes(); } catch (Exception e) { AppLog.W(TAG, "episode check failed: " + e.Message); }
             }
@@ -117,7 +117,7 @@ public static class Reminders
             var newest = fresh[^1];
             var text = fresh.Count == 1 ? $"{show}: S{newest.Season:00}E{newest.Number:00} {newest.Title} is ready to watch." : $"{show} has {fresh.Count} new episodes.";
             AppLog.I(TAG, $"new episodes for '{show}': {fresh.Count}");
-            if (prefs.RemindersOn)
+            if (prefs.NewEpisodeAlerts)
                 Application.Current?.Dispatcher.Invoke(() => Tray.ShowBalloon("New episode", text));
             if (prefs.AutoDownloadNew)
             {

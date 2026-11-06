@@ -47,6 +47,7 @@ import java.util.concurrent.TimeUnit
 object Reminders {
     private const val TAG = "Reminders"
     private const val CHANNEL = "reminders"
+    private const val CHANNEL_EPISODES = "new_episodes"
     private const val WORK = "reminders-check"
     private const val MAX_SHOWS = 40
 
@@ -57,21 +58,22 @@ object Reminders {
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(WORK, ExistingPeriodicWorkPolicy.KEEP, req)
     }
 
-    private fun ensureChannel(context: Context) {
+    private fun ensureChannel(context: Context, channel: String) {
         if (Build.VERSION.SDK_INT < 26) return
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (nm.getNotificationChannel(CHANNEL) == null) {
-            nm.createNotificationChannel(NotificationChannel(CHANNEL, context.getString(R.string.reminders_channel), NotificationManager.IMPORTANCE_DEFAULT))
+        if (nm.getNotificationChannel(channel) == null) {
+            val name = context.getString(if (channel == CHANNEL_EPISODES) R.string.new_episodes_channel else R.string.reminders_channel)
+            nm.createNotificationChannel(NotificationChannel(channel, name, NotificationManager.IMPORTANCE_DEFAULT))
         }
     }
 
-    private fun notify(context: Context, id: Int, title: String, text: String, open: Intent) {
-        ensureChannel(context)
+    private fun notify(context: Context, id: Int, title: String, text: String, open: Intent, channel: String = CHANNEL) {
+        ensureChannel(context, channel)
         val pi = PendingIntent.getActivity(
             context, id, open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val n = NotificationCompat.Builder(context, CHANNEL)
+        val n = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_update)
             .setContentTitle(title)
             .setContentText(text)
@@ -152,9 +154,9 @@ object Reminders {
             val text = if (fresh.size == 1) context.getString(R.string.new_episode_fmt, show, Format.se(newest.season, newest.number), newest.title)
                 else context.getString(R.string.new_episodes_fmt, show, fresh.size)
             AppLog.i(TAG, "new episodes for '$show': ${fresh.size}")
-            if (prefs.reminders) {
+            if (prefs.newEpisodeAlerts) {
                 notify(context, 7200 + (id.hashCode() and 0xFFF), context.getString(R.string.new_episode_title), text,
-                    SeriesActivity.intent(context, service, id, show, names[id]?.image, names[id]?.plot))
+                    SeriesActivity.intent(context, service, id, show, names[id]?.image, names[id]?.plot), CHANNEL_EPISODES)
             }
             if (prefs.autoDownloadNew) {
                 val add = fresh.map { "${id}\t${it.id}\t${it.season}\t${it.number}\t${it.containerExtension}\t${show.replace('\t', ' ')}\t${it.title.replace('\t', ' ')}" }
@@ -215,8 +217,10 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
     override suspend fun doWork(): Result {
         val ctx = applicationContext
         val prefs = Prefs(ctx)
-        if (prefs.reminders || prefs.autoDownloadNew) {
-            try { if (prefs.reminders) Reminders.checkExpiry(ctx) } catch (e: Exception) { AppLog.w("Reminders", "expiry check failed: ${e.message}") }
+        if (prefs.expiryReminders) {
+            try { Reminders.checkExpiry(ctx) } catch (e: Exception) { AppLog.w("Reminders", "expiry check failed: ${e.message}") }
+        }
+        if (prefs.newEpisodeAlerts || prefs.autoDownloadNew) {
             try { Reminders.checkNewEpisodes(ctx) } catch (e: Exception) { AppLog.w("Reminders", "episode check failed: ${e.message}") }
             try { Reminders.processPendingDownloads(ctx, fromBackground = true) } catch (e: Exception) { AppLog.w("Reminders", "auto-download failed: ${e.message}") }
         }
