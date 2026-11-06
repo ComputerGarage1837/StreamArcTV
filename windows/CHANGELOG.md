@@ -3,6 +3,18 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.24 — 2026-11-06
+
+### Added
+- Audio and subtitle picker in the player. The subtitle button now lists every audio and subtitle
+  track of the stream with the current ones ticked; choosing one switches straight away. The audio
+  language you pick is remembered and preferred on every stream from then on.
+- Automatic stream format fallback. When a live channel fails, the app now tries the other format
+  (HLS or raw TS) once before showing an error, because some channels only work in one of them.
+- Channel up / down in the player. Opened from the guide, the player can move to the next or
+  previous channel of the list you were browsing: CH − / CH + buttons, Page Up / Page Down, and
+  up / down when the controls are hidden.
+
 ## v1.1.23 — 2026-11-06
 
 ### Fixed

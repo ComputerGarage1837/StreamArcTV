@@ -31,6 +31,16 @@
     <string name="back">Back</string>
     <string name="profile">Profile</string>
     <string name="categories">Categories</string>
+    <string name="audio_subtitles">Audio &amp; subtitles</string>
+    <string name="channel_up">CH +</string>
+    <string name="channel_down">CH −</string>
+    <string name="track_number_fmt">Track %1$d</string>
+    <string name="tracks_title">Audio and subtitles</string>
+    <string name="tracks_none">This stream has no other audio or subtitle tracks to choose.</string>
+    <string name="tracks_subtitles_off">Subtitles: off</string>
+    <string name="tracks_audio_fmt">Audio: %1$s</string>
+    <string name="tracks_subtitle_fmt">Subtitles: %1$s</string>
+    <string name="trying_other_format">Trying another stream format…</string>
     <string name="nav_channels_247">24/7 Channels</string>
     <string name="channels_247_title">24/7 Channels</string>
 

@@ -154,6 +154,16 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("vod_channels_available", false)
         set(value) { sp.edit().putBoolean("vod_channels_available", value).apply() }
 
+    /** Language (ISO code) of the audio track the viewer last chose; preferred on every stream from then on. */
+    var audioLanguage: String?
+        get() = sp.getString("audio_language", null)
+        set(value) { sp.edit().putString("audio_language", value).apply() }
+
+    /** Language of the subtitle track the viewer last chose. */
+    var subtitleLanguage: String?
+        get() = sp.getString("subtitle_language", null)
+        set(value) { sp.edit().putString("subtitle_language", value).apply() }
+
     /** Send raw Dolby / DTS bitstreams to the TV or receiver instead of decoding on the device. Off by default. */
     var dolbyPassthrough: Boolean
         get() = sp.getBoolean("dolby_passthrough", false)

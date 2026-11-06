@@ -105,6 +105,12 @@ class PlayerActivity : AppCompatActivity() {
     private var nextCountdown: Runnable? = null
     private var nextOffered = false
     private var formatChecked = false
+    /** Channel up / down is available (opened from the guide with its channel list). */
+    private var zap = false
+    /** The other stream format (HLS / TS) was already tried for this channel. */
+    private var triedAlternate = false
+    /** Play the plain stream instead of the storage buffer (used when the buffered TS stream failed). */
+    private var noTimeshift = false
     /** Position to start from once the stream is ready (set by the resume prompt). */
     private var startPositionMs = 0L
 
@@ -126,6 +132,7 @@ class PlayerActivity : AppCompatActivity() {
         isLive = intent.getBooleanExtra(EXTRA_LIVE, false)
         AppLog.i(TAG, "open live=$isLive title='$title' url=${AppLog.safeUrl(url)} emulator=$isEmulator")
         watchKey = intent.getStringExtra(EXTRA_KEY)?.takeIf { !isLive }
+        zap = isLive && intent.getBooleanExtra(EXTRA_ZAP, false) && com.streamarc.tv.player.ChannelQueue.available
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         b.txtTitle.text = title
@@ -147,11 +154,16 @@ class PlayerActivity : AppCompatActivity() {
                 b.txtLiveStatus.visibility = if (isLive) visibility else View.GONE
                 b.btnSeekBack.visibility = visibility
                 b.btnSeekFwd.visibility = visibility
+                b.btnTracks.visibility = visibility
+                b.channelBox.visibility = if (zap) visibility else View.GONE
             }
         )
         b.txtLiveStatus.visibility = View.GONE
         b.btnSeekBack.visibility = View.GONE
         b.btnSeekFwd.visibility = View.GONE
+        b.btnTracks.setOnClickListener { showTrackPicker() }
+        b.btnChannelUp.setOnClickListener { zapBy(1) }
+        b.btnChannelDown.setOnClickListener { zapBy(-1) }
         b.txtLiveStatus.setOnClickListener { goLive() }
         b.btnSeekBack.setOnClickListener { seekBy(-SEEK_STEP_MS) }
         b.btnSeekFwd.setOnClickListener { seekBy(SEEK_STEP_MS) }
@@ -283,6 +295,11 @@ class PlayerActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_MEDIA_REWIND -> { seekBy(-SEEK_STEP_MS); return true }
                 KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> { seekBy(SEEK_STEP_MS); return true }
                 // With the controls hidden, left/right on the remote skip; with them shown they move focus.
+                KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> if (zap) { zapBy(1); return true }
+                KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> if (zap) { zapBy(-1); return true }
+                // With the controls hidden, up / down on the remote change channel too.
+                KeyEvent.KEYCODE_DPAD_UP -> if (zap && !pv.isControllerFullyVisible) { zapBy(1); return true }
+                KeyEvent.KEYCODE_DPAD_DOWN -> if (zap && !pv.isControllerFullyVisible) { zapBy(-1); return true }
                 KeyEvent.KEYCODE_DPAD_LEFT -> if (!pv.isControllerFullyVisible) { seekBy(-SEEK_STEP_MS); return true }
                 KeyEvent.KEYCODE_DPAD_RIGHT -> if (!pv.isControllerFullyVisible) { seekBy(SEEK_STEP_MS); return true }
             }
@@ -317,7 +334,8 @@ class PlayerActivity : AppCompatActivity() {
         // With storage timeshift the player only ever talks to the local relay, which keeps the
         // upstream connection alive itself (reconnecting for up to 90 s). Give the player a long
         // read timeout there so a provider stall shows as buffering instead of an error.
-        val useRelay = isLive && level.onDisk
+        val disk = level.onDisk && !noTimeshift
+        val useRelay = isLive && disk
         val httpFactory = OkHttpDataSource.Factory(if (useRelay) relayClient else playerClient)
             .setUserAgent(XtreamApi.USER_AGENT)
             .setDefaultRequestProperties(mapOf("Connection" to "close"))
@@ -410,6 +428,10 @@ class PlayerActivity : AppCompatActivity() {
         // Subtitles follow the saved preference; the CC button in the controls changes and remembers it.
         p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !prefs.subtitles)
+            .apply {
+                prefs.audioLanguage?.let { setPreferredAudioLanguage(it) }
+                prefs.subtitleLanguage?.let { setPreferredTextLanguage(it) }
+            }
             .build()
 
         p.addListener(object : Player.Listener {
@@ -460,14 +482,14 @@ class PlayerActivity : AppCompatActivity() {
         })
 
         var playUrl = url
-        if (isLive && level.onDisk) {
+        if (isLive && disk) {
             // Storage timeshift works on the raw MPEG-TS stream; swap an HLS address for it.
             val tsUrl = url.replace(Regex("\\.m3u8$"), ".ts")
             timeshift = TimeshiftServer(this, tsUrl, level.diskMinutes * 60_000L)
             playUrl = timeshift!!.localUrl
         }
         val item = MediaItem.Builder().setUri(playUrl)
-        if (isLive && !level.onDisk) {
+        if (isLive && !disk) {
             // Never speed playback up to "catch up" with the live edge: pausing must not creep back to live.
             item.setLiveConfiguration(
                 MediaItem.LiveConfiguration.Builder()
@@ -634,6 +656,7 @@ class PlayerActivity : AppCompatActivity() {
                 .also { handler.postDelayed(it, delay) }
             return
         }
+        if (isLive && tryAlternateFormat(error)) return
         b.bufferBox.visibility = View.GONE
         b.txtError.text = describeError(error)
         AppLog.e(TAG, "giving up: ${b.txtError.text} | bytes=$bytesLoaded loads=$loadsStarted video=$videoInfo decoder=$decoderName firstFrame=$firstFrame " +
@@ -641,6 +664,130 @@ class PlayerActivity : AppCompatActivity() {
         b.txtError.visibility = View.VISIBLE
         b.btnRetry.visibility = View.VISIBLE
         b.btnRetry.requestFocus()
+    }
+
+    /**
+     * Some channels only work as HLS and some only as raw TS. When one fails, quietly try the other
+     * once before showing an error. With a storage buffer (always TS through the relay) the other
+     * format is the plain HLS stream.
+     */
+    private fun tryAlternateFormat(error: PlaybackException): Boolean {
+        if (triedAlternate) return false
+        val base = url.removeSuffix(".m3u8").removeSuffix(".ts")
+        if (base == url) return false
+        val onDisk = BufferLevel.from(prefs.bufferLevel).onDisk && !noTimeshift
+        val newUrl = when {
+            onDisk -> { noTimeshift = true; "$base.m3u8" }
+            url.endsWith(".m3u8") -> "$base.ts"
+            else -> "$base.m3u8"
+        }
+        triedAlternate = true
+        AppLog.w(TAG, "format fallback after ${error.errorCodeName}: ${AppLog.safeUrl(url)} -> ${AppLog.safeUrl(newUrl)}")
+        Toast.makeText(this, R.string.trying_other_format, Toast.LENGTH_SHORT).show()
+        url = newUrl
+        retries = 0; nudges = 0
+        cancelRetry()
+        releasePlayer()
+        initPlayer()
+        return true
+    }
+
+    // ---- Channel up / down -------------------------------------------------------
+
+    private fun zapBy(delta: Int) {
+        val s = com.streamarc.tv.player.ChannelQueue.step(delta) ?: return
+        val svc = com.streamarc.tv.player.ChannelQueue.service ?: return
+        val acct = prefs.account(svc) ?: return
+        val newUrl = try { XtreamApi.streamUrl(svc, acct, s, prefs.liveFormat, true) } catch (e: Exception) { return }
+        AppLog.i(TAG, "channel ${if (delta > 0) "up" else "down"} -> '${s.name}'")
+        url = newUrl
+        title = s.name ?: ""
+        b.txtTitle.text = title
+        retries = 0; nudges = 0
+        triedAlternate = false; noTimeshift = false
+        cancelRetry()
+        releasePlayer()
+        initPlayer()
+        pv.showController()   // brings up the title so the new channel is named
+    }
+
+    // ---- Audio and subtitle tracks ---------------------------------------------------
+
+    private class TrackChoice(val label: String, val action: () -> Unit)
+
+    private fun shortCodec(mime: String?): String = when {
+        mime == null -> ""
+        mime == "audio/mp4a-latm" -> "AAC"
+        mime == "audio/ac3" -> "Dolby Digital"
+        mime == "audio/eac3" || mime == "audio/eac3-joc" -> "Dolby Digital Plus"
+        mime == "audio/mpeg-L2" -> "MP2"
+        mime == "audio/mpeg" -> "MP3"
+        mime == "audio/true-hd" -> "TrueHD"
+        mime.startsWith("audio/vnd.dts") -> "DTS"
+        else -> mime.substringAfter('/')
+    }
+
+    private fun channelLayout(n: Int) = when (n) { 1 -> "mono"; 2 -> "stereo"; 6 -> "5.1"; 8 -> "7.1"; else -> "$n ch" }
+
+    private fun trackName(f: Format, number: Int, audio: Boolean): String {
+        val lang = f.language?.takeIf { it != "und" && it.isNotBlank() }
+            ?.let { java.util.Locale(it).displayLanguage.replaceFirstChar { c -> c.titlecase() } }
+        val main = f.label?.takeIf { it.isNotBlank() } ?: lang ?: getString(R.string.track_number_fmt, number)
+        val extra = ArrayList<String>()
+        if (f.label != null && lang != null && !f.label!!.contains(lang, ignoreCase = true)) extra.add(lang)
+        if (audio) {
+            if (f.channelCount > 0) extra.add(channelLayout(f.channelCount))
+            shortCodec(f.sampleMimeType).takeIf { it.isNotEmpty() }?.let { extra.add(it) }
+        }
+        return if (extra.isEmpty()) main else "$main · ${extra.joinToString(" · ")}"
+    }
+
+    /** Lists the audio and subtitle tracks of the stream; choosing one switches to it and remembers the language. */
+    private fun showTrackPicker() {
+        val p = player ?: return
+        val choices = ArrayList<TrackChoice>()
+        val textDisabled = p.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)
+        var audioNo = 0
+        var textNo = 0
+        for (g in p.currentTracks.groups) {
+            if (g.type != C.TRACK_TYPE_AUDIO && g.type != C.TRACK_TYPE_TEXT) continue
+            for (i in 0 until g.length) {
+                if (!g.isTrackSupported(i)) continue
+                val f = g.getTrackFormat(i)
+                val audio = g.type == C.TRACK_TYPE_AUDIO
+                val n = if (audio) ++audioNo else ++textNo
+                val name = trackName(f, n, audio)
+                val on = g.isTrackSelected(i) && (audio || !textDisabled)
+                val label = (if (on) "✓ " else "") + getString(if (audio) R.string.tracks_audio_fmt else R.string.tracks_subtitle_fmt, name)
+                val group = g
+                val index = i
+                choices.add(TrackChoice(label) {
+                    val params = p.trackSelectionParameters.buildUpon()
+                        .setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup, index))
+                    if (audio) {
+                        f.language?.takeIf { it != "und" }?.let { prefs.audioLanguage = it }
+                    } else {
+                        params.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                        f.language?.takeIf { it != "und" }?.let { prefs.subtitleLanguage = it }
+                    }
+                    p.trackSelectionParameters = params.build()
+                })
+            }
+        }
+        if (textNo > 0) {
+            choices.add(TrackChoice((if (textDisabled) "✓ " else "") + getString(R.string.tracks_subtitles_off)) {
+                p.trackSelectionParameters = p.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
+            })
+        }
+        if (choices.size <= 1 && audioNo <= 1 && textNo == 0) {
+            Toast.makeText(this, R.string.tracks_none, Toast.LENGTH_LONG).show()
+            return
+        }
+        FocusDialog(this)
+            .setTitle(R.string.tracks_title)
+            .setItems(choices.map { it.label }.toTypedArray()) { _, which -> choices[which].action() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun describeError(error: PlaybackException): String =
@@ -804,6 +951,7 @@ class PlayerActivity : AppCompatActivity() {
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_LIVE = "live"
         private const val EXTRA_KEY = "key"
+        private const val EXTRA_ZAP = "zap"
         private const val MAX_RETRIES = 4
         private const val BEHIND_THRESHOLD_MS = 2_000L
         private const val SEEK_STEP_MS = 10_000L
@@ -834,11 +982,13 @@ class PlayerActivity : AppCompatActivity() {
                 .followRedirects(true).followSslRedirects(true)
                 .build()
         }
-        fun intent(ctx: Context, url: String, title: String, live: Boolean, watchKey: String? = null): Intent =
+        /** [zap]: opened from the guide, so channel up / down can use the guide's channel list. */
+        fun intent(ctx: Context, url: String, title: String, live: Boolean, watchKey: String? = null, zap: Boolean = false): Intent =
             Intent(ctx, PlayerActivity::class.java)
                 .putExtra(EXTRA_URL, url)
                 .putExtra(EXTRA_TITLE, title)
                 .putExtra(EXTRA_LIVE, live)
                 .putExtra(EXTRA_KEY, watchKey)
+                .putExtra(EXTRA_ZAP, zap)
     }
 }

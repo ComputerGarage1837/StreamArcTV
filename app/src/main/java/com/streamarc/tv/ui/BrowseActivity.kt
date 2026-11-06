@@ -56,6 +56,8 @@ class BrowseActivity : AppCompatActivity() {
     /** What is being browsed: LIVE for the guide, MOVIE or SERIES for the VOD tabs. */
     private var kind: ContentKind = ContentKind.LIVE
     private val isLive: Boolean get() = kind == ContentKind.LIVE
+    /** The channels currently listed in the guide (after filters), used for channel up / down in the player. */
+    private var visibleStreams: List<Stream> = emptyList()
     /** The live guide running on the VOD account: the provider's 24/7 channels. */
     private val twentyFourSeven: Boolean get() = isLive && service.kind != ContentKind.LIVE
 
@@ -580,6 +582,7 @@ class BrowseActivity : AppCompatActivity() {
             if (hiddenChannels.isNotEmpty()) list = list.filter { it.id !in hiddenChannels }
         }
         if (q.isNotEmpty()) list = list.filter { it.name?.contains(q, ignoreCase = true) == true }
+        visibleStreams = list
 
         if (isLive) {
             b.epgGrid.favorites = favs
@@ -612,7 +615,9 @@ class BrowseActivity : AppCompatActivity() {
         // The preview is a second connection on the same account; many accounts allow only one, so close
         // it before the full-screen stream connects (it was only released in onStop, after the player had started).
         if (isLive) releasePreview()
-        startActivity(PlayerActivity.intent(this, url, stream.name ?: "", isLive, key))
+        val zap = isLive && visibleStreams.size > 1
+        if (zap) com.streamarc.tv.player.ChannelQueue.set(service, visibleStreams, stream) else com.streamarc.tv.player.ChannelQueue.clear()
+        startActivity(PlayerActivity.intent(this, url, stream.name ?: "", isLive, key, zap))
     }
 
     /** Context menu opened by holding OK / long-pressing an item. */
