@@ -66,6 +66,8 @@ class MovieActivity : AppCompatActivity() {
             renderButtons()
         }
         b.btnPlay.requestFocus()
+        val extras = ExtrasView(this)
+        b.scrollContent.addView(extras)
 
         // The provider's own cast, rating and trailer, when it has them.
         lifecycleScope.launch {
@@ -77,6 +79,18 @@ class MovieActivity : AppCompatActivity() {
             d.director?.let { b.txtDirector.text = getString(R.string.director_fmt, it); b.txtDirector.visibility = View.VISIBLE }
             if (image.isNullOrBlank()) showPoster(d.poster)
             renderButtons()
+        }
+        loadExtras(extras, account)
+    }
+
+    /** Actor photos and similar titles (from TMDB), matched to what this provider actually has. */
+    private fun loadExtras(extras: ExtrasView, account: com.streamarc.tv.data.Account) {
+        lifecycleScope.launch {
+            val info = com.streamarc.tv.data.Tmdb.lookup(name, null, series = false)
+            extras.showCast(info.cast)
+            val catalogue = try { com.streamarc.tv.data.CatalogCache.get(this@MovieActivity, service, account, ContentKind.MOVIE) } catch (_: Exception) { emptyList() }
+            val similar = com.streamarc.tv.data.Tmdb.similarIn(info, catalogue, id, details?.genre ?: intent.getStringExtra(EXTRA_GENRE))
+            extras.showSimilar(similar) { s -> startActivity(MovieActivity.intent(this@MovieActivity, service, s)) }
         }
     }
 

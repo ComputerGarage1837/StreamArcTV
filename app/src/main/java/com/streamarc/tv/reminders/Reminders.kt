@@ -217,6 +217,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
     override suspend fun doWork(): Result {
         val ctx = applicationContext
         val prefs = Prefs(ctx)
+        try { com.streamarc.tv.data.Backup.autoBackupIfDue(ctx) } catch (e: Exception) { AppLog.w("Backup", "weekly backup failed: ${e.message}") }
         if (prefs.expiryReminders) {
             try { Reminders.checkExpiry(ctx) } catch (e: Exception) { AppLog.w("Reminders", "expiry check failed: ${e.message}") }
         }

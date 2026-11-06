@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="castPhoto" type="id" />
+    <item name="castName" type="id" />
+    <item name="castRole" type="id" />
+</resources>

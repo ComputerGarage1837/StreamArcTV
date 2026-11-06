@@ -15,7 +15,7 @@ object Backup {
     private const val PREFS = "streamarc"
     private const val WATCH = "streamarc_watch"
     /** Keys that describe this device rather than the user's choices. */
-    private val skip = setOf("crashed", "install_permission_asked")
+    private val skip = setOf("crashed", "install_permission_asked", "last_auto_backup")
 
     fun export(context: Context, includeAccounts: Boolean): String {
         val root = JSONObject()
@@ -51,6 +51,30 @@ object Backup {
         return root.toString(2)
     }
 
+    private const val WEEK_MS = 7L * 24 * 3600 * 1000
+
+    /**
+     * Silent weekly backup of everything (settings, users and their lists, watched positions, sign-ins)
+     * into the app's own folder. Only the newest file is kept, so it never grows. Returns the file written, or null.
+     */
+    fun autoBackupIfDue(context: Context): java.io.File? {
+        val sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val last = sp.getLong("last_auto_backup", 0L)
+        val now = System.currentTimeMillis()
+        if (last != 0L && now - last < WEEK_MS) return null
+        val dir = java.io.File(context.getExternalFilesDir(null) ?: context.filesDir, "backups")
+        if (!dir.exists() && !dir.mkdirs()) return null
+        val stamp = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date(now))
+        val file = java.io.File(dir, "stream-arc-tv-auto-backup-$stamp.json")
+        val tmp = java.io.File(dir, "auto-backup.tmp")
+        tmp.writeText(export(context, includeAccounts = true))
+        if (!tmp.renameTo(file)) { file.writeText(tmp.readText()); tmp.delete() }
+        // Delete every earlier automatic backup.
+        dir.listFiles()?.filter { it.name.startsWith("stream-arc-tv-auto-backup-") && it != file }?.forEach { it.delete() }
+        sp.edit().putLong("last_auto_backup", now).apply()
+        return file
+    }
+
     /** Applies a backup; returns a short summary. Existing values for the same keys are replaced. */
     fun import(context: Context, json: String): String {
         val root = JSONObject(json)
@@ -80,8 +104,14 @@ object Backup {
             WatchProgress.reload()
             watched = w.length()
         }
+        // Other users' lists on this device are replaced by the backup's, not mixed with them.
+        val wsp = context.getSharedPreferences(WATCH, Context.MODE_PRIVATE)
+        val stale = wsp.all.keys.filter { it.startsWith("entries_") }
+        if (stale.isNotEmpty() && (root.has("watchUsers") || prefs.has("vod_users"))) {
+            val e = wsp.edit(); stale.forEach { e.remove(it) }; e.commit()
+        }
         root.optJSONObject("watchUsers")?.let { o ->
-            val ed2 = context.getSharedPreferences(WATCH, Context.MODE_PRIVATE).edit()
+            val ed2 = wsp.edit()
             for (key in o.keys()) { ed2.putString(key, o.getJSONObject(key).toString()); watched += o.getJSONObject(key).length() }
             ed2.commit()
         }

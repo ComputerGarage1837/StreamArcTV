@@ -47,6 +47,7 @@ public partial class SeriesPage : AppPage
                 _episodes = episodes;
                 Render();
                 BtnDownloadAll.Visibility = Visibility.Visible;
+                LoadExtras(account, data.Details?.Genre);
                 if (IsResumed) _ = Dispatcher.BeginInvoke(() => _rows.FirstOrDefault().Row?.Focus(), System.Windows.Threading.DispatcherPriority.Input);
             }
         }
@@ -56,6 +57,22 @@ public partial class SeriesPage : AppPage
             TxtError.Text = string.IsNullOrWhiteSpace(e.Message) ? "Couldn't load content." : e.Message;
             TxtError.Visibility = Visibility.Visible;
         }
+    }
+
+    /// Actor photos and similar shows (from TMDB), matched to what this provider actually has.
+    private async void LoadExtras(Account account, string? genre)
+    {
+        try
+        {
+            var info = await Tmdb.Lookup(_title, null, series: true);
+            if (Finished) return;
+            Extras.ShowCast(info.Cast);
+            var catalogue = await CatalogCache.Get(_service, account, ContentKind.SERIES);
+            if (Finished) return;
+            var similar = Tmdb.SimilarIn(info, catalogue, _seriesId, genre);
+            Extras.ShowSimilar(similar, s => { if (s.Id != null) Nav.Push(new SeriesPage(_service, s.Id, s.Name ?? "", s.Image, s.Plot)); });
+        }
+        catch { }
     }
 
     /// Rating, genre, cast and trailer from the provider, when it has them.
