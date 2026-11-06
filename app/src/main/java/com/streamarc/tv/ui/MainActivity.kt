@@ -52,6 +52,12 @@ class MainActivity : AppCompatActivity() {
         inflateHome()
 
         if (prefs.layoutMode == null) askLayout() else maybeAskInstallPermission()
+        if (prefs.reminders && android.os.Build.VERSION.SDK_INT >= 33 && !prefs.notificationsAsked &&
+            androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            prefs.notificationsAsked = true
+            androidx.core.app.ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 72)
+        }
         if (prefs.crashed) {
             prefs.crashed = false
             FocusDialog(this)
@@ -252,6 +258,8 @@ class MainActivity : AppCompatActivity() {
             if (com.streamarc.tv.data.Format.zoneId() == com.streamarc.tv.data.Format.DEVICE_ZONE) null else com.streamarc.tv.data.Format.zoneId()
         refreshAll()
         watchNotice()
+        // On Wi-Fi, queue any new episodes found while away (the background check may not be allowed to start downloads).
+        try { com.streamarc.tv.reminders.Reminders.processPendingDownloads(this, fromBackground = false) } catch (_: Exception) {}
         if (currentFocus == null) findViewById<View>(R.id.btnLive).requestFocus()
     }
 

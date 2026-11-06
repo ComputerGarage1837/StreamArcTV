@@ -50,6 +50,7 @@ public partial class App : Application
         Tray.Init();
         TransferService.RescheduleAll();
         TransferService.RenameCompleted();
+        Reminders.Start();
 
         Window = new MainWindow();
         if (StartInTray)

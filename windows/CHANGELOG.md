@@ -3,6 +3,16 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.26 — 2026-11-06
+
+### Added
+- Reminders. A tray notification a week before a subscription ends, another the day before, and
+  one when it has ended, for both Live TV and Video on Demand. The app checks the account itself
+  every few hours while it is running (it stays in the tray when the window is closed).
+- New episode alerts. When a show in My List gets a new episode, a tray notification says so.
+- Auto-download new episodes (Settings → Reminders and alerts, off by default): new episodes of
+  My List shows are downloaded by themselves overnight (1 am to 7 am), and queued when the app starts.
+
 ## v1.1.25 — 2026-11-06
 
 ### Added

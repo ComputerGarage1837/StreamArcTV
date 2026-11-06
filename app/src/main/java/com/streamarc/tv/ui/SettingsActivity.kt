@@ -114,6 +114,16 @@ class SettingsActivity : AppCompatActivity() {
         b.switchWifiOnly.setOnCheckedChangeListener { _, on -> prefs.downloadsWifiOnly = on }
         b.switchDeleteWatched.isChecked = prefs.deleteAfterWatched
         b.switchDeleteWatched.setOnCheckedChangeListener { _, on -> prefs.deleteAfterWatched = on }
+        b.switchReminders.isChecked = prefs.reminders
+        b.switchReminders.setOnCheckedChangeListener { _, on ->
+            prefs.reminders = on
+            if (on) askNotificationPermission()
+        }
+        b.switchAutoDownloadNew.isChecked = prefs.autoDownloadNew
+        b.switchAutoDownloadNew.setOnCheckedChangeListener { _, on ->
+            prefs.autoDownloadNew = on
+            if (on) askNotificationPermission()
+        }
         b.rowSubtitles.setOnClickListener { pickSubtitles() }
         b.rowDolby.setOnClickListener { pickDolby() }
         renderSubtitles()
@@ -177,6 +187,13 @@ class SettingsActivity : AppCompatActivity() {
                 d.dismiss()
             }
             .show()
+    }
+
+    /** Android 13+ asks before an app may show notifications. */
+    private fun askNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) androidx.core.app.ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 72)
     }
 
     private fun renderSubtitles() {

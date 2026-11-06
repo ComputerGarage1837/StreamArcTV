@@ -159,6 +159,40 @@ class Prefs(context: Context) {
         get() = sp.getString("vod_sort", "default") ?: "default"
         set(value) { sp.edit().putString("vod_sort", value).apply() }
 
+    /** The notification permission prompt was shown once already. */
+    var notificationsAsked: Boolean
+        get() = sp.getBoolean("notifications_asked", false)
+        set(value) { sp.edit().putBoolean("notifications_asked", value).apply() }
+
+    /** Reminders and alerts: subscription expiry and new episodes of My List shows. */
+    var reminders: Boolean
+        get() = sp.getBoolean("reminders", true)
+        set(value) { sp.edit().putBoolean("reminders", value).apply() }
+
+    /** Download new episodes of My List shows by itself, overnight on Wi-Fi. */
+    var autoDownloadNew: Boolean
+        get() = sp.getBoolean("auto_download_new", false)
+        set(value) { sp.edit().putBoolean("auto_download_new", value).apply() }
+
+    /** "<expiry epoch seconds>:<stage>" of the last expiry reminder sent for [service]. */
+    fun expiryNotified(service: Service): String? = sp.getString(k(service, "expiry_notified"), null)
+    fun setExpiryNotified(service: Service, value: String) { sp.edit().putString(k(service, "expiry_notified"), value).apply() }
+
+    /** Newest episode (season * 10000 + number) seen so far for each My List show, by series id. */
+    fun knownEpisodes(): Map<String, Int> =
+        (sp.getString("known_episodes", null) ?: "").split(';').mapNotNull { e ->
+            val p = e.split('=')
+            if (p.size == 2) p[1].toIntOrNull()?.let { p[0] to it } else null
+        }.toMap()
+    fun setKnownEpisodes(map: Map<String, Int>) {
+        sp.edit().putString("known_episodes", map.entries.joinToString(";") { "${it.key}=${it.value}" }).apply()
+    }
+
+    /** New episodes waiting to be downloaded (tab separated lines, see Reminders). */
+    var pendingEpisodes: Set<String>
+        get() = sp.getStringSet("pending_episodes", emptySet())?.toSet() ?: emptySet()
+        set(value) { sp.edit().putStringSet("pending_episodes", value).apply() }
+
     /** Language (ISO code) of the audio track the viewer last chose; preferred on every stream from then on. */
     var audioLanguage: String?
         get() = sp.getString("audio_language", null)

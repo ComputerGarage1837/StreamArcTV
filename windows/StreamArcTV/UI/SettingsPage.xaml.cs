@@ -29,6 +29,10 @@ public partial class SettingsPage : AppPage
         RenderBuffer();
         SwitchAutoPlayNext.IsChecked = _prefs.AutoPlayNext;
         SwitchAutoPlayNext.Click += (_, _) => _prefs.AutoPlayNext = SwitchAutoPlayNext.IsChecked == true;
+        SwitchReminders.IsChecked = _prefs.RemindersOn;
+        SwitchReminders.Click += (_, _) => _prefs.RemindersOn = SwitchReminders.IsChecked == true;
+        SwitchAutoDownloadNew.IsChecked = _prefs.AutoDownloadNew;
+        SwitchAutoDownloadNew.Click += (_, _) => _prefs.AutoDownloadNew = SwitchAutoDownloadNew.IsChecked == true;
         SwitchWifiOnly.IsChecked = _prefs.DownloadsWifiOnly;
         SwitchWifiOnly.Click += (_, _) => _prefs.DownloadsWifiOnly = SwitchWifiOnly.IsChecked == true;
         SwitchDeleteWatched.IsChecked = _prefs.DeleteAfterWatched;
