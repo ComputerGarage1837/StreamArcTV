@@ -609,6 +609,9 @@ class BrowseActivity : AppCompatActivity() {
         }
         val key = if (kind == ContentKind.MOVIE) stream.streamId?.let { WatchProgress.movieKey(service, it) } else null
         if (key != null) WatchProgress.describe(key, WatchProgress.KIND_MOVIE, stream.name ?: "", stream.image, stream.containerExtension, stream.streamId!!)
+        // The preview is a second connection on the same account; many accounts allow only one, so close
+        // it before the full-screen stream connects (it was only released in onStop, after the player had started).
+        if (isLive) releasePreview()
         startActivity(PlayerActivity.intent(this, url, stream.name ?: "", isLive, key))
     }
 
