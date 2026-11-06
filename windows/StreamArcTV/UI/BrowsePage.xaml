@@ -36,6 +36,9 @@
             <Button x:Name="BtnMulti" Grid.Column="5" Style="{StaticResource SquareIconButton}" Margin="0,0,6,0" ToolTip="Multi-view" Visibility="Collapsed">
                 <Path Data="{StaticResource IconMulti}" Fill="{StaticResource TextBrush}" Width="20" Height="20" Stretch="Uniform" />
             </Button>
+            <Button x:Name="BtnSort" Grid.Column="5" Style="{StaticResource SquareIconButton}" Margin="0,0,6,0" ToolTip="Sort and filter" Visibility="Collapsed">
+                <Path Data="{StaticResource IconSort}" Fill="{StaticResource TextBrush}" Width="20" Height="20" Stretch="Uniform" />
+            </Button>
             <Button x:Name="BtnProfile" Grid.Column="6" Style="{StaticResource SquareIconButton}" ToolTip="Profile">
                 <Path Data="{StaticResource IconProfile}" Fill="{StaticResource TextBrush}" Width="22" Height="22" Stretch="Uniform" />
             </Button>

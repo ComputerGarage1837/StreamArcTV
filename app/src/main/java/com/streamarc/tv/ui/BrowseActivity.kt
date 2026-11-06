@@ -58,6 +58,8 @@ class BrowseActivity : AppCompatActivity() {
     private val isLive: Boolean get() = kind == ContentKind.LIVE
     /** The channels currently listed in the guide (after filters), used for channel up / down in the player. */
     private var visibleStreams: List<Stream> = emptyList()
+    /** Genre the movie / show list is narrowed to, or null for all. */
+    private var genreFilter: String? = null
     /** The live guide running on the VOD account: the provider's 24/7 channels. */
     private val twentyFourSeven: Boolean get() = isLive && service.kind != ContentKind.LIVE
 
@@ -101,6 +103,8 @@ class BrowseActivity : AppCompatActivity() {
         b.btnProfile.setOnClickListener { startActivity(ProfileActivity.intent(this, service)) }
         b.btnMulti.visibility = if (isLive && !twentyFourSeven) View.VISIBLE else View.GONE
         b.btnRefreshGuide.visibility = if (isLive) View.VISIBLE else View.GONE
+        b.btnSort.visibility = if (isLive) View.GONE else View.VISIBLE
+        b.btnSort.setOnClickListener { showSortFilter() }
         b.btnMulti.setOnClickListener { startActivity(MultiViewActivity.intent(this, service)) }
 
         applyCategoryLayout()
@@ -313,6 +317,50 @@ class BrowseActivity : AppCompatActivity() {
             b.listCategories.layoutManager = LinearLayoutManager(this)
             b.listCategories.adapter = categoryAdapter
         }
+    }
+
+    // ---- Sort and filter (movies and shows) ------------------------------------------
+
+    private fun yearOf(s: Stream): Int = Regex("\\b(19|20)\\d{2}\\b").findAll(s.name.orEmpty()).lastOrNull()?.value?.toIntOrNull() ?: 0
+
+    private fun sorted(list: List<Stream>): List<Stream> = when (prefs.vodSort) {
+        "newest" -> list.sortedByDescending { it.added?.trim()?.toLongOrNull() ?: 0L }
+        "rating" -> list.sortedByDescending { it.rating?.trim()?.toDoubleOrNull() ?: 0.0 }
+        "year" -> list.sortedByDescending { yearOf(it) }
+        "name" -> list.sortedBy { it.name.orEmpty().lowercase() }
+        else -> list
+    }
+
+    private fun showSortFilter() {
+        val sorts = listOf(
+            "default" to R.string.sort_default, "newest" to R.string.sort_newest, "rating" to R.string.sort_rating,
+            "year" to R.string.sort_year, "name" to R.string.sort_name
+        )
+        val options = ArrayList<String>()
+        for ((key, label) in sorts) options.add((if (prefs.vodSort == key) "✓ " else "") + getString(R.string.sort_fmt, getString(label)))
+        options.add(getString(R.string.filter_genre_fmt, genreFilter ?: getString(R.string.filter_all_genres)))
+        FocusDialog(this)
+            .setTitle(R.string.sort_filter)
+            .setItems(options.toTypedArray()) { _, which ->
+                if (which < sorts.size) { prefs.vodSort = sorts[which].first; applyFilter() } else pickGenre()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun pickGenre() {
+        val counts = HashMap<String, Int>()
+        for (s in allStreams) for (g in s.genres) counts[g.lowercase()] = (counts[g.lowercase()] ?: 0) + 1
+        val names = counts.entries.sortedByDescending { it.value }.take(40).map { it.key.replaceFirstChar { c -> c.titlecase() } }
+        val options = listOf(getString(R.string.filter_all_genres)) + names
+        FocusDialog(this)
+            .setTitle(R.string.sort_filter)
+            .setItems(options.toTypedArray()) { _, which ->
+                genreFilter = if (which == 0) null else names[which - 1]
+                applyFilter()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     // ---- Static VOD menu (24/7 channels) ------------------------------------------
@@ -582,6 +630,10 @@ class BrowseActivity : AppCompatActivity() {
             if (hiddenChannels.isNotEmpty()) list = list.filter { it.id !in hiddenChannels }
         }
         if (q.isNotEmpty()) list = list.filter { it.name?.contains(q, ignoreCase = true) == true }
+        if (!isLive) {
+            genreFilter?.let { g -> list = list.filter { s -> s.genres.any { it.equals(g, ignoreCase = true) } } }
+            list = sorted(list)
+        }
         visibleStreams = list
 
         if (isLive) {
@@ -599,12 +651,14 @@ class BrowseActivity : AppCompatActivity() {
 
     // ---- Actions -------------------------------------------------------
 
-    private fun play(stream: Stream) {
+    /** [direct]: play now (the hold-OK menu) instead of opening the movie page. */
+    private fun play(stream: Stream, direct: Boolean = false) {
         if (kind == ContentKind.SERIES) {
             val id = stream.seriesId ?: stream.streamId ?: return
             startActivity(SeriesActivity.intent(this, service, id, stream.name ?: "", stream.image, stream.plot))
             return
         }
+        if (kind == ContentKind.MOVIE && !direct) { startActivity(MovieActivity.intent(this, service, stream)); return }
         val url = try {
             XtreamApi.streamUrl(service, account, stream, prefs.liveFormat, isLive)
         } catch (e: Exception) {
@@ -644,7 +698,7 @@ class BrowseActivity : AppCompatActivity() {
                         Toast.makeText(this, getString(R.string.channel_hidden_fmt, stream.name ?: ""), Toast.LENGTH_LONG).show()
                         applyFilter()
                     } else { WatchProgress.setWatched(watchKey!!, !WatchProgress.isWatched(watchKey)); streamAdapter.notifyDataSetChanged() }
-                    0 -> play(stream)
+                    0 -> play(stream, true)
                     1 -> {
                         val nowFav = prefs.toggleFavorite(service, kind, id)
                         val msg = if (nowFav) R.string.added_to_favorites_fmt else R.string.removed_from_favorites_fmt

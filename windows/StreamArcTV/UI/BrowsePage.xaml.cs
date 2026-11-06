@@ -79,6 +79,8 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         BtnProfile.Click += (_, _) => Nav.Push(new ProfilePage(service));
         BtnMulti.Visibility = IsLive && !TwentyFourSeven ? Visibility.Visible : Visibility.Collapsed;
         BtnMulti.Click += (_, _) => Nav.Push(new MultiViewPage(service));
+        BtnSort.Visibility = IsLive ? Visibility.Collapsed : Visibility.Visible;
+        BtnSort.Click += (_, _) => ShowSortFilter();
 
         if (service.Kind() != ContentKind.LIVE && !IsLive)
         {
@@ -138,6 +140,50 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         ReleasePreview();
         _libVlc = null;
         LazyImages.Forget(this);
+    }
+
+    // ---- Sort and filter (movies and shows) ------------------------------------------
+
+    private static int YearOf(Data.Stream s)
+    {
+        var m = System.Text.RegularExpressions.Regex.Matches(s.Name ?? "", @"\b(19|20)\d{2}\b");
+        return m.Count > 0 && int.TryParse(m[^1].Value, out var y) ? y : 0;
+    }
+
+    private List<Data.Stream> Sorted(List<Data.Stream> list) => _prefs.VodSort switch
+    {
+        "newest" => list.OrderByDescending(s => s.AddedEpoch).ToList(),
+        "rating" => list.OrderByDescending(s => double.TryParse(s.Rating, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var r) ? r : 0).ToList(),
+        "year" => list.OrderByDescending(YearOf).ToList(),
+        "name" => list.OrderBy(s => (s.Name ?? "").ToLowerInvariant()).ToList(),
+        _ => list
+    };
+
+    private void ShowSortFilter()
+    {
+        var sorts = new (string Key, string Label)[]
+        {
+            ("default", "Provider order"), ("newest", "Newest added"), ("rating", "Highest rated"), ("year", "Newest year"), ("name", "A to Z")
+        };
+        var options = sorts.Select(s => (_prefs.VodSort == s.Key ? "✓ " : "") + "Sort: " + s.Label).ToList();
+        options.Add("Genre: " + (_genreFilter ?? "All genres"));
+        var which = Dialogs.Items("Sort and filter", options);
+        if (which < 0) return;
+        if (which < sorts.Length) { _prefs.VodSort = sorts[which].Key; ApplyFilter(); }
+        else PickGenre();
+    }
+
+    private void PickGenre()
+    {
+        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var s in _allStreams) foreach (var g in s.Genres) counts[g] = counts.TryGetValue(g, out var n) ? n + 1 : 1;
+        var names = counts.OrderByDescending(kv => kv.Value).Take(40).Select(kv => kv.Key).ToList();
+        var options = new List<string> { "All genres" };
+        options.AddRange(names);
+        var which = Dialogs.Items("Genre", options);
+        if (which < 0) return;
+        _genreFilter = which == 0 ? null : names[which - 1];
+        ApplyFilter();
     }
 
     // ---- Live preview -------------------------------------------------------
@@ -495,6 +541,11 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
             if (hidden.Count > 0) list = list.Where(s => s.CategoryId == null || !hidden.Contains(s.CategoryId)).ToList();
         }
         if (q.Length > 0) list = list.Where(s => s.Name?.Contains(q, StringComparison.OrdinalIgnoreCase) == true).ToList();
+        if (!IsLive)
+        {
+            if (_genreFilter != null) list = list.Where(s => s.Genres.Any(g => string.Equals(g, _genreFilter, StringComparison.OrdinalIgnoreCase))).ToList();
+            list = Sorted(list);
+        }
         _visible = list;
 
         if (IsLive)
@@ -517,6 +568,8 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
     private List<Data.Stream> _filtered = new();
     /// The channels currently listed in the guide (after filters), used for channel up / down in the player.
     private List<Data.Stream> _visible = new();
+    /// Genre the movie / show list is narrowed to, or null for all.
+    private string? _genreFilter;
 
     private int PosterColumns()
     {
@@ -545,7 +598,15 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
 
     // ---- Actions -------------------------------------------------------
 
+    /// Opens the movie page for a movie; everything else plays straight away.
     private void Play(Data.Stream stream)
+    {
+        if (_kind == ContentKind.MOVIE) { Nav.Push(new MoviePage(_service, stream)); return; }
+        PlayNow(stream);
+    }
+
+    /// Plays straight away (the hold-Enter menu), without the movie page.
+    private void PlayNow(Data.Stream stream)
     {
         if (_kind == ContentKind.SERIES)
         {
@@ -582,7 +643,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         var which = Dialogs.Items(stream.Name ?? "", options);
         switch (which)
         {
-            case 0: Play(stream); break;
+            case 0: PlayNow(stream); break;
             case 1:
                 var nowFav = _prefs.ToggleFavorite(_service, _kind, id);
                 Dialogs.Toast(nowFav ? $"{stream.Name} added to favorites" : $"{stream.Name} removed from favorites");

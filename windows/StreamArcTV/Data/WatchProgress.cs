@@ -95,6 +95,13 @@ public static class WatchProgress
         }
     }
 
+    /// The most recently finished movie or episode, or null.
+    public static Entry? LastFinished()
+    {
+        lock (Lock)
+            return Map().Values.Where(e => e.Watched && (e.Kind == KIND_MOVIE || e.Kind == KIND_EPISODE)).MaxBy(e => e.UpdatedAt);
+    }
+
     /// Series that have been started: the most recently touched episode entry per series, newest first.
     public static List<Entry> StartedSeries(int limit = 12)
     {

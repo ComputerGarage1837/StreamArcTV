@@ -243,6 +243,11 @@ public partial class VodHomePage : AppPage
             if (cont.Count > 0) rows.Add(new RowPlan("Continue watching", cont, null));
             if (next.Count > 0) rows.Add(new RowPlan("Next episodes", next, null));
 
+            var movieByIdEarly = movies.Where(m => m.Id != null).GroupBy(m => m.Id!).ToDictionary(g => g.Key, g => g.First());
+            var seriesByIdEarly = series.Where(s => s.Id != null).GroupBy(s => s.Id!).ToDictionary(g => g.Key, g => g.First());
+            var because = BecauseYouWatched(movies, series, movieByIdEarly, seriesByIdEarly);
+            if (because != null) rows.Add(because);
+
             var movieById = movies.Where(m => m.Id != null).GroupBy(m => m.Id!).ToDictionary(g => g.Key, g => g.First());
             var seriesById = series.Where(s => s.Id != null).GroupBy(s => s.Id!).ToDictionary(g => g.Key, g => g.First());
             var myList = favMovies.Where(movieById.ContainsKey).Select(id => MovieCard(movieById[id]))
@@ -303,6 +308,33 @@ public partial class VodHomePage : AppPage
         return counts.Where(kv => kv.Value >= 5).OrderByDescending(kv => kv.Value).Take(n).Select(kv => kv.Key).ToList();
     }
 
+    /// Titles that share a genre with what was finished most recently, best rated first.
+    private RowPlan? BecauseYouWatched(List<Data.Stream> movies, List<Data.Stream> series,
+        Dictionary<string, Data.Stream> movieById, Dictionary<string, Data.Stream> seriesById)
+    {
+        var last = WatchProgress.LastFinished();
+        if (last == null) return null;
+        var isSeries = last.Kind == WatchProgress.KIND_EPISODE;
+        var seedKey = isSeries ? last.SeriesId : last.ItemId;
+        if (seedKey == null) return null;
+        var seed = isSeries ? (seriesById.TryGetValue(seedKey, out var ss) ? ss : null) : (movieById.TryGetValue(seedKey, out var ms) ? ms : null);
+        if (seed == null) return null;
+        var genres = seed.Genres.Select(g => g.ToLowerInvariant()).ToHashSet();
+        if (genres.Count == 0) return null;
+        var started = WatchProgress.StartedSeries(200).Where(e => e.SeriesId != null).Select(e => e.SeriesId!).ToHashSet();
+        var pool = isSeries ? series : movies;
+        var picks = pool
+            .Where(s => s.Id != seed.Id && !string.IsNullOrWhiteSpace(s.Name))
+            .Where(s => isSeries ? s.Id == null || !started.Contains(s.Id) : !WatchProgress.IsWatched(WatchProgress.MovieKey(_service, s.StreamId ?? "")))
+            .Select(s => (S: s, Shared: s.Genres.Count(g => genres.Contains(g.ToLowerInvariant()))))
+            .Where(x => x.Shared > 0)
+            .OrderByDescending(x => x.Shared)
+            .ThenByDescending(x => double.TryParse(x.S.Rating, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var r) ? r : 0)
+            .Take(20).Select(x => x.S).ToList();
+        if (picks.Count < 4) return null;
+        return new RowPlan($"Because you watched {seed.Name}", picks.Select(p => isSeries ? SeriesCard(p) : MovieCard(p)).ToList(), null);
+    }
+
     private Card MovieCard(Data.Stream s)
     {
         var key = s.StreamId != null ? WatchProgress.MovieKey(_service, s.StreamId) : null;
@@ -311,7 +343,7 @@ public partial class VodHomePage : AppPage
         {
             Title = s.Name ?? "", Subtitle = s.Genres.FirstOrDefault(), Image = s.Image,
             Progress = frac is < 1f ? frac : null, Badge = frac >= 1f ? "✓" : null,
-            OnClick = () => PlayMovie(s),
+            OnClick = () => Nav.Push(new MoviePage(_service, s)),
             OnLongClick = () => ShowMovieMenu(s),
         };
     }

@@ -71,6 +71,20 @@ data class Stream(
     val image: String? get() = icon?.takeIf { it.isNotBlank() } ?: cover?.takeIf { it.isNotBlank() }
 }
 
+/** Extra facts about a movie or show from the provider (`get_vod_info` / `get_series_info`). */
+data class Details(
+    val plot: String?, val cast: String?, val director: String?, val genre: String?,
+    val year: String?, val rating: String?, val duration: String?, val trailer: String?,
+    val backdrop: String?, val poster: String?
+) {
+    /** A watchable address for the trailer: the provider usually sends a YouTube id. */
+    val trailerUrl: String?
+        get() = trailer?.trim()?.takeIf { it.isNotEmpty() }?.let { t -> if (t.startsWith("http")) t else "https://www.youtube.com/watch?v=$t" }
+}
+
+/** A show's details together with its episodes. */
+class SeriesData(val details: Details?, val episodes: List<Episode>)
+
 /** One episode of a series, as returned by `get_series_info`. */
 data class Episode(
     val id: String,

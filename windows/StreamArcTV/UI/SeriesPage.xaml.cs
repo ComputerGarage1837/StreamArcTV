@@ -37,7 +37,9 @@ public partial class SeriesPage : AppPage
         Progress.Visibility = Visibility.Visible;
         try
         {
-            var episodes = await XtreamApi.SeriesInfo(_service, account, _seriesId);
+            var data = await XtreamApi.SeriesFull(_service, account, _seriesId);
+            var episodes = data.Episodes;
+            BindDetails(data.Details);
             Progress.Visibility = Visibility.Collapsed;
             if (episodes.Count == 0) { TxtError.Text = "No episodes found."; TxtError.Visibility = Visibility.Visible; }
             else
@@ -54,6 +56,20 @@ public partial class SeriesPage : AppPage
             TxtError.Text = string.IsNullOrWhiteSpace(e.Message) ? "Couldn't load content." : e.Message;
             TxtError.Visibility = Visibility.Visible;
         }
+    }
+
+    /// Rating, genre, cast and trailer from the provider, when it has them.
+    private void BindDetails(Details? d)
+    {
+        if (d == null) return;
+        var facts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(d.Year)) facts.Add(d.Year!);
+        if (double.TryParse(d.Rating, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var r) && r > 0) facts.Add("★ " + r.ToString("0.0"));
+        if (!string.IsNullOrWhiteSpace(d.Genre)) facts.Add(d.Genre!);
+        if (facts.Count > 0) { TxtFacts.Text = string.Join("  ·  ", facts); TxtFacts.Visibility = Visibility.Visible; }
+        if (string.IsNullOrWhiteSpace(TxtPlot.Text) && !string.IsNullOrWhiteSpace(d.Plot)) TxtPlot.Text = d.Plot;
+        if (!string.IsNullOrWhiteSpace(d.Cast)) { TxtCast.Text = "Cast: " + d.Cast; TxtCast.Visibility = Visibility.Visible; }
+        if (d.TrailerUrl is { } url) { BtnTrailer.Visibility = Visibility.Visible; BtnTrailer.Click += (_, _) => Trailer.Open(url); }
     }
 
     public override void OnResume() => RefreshRows();
