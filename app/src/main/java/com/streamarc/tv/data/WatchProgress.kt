@@ -95,6 +95,11 @@ object WatchProgress {
             .map { it.key to it.value }
     }
 
+    /** The most recently finished movie or episode, or null. */
+    fun lastFinished(): Entry? = synchronized(this) {
+        map().values.filter { it.watched && (it.kind == KIND_MOVIE || it.kind == KIND_EPISODE) }.maxByOrNull { it.updatedAt }
+    }
+
     /** Series that have been started: the most recently touched episode entry per series, newest first. */
     fun startedSeries(limit: Int = 12): List<Entry> = synchronized(this) {
         map().values

@@ -256,6 +256,7 @@ class VodHomeActivity : AppCompatActivity() {
 
         val movieById = movies.associateBy { it.id }
         val seriesById = series.associateBy { it.id }
+        becauseYouWatched(movieById, seriesById)?.let { rows.add(it) }
         val myList = prefs.favorites(service, ContentKind.MOVIE).mapNotNull { movieById[it] }.map { movieCard(it) } +
             prefs.favorites(service, ContentKind.SERIES).mapNotNull { seriesById[it] }.map { seriesCard(it) }
         if (myList.isNotEmpty()) rows.add(Row.Cards(getString(R.string.my_list), myList, null))
@@ -282,6 +283,27 @@ class VodHomeActivity : AppCompatActivity() {
         rowsAdapter.submit(rows)
     }
 
+    /** Titles that share a genre with what was finished most recently, best rated first. */
+    private fun becauseYouWatched(movieById: Map<String?, Stream>, seriesById: Map<String?, Stream>): Row.Cards? {
+        val last = WatchProgress.lastFinished() ?: return null
+        val isSeries = last.kind == WatchProgress.KIND_EPISODE
+        val seed = (if (isSeries) seriesById[last.seriesId] else movieById[last.itemId]) ?: return null
+        val genres = seed.genres.map { it.lowercase() }.toSet()
+        if (genres.isEmpty()) return null
+        val startedSeries = WatchProgress.startedSeries(200).mapNotNull { it.seriesId }.toSet()
+        val pool = if (isSeries) series else movies
+        val picks = pool.asSequence()
+            .filter { it.id != seed.id && !it.name.isNullOrBlank() }
+            .filter { if (isSeries) it.id !in startedSeries else !WatchProgress.isWatched(WatchProgress.movieKey(service, it.streamId ?: "")) }
+            .map { s -> s to s.genres.count { it.lowercase() in genres } }
+            .filter { it.second > 0 }
+            .sortedWith(compareByDescending<Pair<Stream, Int>> { it.second }.thenByDescending { it.first.rating?.trim()?.toDoubleOrNull() ?: 0.0 })
+            .take(20).map { it.first }.toList()
+        if (picks.size < 4) return null
+        val cards = picks.map { if (isSeries) seriesCard(it) else movieCard(it) }
+        return Row.Cards(getString(R.string.because_you_watched_fmt, seed.name ?: ""), cards, null)
+    }
+
     private fun topGenres(items: List<Stream>, n: Int): List<String> {
         val counts = HashMap<String, Int>()
         for (s in items) for (g in s.genres) counts[g] = (counts[g] ?: 0) + 1
@@ -294,7 +316,7 @@ class VodHomeActivity : AppCompatActivity() {
         return Card(
             title = s.name ?: "", subtitle = s.genres.firstOrNull(), image = s.image,
             progress = frac?.takeIf { it < 1f }, badge = if (frac != null && frac >= 1f) "✓" else null,
-            onClick = { playMovie(s) },
+            onClick = { startActivity(MovieActivity.intent(this, service, s)) },
             onLongClick = { showMovieMenu(s) },
         )
     }

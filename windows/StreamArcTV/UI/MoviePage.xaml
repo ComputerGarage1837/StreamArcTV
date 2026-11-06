@@ -1,0 +1,39 @@
+<ui:AppPage x:Class="StreamArcTV.UI.MoviePage"
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:ui="clr-namespace:StreamArcTV.UI">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid Margin="12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <Button x:Name="BtnBack" Style="{StaticResource SquareIconButton}" ToolTip="Back">
+                <Path Data="{StaticResource IconBack}" Fill="{StaticResource TextBrush}" Width="22" Height="22" Stretch="Uniform" />
+            </Button>
+            <TextBlock x:Name="TxtTitle" Grid.Column="1" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxHeight="76" />
+        </Grid>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Focusable="False" Padding="16,0,16,16">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <Border Width="160" Height="230" Background="#0C1F3B" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Top">
+                    <Image x:Name="ImgPoster" Stretch="UniformToFill" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                    <TextBlock x:Name="TxtFacts" FontSize="14" Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" />
+                    <TextBlock x:Name="TxtPlot" Margin="0,8,0,0" FontSize="14" Foreground="#E2E8F0" TextWrapping="Wrap" />
+                    <TextBlock x:Name="TxtCast" Margin="0,10,0,0" FontSize="13" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Visibility="Collapsed" />
+                    <TextBlock x:Name="TxtDirector" Margin="0,4,0,0" FontSize="13" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Visibility="Collapsed" />
+                    <WrapPanel Margin="0,16,0,0">
+                        <Button x:Name="BtnPlay" Content="Play" Style="{StaticResource PrimaryButton}" MinHeight="40" Padding="22,4" Margin="0,0,8,8" />
+                        <Button x:Name="BtnStartOver" Content="Start over" Style="{StaticResource SmallButton}" MinHeight="40" Margin="0,0,8,8" Visibility="Collapsed" />
+                        <Button x:Name="BtnTrailer" Content="Trailer" Style="{StaticResource SmallButton}" MinHeight="40" Margin="0,0,8,8" Visibility="Collapsed" />
+                        <Button x:Name="BtnList" Style="{StaticResource SmallButton}" MinHeight="40" Margin="0,0,8,8" />
+                        <Button x:Name="BtnWatched" Style="{StaticResource SmallButton}" MinHeight="40" Margin="0,0,8,8" />
+                    </WrapPanel>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</ui:AppPage>

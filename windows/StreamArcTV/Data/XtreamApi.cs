@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Web;
 using StreamArcTV.Util;
 
@@ -80,7 +81,51 @@ public static class XtreamApi
     }
 
     /// Episodes of a series grouped by season (`get_series_info`).
-    public static async Task<List<Episode>> SeriesInfo(Service service, Account account, string seriesId)
+    public static async Task<List<Episode>> SeriesInfo(Service service, Account account, string seriesId) =>
+        (await SeriesFull(service, account, seriesId).ConfigureAwait(false)).Episodes;
+
+    /// Reads the `info` object of a get_vod_info / get_series_info answer; null when it has nothing useful.
+    private static Details? ParseDetails(JsonElement? infoEl)
+    {
+        if (infoEl is not { ValueKind: JsonValueKind.Object } info) return null;
+        string? S(params string[] names)
+        {
+            foreach (var n in names)
+            {
+                var v = info.Get(n);
+                if (v == null) continue;
+                var t = v.Value.ValueKind == JsonValueKind.Array ? (v.Value.GetArrayLength() > 0 ? v.Value[0].Str() : null) : v.Value.Str();
+                t = t?.Trim();
+                if (!string.IsNullOrEmpty(t) && t != "0") return t;
+            }
+            return null;
+        }
+        var yearText = S("releasedate", "release_date", "releaseDate", "year");
+        var year = yearText == null ? null : Regex.Match(yearText, @"(19|20)\d{2}").Value;
+        if (string.IsNullOrEmpty(year)) year = null;
+        var rating = S("rating", "rating_5based");
+        if (rating != null && !double.TryParse(rating, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _)) rating = null;
+        var d = new Details(S("plot", "description"), S("cast", "actors"), S("director"), S("genre"), year, rating,
+            S("duration", "episode_run_time"), S("youtube_trailer", "trailer"), S("backdrop_path", "backdrop"), S("movie_image", "cover_big", "cover"));
+        var empty = d.Plot == null && d.Cast == null && d.Director == null && d.Genre == null && d.Year == null && d.Rating == null && d.Duration == null && d.Trailer == null;
+        return empty ? null : d;
+    }
+
+    /// Cast, rating, trailer and so on for a movie (get_vod_info); null when the provider has none.
+    public static async Task<Details?> VodInfo(Service service, Account account, string streamId)
+    {
+        var body = await Get(ApiUrl(service, account.Username, account.Password, "get_vod_info",
+            new Dictionary<string, string> { ["vod_id"] = streamId })).ConfigureAwait(false);
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            return doc.RootElement.ValueKind == JsonValueKind.Object ? ParseDetails(doc.RootElement.Get("info")) : null;
+        }
+        catch (JsonException) { return null; }
+    }
+
+    /// A show's details and its episodes from one get_series_info request.
+    public static async Task<SeriesData> SeriesFull(Service service, Account account, string seriesId)
     {
         var body = await Get(ApiUrl(service, account.Username, account.Password, "get_series_info",
             new Dictionary<string, string> { ["series_id"] = seriesId })).ConfigureAwait(false);
@@ -89,9 +134,10 @@ public static class XtreamApi
         using (doc)
         {
             var root = doc.RootElement;
-            if (root.ValueKind != JsonValueKind.Object) return new();
+            if (root.ValueKind != JsonValueKind.Object) return new SeriesData(null, new());
+            var details = ParseDetails(root.Get("info"));
             var episodes = root.Get("episodes");
-            if (episodes == null) return new();
+            if (episodes == null) return new SeriesData(details, new());
             var outList = new List<Episode>();
 
             void Add(string seasonKey, JsonElement arr)
@@ -124,7 +170,7 @@ public static class XtreamApi
                 var i = 0;
                 foreach (var v in episodes.Value.EnumerateArray()) Add((++i).ToString(), v);
             }
-            return outList.OrderBy(e => e.Season).ThenBy(e => e.Number).ToList();
+            return new SeriesData(details, outList.OrderBy(e => e.Season).ThenBy(e => e.Number).ToList());
         }
     }
 

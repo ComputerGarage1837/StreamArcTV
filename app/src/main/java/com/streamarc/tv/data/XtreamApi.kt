@@ -98,11 +98,48 @@ object XtreamApi {
 
     /** Episodes of a series grouped by season (`get_series_info`). */
     suspend fun seriesInfo(service: Service, account: Account, seriesId: String): List<Episode> =
+        seriesFull(service, account, seriesId).episodes
+
+    /** Reads the `info` object of a `get_vod_info` / `get_series_info` answer; null when it has nothing useful. */
+    private fun parseDetails(info: com.google.gson.JsonObject?): Details? {
+        info ?: return null
+        fun s(vararg names: String): String? {
+            for (n in names) {
+                val v = info.get(n)?.takeIf { !it.isJsonNull } ?: continue
+                val t = runCatching { if (v.isJsonArray) v.asJsonArray.firstOrNull()?.asString else v.asString }.getOrNull()?.trim()
+                if (!t.isNullOrEmpty() && t != "0") return t
+            }
+            return null
+        }
+        val year = s("releasedate", "release_date", "releaseDate", "year")?.let { Regex("(19|20)\\d{2}").find(it)?.value }
+        val d = Details(
+            plot = s("plot", "description"), cast = s("cast", "actors"), director = s("director"), genre = s("genre"),
+            year = year, rating = s("rating", "rating_5based")?.let { r -> if (r.toDoubleOrNull() == null) null else r },
+            duration = s("duration", "episode_run_time"), trailer = s("youtube_trailer", "trailer"),
+            backdrop = s("backdrop_path", "backdrop"), poster = s("movie_image", "cover_big", "cover")
+        )
+        val empty = d.plot == null && d.cast == null && d.director == null && d.genre == null && d.year == null &&
+            d.rating == null && d.duration == null && d.trailer == null
+        return if (empty) null else d
+    }
+
+    /** Cast, rating, trailer and so on for a movie (`get_vod_info`); null when the provider has none. */
+    suspend fun vodInfo(service: Service, account: Account, streamId: String): Details? =
+        withContext(Dispatchers.IO) {
+            val body = get(apiUrl(service, account.username, account.password, "get_vod_info", mapOf("vod_id" to streamId)))
+            val root = runCatching { com.google.gson.JsonParser.parseString(body) }.getOrNull()
+            if (root == null || !root.isJsonObject) return@withContext null
+            parseDetails(root.asJsonObject.get("info")?.takeIf { it.isJsonObject }?.asJsonObject)
+        }
+
+    /** A show's details and its episodes from one `get_series_info` request. */
+    suspend fun seriesFull(service: Service, account: Account, seriesId: String): SeriesData =
         withContext(Dispatchers.IO) {
             val body = get(apiUrl(service, account.username, account.password, "get_series_info", mapOf("series_id" to seriesId)))
             val root = try { com.google.gson.JsonParser.parseString(body) } catch (_: Exception) { throw ApiException("Unexpected response from server") }
-            if (!root.isJsonObject) return@withContext emptyList()
-            val episodes = root.asJsonObject.get("episodes")?.takeIf { !it.isJsonNull } ?: return@withContext emptyList()
+            if (!root.isJsonObject) return@withContext SeriesData(null, emptyList())
+            val details = parseDetails(root.asJsonObject.get("info")?.takeIf { it.isJsonObject }?.asJsonObject)
+            val episodes = root.asJsonObject.get("episodes")?.takeIf { !it.isJsonNull } ?: return@withContext SeriesData(details, emptyList())
             val out = ArrayList<Episode>()
             fun add(seasonKey: String, arr: com.google.gson.JsonElement) {
                 if (!arr.isJsonArray) return
@@ -130,7 +167,7 @@ object XtreamApi {
                 episodes.isJsonObject -> episodes.asJsonObject.entrySet().forEach { (k, v) -> add(k, v) }
                 episodes.isJsonArray -> episodes.asJsonArray.forEachIndexed { i, v -> add((i + 1).toString(), v) }
             }
-            out.sortedWith(compareBy({ it.season }, { it.number }))
+            SeriesData(details, out.sortedWith(compareBy({ it.season }, { it.number })))
         }
 
     fun episodeUrl(service: Service, account: Account, episode: Episode): String {

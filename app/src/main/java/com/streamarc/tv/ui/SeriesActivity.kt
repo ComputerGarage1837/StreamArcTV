@@ -57,7 +57,9 @@ class SeriesActivity : AppCompatActivity() {
         b.progress.visibility = View.VISIBLE
         lifecycleScope.launch {
             try {
-                val episodes = XtreamApi.seriesInfo(service, account, seriesId)
+                val data = XtreamApi.seriesFull(service, account, seriesId)
+                val episodes = data.episodes
+                bindDetails(data.details)
                 b.progress.visibility = View.GONE
                 if (episodes.isEmpty()) {
                     b.txtError.text = getString(R.string.no_episodes)
@@ -74,6 +76,20 @@ class SeriesActivity : AppCompatActivity() {
                 b.txtError.visibility = View.VISIBLE
             }
         }
+    }
+
+    /** Rating, genre, cast and trailer from the provider, when it has them. */
+    private fun bindDetails(d: com.streamarc.tv.data.Details?) {
+        d ?: return
+        val facts = listOfNotNull(
+            d.year,
+            d.rating?.toDoubleOrNull()?.takeIf { it > 0 }?.let { "★ " + String.format("%.1f", it) },
+            d.genre
+        )
+        if (facts.isNotEmpty()) { b.txtFacts.text = facts.joinToString("  ·  "); b.txtFacts.visibility = View.VISIBLE }
+        if (b.txtPlot.text.isNullOrBlank() && !d.plot.isNullOrBlank()) b.txtPlot.text = d.plot
+        d.cast?.let { b.txtCast.text = getString(R.string.cast_fmt, it); b.txtCast.visibility = View.VISIBLE }
+        d.trailerUrl?.let { url -> b.btnTrailer.visibility = View.VISIBLE; b.btnTrailer.setOnClickListener { openTrailer(this, url) } }
     }
 
     private fun item(ep: Episode): DownloadItem? {

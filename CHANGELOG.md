@@ -3,6 +3,19 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.77 — 2026-11-06
+
+### Added
+- Movie pages. Choosing a movie now opens its own page with the poster, year, rating, running
+  time, genre, plot, cast and director when the provider supplies them, and buttons for Play (or
+  Resume from where you stopped), Start over, Trailer, add to My List and mark watched. Holding OK
+  on a movie still plays it straight away.
+- Show pages show the rating, year, genre, cast and a Trailer button too.
+- Sort and filter for the movie and show lists: a new button sorts by newest added, highest rated,
+  newest year or A to Z, and narrows the list to one genre. The sort choice is remembered.
+- A "Because you watched …" row on the Video on Demand home, suggesting unwatched titles that share
+  a genre with what you finished most recently, best rated first.
+
 ## v1.0.76 — 2026-11-06
 
 ### Added

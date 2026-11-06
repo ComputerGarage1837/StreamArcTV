@@ -154,6 +154,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("vod_channels_available", false)
         set(value) { sp.edit().putBoolean("vod_channels_available", value).apply() }
 
+    /** How the movie and show lists are ordered: default, newest, rating, year or name. */
+    var vodSort: String
+        get() = sp.getString("vod_sort", "default") ?: "default"
+        set(value) { sp.edit().putString("vod_sort", value).apply() }
+
     /** Language (ISO code) of the audio track the viewer last chose; preferred on every stream from then on. */
     var audioLanguage: String?
         get() = sp.getString("audio_language", null)

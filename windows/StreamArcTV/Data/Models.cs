@@ -76,6 +76,18 @@ public class Category
     [JsonIgnore] public bool HasExplicitNullId => _idSet && _id == null;
 }
 
+/// Extra facts about a movie or show from the provider (get_vod_info / get_series_info).
+public record Details(string? Plot, string? Cast, string? Director, string? Genre, string? Year, string? Rating,
+    string? Duration, string? Trailer, string? Backdrop, string? Poster)
+{
+    /// A watchable address for the trailer: the provider usually sends a YouTube id.
+    public string? TrailerUrl => string.IsNullOrWhiteSpace(Trailer) ? null
+        : Trailer!.Trim().StartsWith("http", StringComparison.OrdinalIgnoreCase) ? Trailer.Trim() : $"https://www.youtube.com/watch?v={Trailer.Trim()}";
+}
+
+/// A show's details together with its episodes.
+public record SeriesData(Details? Details, List<Episode> Episodes);
+
 public class Stream
 {
     [JsonPropertyName("name")] public JsonElement? NameRaw { get; set; }

@@ -21,7 +21,12 @@
             <Border Width="160" Height="230" Background="#0C1F3B" CornerRadius="8" ClipToBounds="True">
                 <Image x:Name="ImgCover" Stretch="UniformToFill" />
             </Border>
-            <TextBlock x:Name="TxtPlot" Grid.Column="1" Margin="16,0,0,0" FontSize="14" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="126" VerticalAlignment="Top" />
+            <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Top">
+                <TextBlock x:Name="TxtFacts" FontSize="14" Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" Visibility="Collapsed" />
+                <TextBlock x:Name="TxtPlot" Margin="0,6,0,0" FontSize="14" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="90" />
+                <TextBlock x:Name="TxtCast" Margin="0,6,0,0" FontSize="13" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="36" Visibility="Collapsed" />
+                <Button x:Name="BtnTrailer" Content="Trailer" Style="{StaticResource SmallButton}" HorizontalAlignment="Left" Margin="0,8,0,0" Visibility="Collapsed" />
+            </StackPanel>
         </Grid>
         <ScrollViewer x:Name="Scroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" Focusable="False" Margin="0,12,0,0" Padding="12,0,12,16">
             <StackPanel x:Name="List" />

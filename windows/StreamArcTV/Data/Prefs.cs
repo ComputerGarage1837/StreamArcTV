@@ -259,6 +259,9 @@ public sealed class Prefs
     /// The VOD account offers 24/7 live channels (found by asking its panel); controls the entry on the VOD home.
     public bool VodChannelsAvailable { get => GetBool("vod_channels_available", false); set => PutBool("vod_channels_available", value); }
 
+    /// How the movie and show lists are ordered: default, newest, rating, year or name.
+    public string VodSort { get => GetString("vod_sort") ?? "default"; set => PutString("vod_sort", value); }
+
     public string? SkippedVersion { get => GetString("skipped_version"); set => PutString("skipped_version", value); }
     public bool AutoCheckUpdates { get => GetBool("auto_check_updates", true); set => PutBool("auto_check_updates", value); }
 
