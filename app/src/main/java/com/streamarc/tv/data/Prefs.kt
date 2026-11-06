@@ -159,6 +159,11 @@ class Prefs(context: Context) {
         get() = sp.getString("vod_sort", "default") ?: "default"
         set(value) { sp.edit().putString("vod_sort", value).apply() }
 
+    /** Open the app by itself when the box starts. */
+    var openOnBoot: Boolean
+        get() = sp.getBoolean("open_on_boot", false)
+        set(value) { sp.edit().putBoolean("open_on_boot", value).apply() }
+
     /** The notification permission prompt was shown once already. */
     var notificationsAsked: Boolean
         get() = sp.getBoolean("notifications_asked", false)

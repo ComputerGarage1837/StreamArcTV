@@ -108,6 +108,7 @@ public partial class PlayerPage : AppPage
         BtnCc.Click += (_, _) => PickTracks();
         BtnChUp.Click += (_, _) => ZapBy(1);
         BtnChDown.Click += (_, _) => ZapBy(-1);
+        BtnMini.Click += (_, _) => App.Window?.SetMini(!App.Window.IsMini);
         BtnFull.Click += (_, _) => App.Window?.SetFullScreen(!App.Window.IsFullScreen);
         BtnClose.Click += (_, _) => Finish();
         Seek.PreviewMouseDown += (_, _) => _seekDragging = true;
@@ -165,6 +166,7 @@ public partial class PlayerPage : AppPage
     public override void OnDestroy()
     {
         _dead = true;
+        try { if (App.Window?.IsMini == true) App.Window.SetMini(false); } catch { }
         if (_libVlc != null) _libVlc.Log -= OnVlcLog;
         _libVlc = null;
     }
@@ -191,6 +193,7 @@ public partial class PlayerPage : AppPage
             case Key.MediaStop: Finish(); return true;
             case Key.Space: if (Keyboard.FocusedElement is not System.Windows.Controls.Primitives.ButtonBase) { TogglePause(); return true; } return false;
             case Key.F: App.Window?.SetFullScreen(!App.Window.IsFullScreen); return true;
+            case Key.M: if (Keyboard.FocusedElement is not System.Windows.Controls.TextBox) { App.Window?.SetMini(!App.Window.IsMini); return true; } return false;
             case Key.Left: if (!_controlsVisible) { SeekBy(-SEEK_STEP_MS); return true; } break;
             case Key.Right: if (!_controlsVisible) { SeekBy(SEEK_STEP_MS); return true; } break;
             case Key.PageUp: if (_zap) { ZapBy(1); return true; } break;

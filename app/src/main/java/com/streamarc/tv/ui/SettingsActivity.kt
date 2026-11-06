@@ -124,6 +124,17 @@ class SettingsActivity : AppCompatActivity() {
             prefs.autoDownloadNew = on
             if (on) askNotificationPermission()
         }
+        b.switchOpenOnBoot.isChecked = prefs.openOnBoot
+        b.switchOpenOnBoot.setOnCheckedChangeListener { v, on ->
+            if (on && android.os.Build.VERSION.SDK_INT >= 29 && !android.provider.Settings.canDrawOverlays(this)) {
+                // Android 10+ only lets an app open itself from the background with this permission.
+                v.isChecked = false
+                Toast.makeText(this, R.string.open_on_boot_permission, Toast.LENGTH_LONG).show()
+                try {
+                    startActivity(Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:$packageName")))
+                } catch (_: Exception) {}
+            } else prefs.openOnBoot = on
+        }
         b.rowSubtitles.setOnClickListener { pickSubtitles() }
         b.rowDolby.setOnClickListener { pickDolby() }
         renderSubtitles()

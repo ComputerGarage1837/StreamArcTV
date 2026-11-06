@@ -3,6 +3,17 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.79 — 2026-11-06
+
+### Added
+- Casting. On phones and boxes with Google Play services, the player has a Cast button. Choosing
+  a Chromecast or Cast-enabled TV sends the stream there (live channels as HLS), stops it on the
+  phone, and hands it back, continuing from where the TV got to, when the cast ends. The screen shows
+  "Casting to …" meanwhile. The button is hidden where casting isn't available.
+- Open the app when the box starts (Settings → Reminders and alerts, off by default). Android 10
+  and later need "Display over other apps" allowed for the app; switching the option on opens
+  that screen when it is missing.
+
 ## v1.0.78 — 2026-11-06
 
 ### Added

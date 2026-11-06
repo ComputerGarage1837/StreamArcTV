@@ -111,6 +111,11 @@ class PlayerActivity : AppCompatActivity() {
     private var triedAlternate = false
     /** Play the plain stream instead of the storage buffer (used when the buffered TS stream failed). */
     private var noTimeshift = false
+    /** Chromecast: the stream is playing on a TV, and the local player is stopped. */
+    private var casting = false
+    private var castReady = false
+    private var castContext: com.google.android.gms.cast.framework.CastContext? = null
+    private var castListener: com.google.android.gms.cast.framework.SessionManagerListener<com.google.android.gms.cast.framework.CastSession>? = null
     /** Position to start from once the stream is ready (set by the resume prompt). */
     private var startPositionMs = 0L
 
@@ -155,6 +160,7 @@ class PlayerActivity : AppCompatActivity() {
                 b.btnSeekBack.visibility = visibility
                 b.btnSeekFwd.visibility = visibility
                 b.btnTracks.visibility = visibility
+                b.btnCast.visibility = if (castReady) visibility else View.GONE
                 b.channelBox.visibility = if (zap) visibility else View.GONE
             }
         )
@@ -162,6 +168,7 @@ class PlayerActivity : AppCompatActivity() {
         b.btnSeekBack.visibility = View.GONE
         b.btnSeekFwd.visibility = View.GONE
         b.btnTracks.setOnClickListener { showTrackPicker() }
+        setupCast()
         b.btnChannelUp.setOnClickListener { zapBy(1) }
         b.btnChannelDown.setOnClickListener { zapBy(-1) }
         b.txtLiveStatus.setOnClickListener { goLive() }
@@ -178,7 +185,7 @@ class PlayerActivity : AppCompatActivity() {
         nudges = 0
         val key = watchKey
         val saved = if (key != null && !resumeAsked) WatchProgress.resumePosition(key) else 0L
-        if (saved > 0) askResume(saved) else initPlayer()
+        if (casting) { /* the TV is playing; keep the local player stopped */ } else if (saved > 0) askResume(saved) else initPlayer()
         handler.post(ticker)
     }
 
@@ -192,6 +199,84 @@ class PlayerActivity : AppCompatActivity() {
             .setNegativeButton(R.string.start_over) { _, _ -> startPositionMs = 0; initPlayer() }
             .setOnCancelListener { startPositionMs = pos; initPlayer() }
             .show()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            castListener?.let { castContext?.sessionManager?.removeSessionManagerListener(it, com.google.android.gms.cast.framework.CastSession::class.java) }
+            // Nothing in the app controls a cast once this screen is gone, so end it.
+            if (isFinishing && casting) castContext?.sessionManager?.endCurrentSession(true)
+        } catch (_: Exception) {}
+    }
+
+    // ---- Chromecast ----------------------------------------------------------------
+
+    private fun setupCast() {
+        if (!com.streamarc.tv.player.CastSupport.available(this)) return
+        val cc = com.streamarc.tv.player.CastSupport.context(this) ?: return
+        try {
+            com.google.android.gms.cast.framework.CastButtonFactory.setUpMediaRouteButton(applicationContext, b.btnCast)
+        } catch (e: Exception) {
+            AppLog.w(TAG, "cast button unavailable: ${e.message}")
+            return
+        }
+        castContext = cc
+        castReady = true
+        val listener = object : com.google.android.gms.cast.framework.SessionManagerListener<com.google.android.gms.cast.framework.CastSession> {
+            override fun onSessionStarted(s: com.google.android.gms.cast.framework.CastSession, id: String) = startCasting(s)
+            override fun onSessionResumed(s: com.google.android.gms.cast.framework.CastSession, wasSuspended: Boolean) = startCasting(s)
+            override fun onSessionEnding(s: com.google.android.gms.cast.framework.CastSession) {
+                // Remember where the TV had got to, so the phone carries on from there.
+                if (!isLive) s.remoteMediaClient?.approximateStreamPosition?.let { if (it > 0) startPositionMs = it }
+            }
+            override fun onSessionEnded(s: com.google.android.gms.cast.framework.CastSession, error: Int) = stopCasting()
+            override fun onSessionStarting(s: com.google.android.gms.cast.framework.CastSession) {}
+            override fun onSessionStartFailed(s: com.google.android.gms.cast.framework.CastSession, error: Int) {
+                Toast.makeText(this@PlayerActivity, R.string.cast_failed, Toast.LENGTH_LONG).show()
+            }
+            override fun onSessionResuming(s: com.google.android.gms.cast.framework.CastSession, id: String) {}
+            override fun onSessionResumeFailed(s: com.google.android.gms.cast.framework.CastSession, error: Int) {}
+            override fun onSessionSuspended(s: com.google.android.gms.cast.framework.CastSession, reason: Int) {}
+        }
+        castListener = listener
+        cc.sessionManager.addSessionManagerListener(listener, com.google.android.gms.cast.framework.CastSession::class.java)
+    }
+
+    /** Hands the stream to the TV and stops playing it here. */
+    private fun startCasting(session: com.google.android.gms.cast.framework.CastSession) {
+        val client = session.remoteMediaClient ?: return
+        val pos = if (isLive) 0L else (player?.currentPosition ?: startPositionMs)
+        // The TV fetches the stream itself: live goes as HLS, and never through the local relay.
+        val castUrl = if (isLive) url.removeSuffix(".ts").removeSuffix(".m3u8") + ".m3u8" else url
+        val type = when {
+            castUrl.endsWith(".m3u8") -> "application/x-mpegURL"
+            castUrl.endsWith(".mkv") -> "video/x-matroska"
+            else -> "video/mp4"
+        }
+        val meta = com.google.android.gms.cast.MediaMetadata(com.google.android.gms.cast.MediaMetadata.MEDIA_TYPE_MOVIE)
+        meta.putString(com.google.android.gms.cast.MediaMetadata.KEY_TITLE, title)
+        val info = com.google.android.gms.cast.MediaInfo.Builder(castUrl)
+            .setStreamType(if (isLive) com.google.android.gms.cast.MediaInfo.STREAM_TYPE_LIVE else com.google.android.gms.cast.MediaInfo.STREAM_TYPE_BUFFERED)
+            .setContentType(type)
+            .setMetadata(meta)
+            .build()
+        AppLog.i(TAG, "casting to '${session.castDevice?.friendlyName}': ${AppLog.safeUrl(castUrl)}")
+        client.load(com.google.android.gms.cast.MediaLoadRequestData.Builder().setMediaInfo(info).setAutoplay(true).setCurrentTime(pos).build())
+        casting = true
+        cancelRetry()
+        releasePlayer()
+        b.bufferBox.visibility = View.GONE
+        b.txtCasting.text = getString(R.string.casting_to_fmt, session.castDevice?.friendlyName ?: "")
+        b.txtCasting.visibility = View.VISIBLE
+    }
+
+    private fun stopCasting() {
+        if (!casting) return
+        casting = false
+        b.txtCasting.visibility = View.GONE
+        AppLog.i(TAG, "cast ended; playing here again")
+        if (!isFinishing && !isDestroyed && player == null) initPlayer()
     }
 
     override fun onStop() {
