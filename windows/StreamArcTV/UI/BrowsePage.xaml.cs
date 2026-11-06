@@ -495,6 +495,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
             if (hidden.Count > 0) list = list.Where(s => s.CategoryId == null || !hidden.Contains(s.CategoryId)).ToList();
         }
         if (q.Length > 0) list = list.Where(s => s.Name?.Contains(q, StringComparison.OrdinalIgnoreCase) == true).ToList();
+        _visible = list;
 
         if (IsLive)
         {
@@ -514,6 +515,8 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
     }
 
     private List<Data.Stream> _filtered = new();
+    /// The channels currently listed in the guide (after filters), used for channel up / down in the player.
+    private List<Data.Stream> _visible = new();
 
     private int PosterColumns()
     {
@@ -559,7 +562,9 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         if (IsLive) ReleasePreview();
         var key = _kind == ContentKind.MOVIE && stream.StreamId != null ? WatchProgress.MovieKey(_service, stream.StreamId) : null;
         if (key != null) WatchProgress.Describe(key, WatchProgress.KIND_MOVIE, stream.Name ?? "", stream.Image, stream.ContainerExtension, stream.StreamId!);
-        Nav.Push(new PlayerPage(url, stream.Name ?? "", IsLive, key));
+        var zap = IsLive && _visible.Count > 1;
+        if (zap) ChannelQueue.Set(_service, _visible, stream); else ChannelQueue.Clear();
+        Nav.Push(new PlayerPage(url, stream.Name ?? "", IsLive, key, zap));
     }
 
     /// Context menu opened by holding Enter / right-clicking an item.

@@ -279,6 +279,8 @@ public sealed class Prefs
 
     /// Whether subtitle tracks are shown by default (the player's CC button changes and remembers this).
     public bool Subtitles { get => GetBool("subtitles", false); set => PutBool("subtitles", value); }
+    /// The language of the audio track the viewer last chose (e.g. "English"); preferred on every stream from then on.
+    public string? AudioLanguage { get => GetString("audio_language"); set => PutString("audio_language", value); }
 
     /// Start the next episode automatically when one ends.
     public bool AutoPlayNext { get => GetBool("auto_play_next", true); set => PutBool("auto_play_next", value); }

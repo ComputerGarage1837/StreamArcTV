@@ -20,6 +20,12 @@
                 <Button x:Name="BtnSeekBack" Content="« 10 s" Style="{StaticResource SeekButton}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="20" Visibility="Collapsed" />
                 <Button x:Name="BtnSeekFwd" Content="10 s »" Style="{StaticResource SeekButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="20" Visibility="Collapsed" />
 
+                <!-- Channel up / down (live TV opened from the guide) -->
+                <StackPanel x:Name="ChannelBox" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,96" Visibility="Collapsed">
+                    <Button x:Name="BtnChDown" Content="CH −" Style="{StaticResource SeekButton}" ToolTip="Previous channel (Page Down)" />
+                    <Button x:Name="BtnChUp" Content="CH +" Style="{StaticResource SeekButton}" Margin="8,0,0,0" ToolTip="Next channel (Page Up)" />
+                </StackPanel>
+
                 <!-- Up next -->
                 <Border x:Name="NextBox" Style="{StaticResource Panel}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,96" Padding="14" Visibility="Collapsed">
                     <StackPanel>
@@ -70,7 +76,7 @@
                         </Button>
                         <TextBlock x:Name="TxtTime" Grid.Column="1" FontSize="13" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="12,0,12,0" MinWidth="90" />
                         <Slider x:Name="Seek" Grid.Column="2" Style="{StaticResource SeekSlider}" Minimum="0" Maximum="1000" VerticalAlignment="Center" Focusable="True" />
-                        <Button x:Name="BtnCc" Grid.Column="3" Style="{StaticResource PlayerButton}" Margin="12,0,0,0" ToolTip="Subtitles">
+                        <Button x:Name="BtnCc" Grid.Column="3" Style="{StaticResource PlayerButton}" Margin="12,0,0,0" ToolTip="Audio and subtitles">
                             <Path Data="{StaticResource IconCc}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="20" Height="20" Stretch="Uniform" />
                         </Button>
                         <Button x:Name="BtnFull" Grid.Column="4" Style="{StaticResource PlayerButton}" Margin="8,0,0,0" ToolTip="Full screen (F11)">
