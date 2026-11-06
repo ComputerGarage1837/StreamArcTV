@@ -114,9 +114,14 @@ class SettingsActivity : AppCompatActivity() {
         b.switchWifiOnly.setOnCheckedChangeListener { _, on -> prefs.downloadsWifiOnly = on }
         b.switchDeleteWatched.isChecked = prefs.deleteAfterWatched
         b.switchDeleteWatched.setOnCheckedChangeListener { _, on -> prefs.deleteAfterWatched = on }
-        b.switchReminders.isChecked = prefs.reminders
+        b.switchReminders.isChecked = prefs.expiryReminders
         b.switchReminders.setOnCheckedChangeListener { _, on ->
-            prefs.reminders = on
+            prefs.expiryReminders = on
+            if (on) askNotificationPermission()
+        }
+        b.switchNewEpisodeAlerts.isChecked = prefs.newEpisodeAlerts
+        b.switchNewEpisodeAlerts.setOnCheckedChangeListener { _, on ->
+            prefs.newEpisodeAlerts = on
             if (on) askNotificationPermission()
         }
         b.switchAutoDownloadNew.isChecked = prefs.autoDownloadNew

@@ -21,6 +21,9 @@ object ChannelQueue {
 
     fun clear() { channels = emptyList(); index = -1; service = null }
 
+    /** The channel the player was opened on (and then moved to by channel up / down). */
+    fun current(): Stream? = channels.getOrNull(index)
+
     val available: Boolean get() = service != null && channels.size > 1 && index in channels.indices
 
     /** Moves by [delta] (wrapping round) and returns the channel there. */

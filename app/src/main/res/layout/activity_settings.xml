@@ -438,6 +438,15 @@
                 android:textSize="16sp" />
 
             <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchNewEpisodeAlerts"
+                style="@style/SettingsRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/new_episode_alerts_setting"
+                android:textColor="@color/text"
+                android:textSize="16sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/switchAutoDownloadNew"
                 style="@style/SettingsRow"
                 android:layout_width="match_parent"

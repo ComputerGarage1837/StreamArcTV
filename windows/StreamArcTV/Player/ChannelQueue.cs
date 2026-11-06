@@ -18,6 +18,8 @@ public static class ChannelQueue
         _index = _channels.FindIndex(s => s.StreamId != null && s.StreamId == current.StreamId);
     }
 
+    public static Data.Stream? Current => _index >= 0 && _index < _channels.Count ? _channels[_index] : null;
+
     public static void Clear() { _channels = new(); _index = -1; Service = null; }
 
     public static bool Available => Service != null && _channels.Count > 1 && _index >= 0 && _index < _channels.Count;

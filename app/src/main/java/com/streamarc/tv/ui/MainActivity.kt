@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity() {
         inflateHome()
 
         if (prefs.layoutMode == null) askLayout() else maybeAskInstallPermission()
-        if (prefs.reminders && android.os.Build.VERSION.SDK_INT >= 33 && !prefs.notificationsAsked &&
+        if ((prefs.expiryReminders || prefs.newEpisodeAlerts) && android.os.Build.VERSION.SDK_INT >= 33 && !prefs.notificationsAsked &&
             androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
         ) {
             prefs.notificationsAsked = true

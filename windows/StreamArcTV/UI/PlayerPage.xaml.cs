@@ -41,6 +41,9 @@ public partial class PlayerPage : AppPage
     private readonly bool _isLive;
     /// Channel up / down is available (opened from the guide with its channel list).
     private readonly bool _zap;
+    private readonly bool _fromGuide;
+    private long _nowCheckedAt;
+    private bool _nowFetching;
     /// The other stream format (HLS / TS) was already tried for this channel.
     private bool _triedAlternate;
     /// Play the plain stream instead of the storage buffer (used when the buffered TS stream failed).
@@ -95,6 +98,7 @@ public partial class PlayerPage : AppPage
         InitializeComponent();
         _url = url; _title = title; _isLive = live;
         _zap = live && zap && ChannelQueue.Available;
+        _fromGuide = live && zap;
         _watchKey = live ? null : watchKey;
         AppLog.I(TAG, $"open live={live} title='{title}' url={AppLog.SafeUrl(url)}");
         TxtTitle.Text = title;
@@ -231,9 +235,8 @@ public partial class PlayerPage : AppPage
         TitleBar.Visibility = v;
         Controller.Visibility = v;
         TxtLiveStatus.Visibility = _isLive ? v : Visibility.Collapsed;
-        BtnSeekBack.Visibility = v;
-        BtnSeekFwd.Visibility = v;
-        ChannelBox.Visibility = _zap ? v : Visibility.Collapsed;
+        ChannelBox.Visibility = _zap ? Visibility.Visible : Visibility.Collapsed;
+        if (on) RefreshNowPlaying(true);
         Overlay.Cursor = on ? Cursors.Arrow : Cursors.None;
     }
 
@@ -630,6 +633,9 @@ public partial class PlayerPage : AppPage
         _url = url;
         _title = s.Name ?? "";
         TxtTitle.Text = _title;
+        TxtNow.Visibility = Visibility.Collapsed;
+        _nowCheckedAt = 0;
+        RefreshNowPlaying(true);
         _retries = 0; _nudges = 0; _triedAlternate = false; _noTimeshift = false;
         CancelRetry();
         ReleasePlayer();
@@ -921,6 +927,7 @@ public partial class PlayerPage : AppPage
         TxtTime.Text = len > 0 ? $"{Clock(time)} / {Clock(len)}" : (_isLive ? Clock(time) : "");
 
         if (!_isLive) return;
+        if (_controlsVisible) RefreshNowPlaying(false);
         var behindMs = BehindLiveMs(p);
         var paused = _userPaused;
         _behindNow = paused || behindMs >= BEHIND_THRESHOLD_MS;
@@ -928,6 +935,50 @@ public partial class PlayerPage : AppPage
             : _behindNow ? $"{Clock(behindMs)} behind live · select to go live"
             : "● LIVE";
         Ui.SetSelected(TxtLiveStatus, _behindNow);
+    }
+
+    /// Live TV and 24/7 channels opened from the guide: what is on now and what is next, under the title.
+    private void RefreshNowPlaying(bool force)
+    {
+        if (!_fromGuide) return;
+        var s = ChannelQueue.Current;
+        var svc = ChannelQueue.Service;
+        if (s == null || svc == null) { TxtNow.Visibility = Visibility.Collapsed; return; }
+        var nowMs = Format.NowMs;
+        if (!force && nowMs - _nowCheckedAt < 20_000) return;
+        _nowCheckedAt = nowMs;
+        var list = EpgCache.GuideFor(svc.Value, s.EpgChannelId, s.Name)
+                   ?? (s.StreamId != null ? EpgCache.Peek(svc.Value, s.StreamId) : null);
+        if (list != null) { ShowNowPlaying(list); return; }
+        if (_nowFetching || s.StreamId == null) return;
+        var acct = _prefs.Account(svc.Value);
+        if (acct == null) return;
+        _nowFetching = true;
+        var sid = s.StreamId;
+        var service = svc.Value;
+        _ = Task.Run(async () =>
+        {
+            List<EpgProgramme> l;
+            try { l = await EpgCache.Get(service, acct, sid); } catch { l = new(); }
+            Ui.Post(() =>
+            {
+                _nowFetching = false;
+                if (!_dead && ChannelQueue.Current?.StreamId == sid) ShowNowPlaying(l);
+            });
+        });
+    }
+
+    private void ShowNowPlaying(List<EpgProgramme> list)
+    {
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var ordered = list.OrderBy(p => p.Start).ToList();
+        var cur = ordered.FirstOrDefault(p => p.Start <= now && now < p.End);
+        var next = ordered.FirstOrDefault(p => p.Start >= (cur?.End ?? now));
+        var lines = new List<string>();
+        if (cur != null) lines.Add($"Now: {cur.Title}  ·  {Format.TimeRange(cur.Start, cur.End)}");
+        if (next != null) lines.Add($"Next: {next.Title}  ·  {Format.Time(next.Start)}");
+        TxtNow.Text = string.Join("\n", lines);
+        TxtNow.Visibility = lines.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private long BehindLiveMs(MediaPlayer p)

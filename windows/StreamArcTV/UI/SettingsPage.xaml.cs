@@ -31,6 +31,8 @@ public partial class SettingsPage : AppPage
         SwitchAutoPlayNext.Click += (_, _) => _prefs.AutoPlayNext = SwitchAutoPlayNext.IsChecked == true;
         SwitchReminders.IsChecked = _prefs.RemindersOn;
         SwitchReminders.Click += (_, _) => _prefs.RemindersOn = SwitchReminders.IsChecked == true;
+        SwitchNewEpisodeAlerts.IsChecked = _prefs.NewEpisodeAlerts;
+        SwitchNewEpisodeAlerts.Click += (_, _) => _prefs.NewEpisodeAlerts = SwitchNewEpisodeAlerts.IsChecked == true;
         SwitchAutoDownloadNew.IsChecked = _prefs.AutoDownloadNew;
         SwitchAutoDownloadNew.Click += (_, _) => _prefs.AutoDownloadNew = SwitchAutoDownloadNew.IsChecked == true;
         SwitchWifiOnly.IsChecked = _prefs.DownloadsWifiOnly;

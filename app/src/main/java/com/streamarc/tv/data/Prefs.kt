@@ -169,10 +169,15 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("notifications_asked", false)
         set(value) { sp.edit().putBoolean("notifications_asked", value).apply() }
 
-    /** Reminders and alerts: subscription expiry and new episodes of My List shows. */
-    var reminders: Boolean
+    /** Subscription expiry reminders (a week and a day before, and when it ends). */
+    var expiryReminders: Boolean
         get() = sp.getBoolean("reminders", true)
         set(value) { sp.edit().putBoolean("reminders", value).apply() }
+
+    /** An alert when a show in My List gets a new episode. */
+    var newEpisodeAlerts: Boolean
+        get() = sp.getBoolean("new_episode_alerts", sp.getBoolean("reminders", true))
+        set(value) { sp.edit().putBoolean("new_episode_alerts", value).apply() }
 
     /** Download new episodes of My List shows by itself, overnight on Wi-Fi. */
     var autoDownloadNew: Boolean

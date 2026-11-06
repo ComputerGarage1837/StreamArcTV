@@ -623,9 +623,8 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         if (IsLive) ReleasePreview();
         var key = _kind == ContentKind.MOVIE && stream.StreamId != null ? WatchProgress.MovieKey(_service, stream.StreamId) : null;
         if (key != null) WatchProgress.Describe(key, WatchProgress.KIND_MOVIE, stream.Name ?? "", stream.Image, stream.ContainerExtension, stream.StreamId!);
-        var zap = IsLive && _visible.Count > 1;
-        if (zap) ChannelQueue.Set(_service, _visible, stream); else ChannelQueue.Clear();
-        Nav.Push(new PlayerPage(url, stream.Name ?? "", IsLive, key, zap));
+        if (IsLive) ChannelQueue.Set(_service, _visible.Count > 0 ? _visible : new List<Data.Stream> { stream }, stream); else ChannelQueue.Clear();
+        Nav.Push(new PlayerPage(url, stream.Name ?? "", IsLive, key, IsLive));
     }
 
     /// Context menu opened by holding Enter / right-clicking an item.
