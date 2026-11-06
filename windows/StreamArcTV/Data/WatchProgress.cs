@@ -40,6 +40,10 @@ public static class WatchProgress
 
     private static readonly object Lock = new();
     private static Dictionary<string, Entry>? _cache;
+    private static string? _cacheName;
+
+    /// Forgets the in-memory copy (a different user is watching, or a backup was imported).
+    public static void Reload() { lock (Lock) { _cache = null; Version++; } }
 
     public static string MovieKey(Service s, string id) => $"movie:{s}:{id}";
     public static string EpisodeKey(string id) => $"ep:{id}";
@@ -147,8 +151,10 @@ public static class WatchProgress
 
     private static Dictionary<string, Entry> Map()
     {
-        if (_cache != null) return _cache;
-        var json = Prefs.Blob("watch");
+        var name = VodUsers.WatchBlob();
+        if (_cache != null && _cacheName == name) return _cache;
+        _cacheName = name;
+        var json = Prefs.Blob(name);
         Dictionary<string, Entry> m;
         try { m = json == null ? new() : JsonSerializer.Deserialize<Dictionary<string, Entry>>(json) ?? new(); }
         catch { m = new(); }
@@ -165,6 +171,6 @@ public static class WatchProgress
         {
             foreach (var k in m.OrderBy(kv => kv.Value.UpdatedAt).Take(m.Count - MAX_ENTRIES).Select(kv => kv.Key).ToList()) m.Remove(k);
         }
-        Prefs.SetBlob("watch", JsonSerializer.Serialize(m));
+        Prefs.SetBlob(VodUsers.WatchBlob(), JsonSerializer.Serialize(m));
     }
 }

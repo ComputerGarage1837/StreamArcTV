@@ -58,6 +58,8 @@ public partial class VodHomePage : AppPage
         Header.SetCompact(true);
         Header.SettingsButton.Click += (_, _) => Nav.Push(new SettingsPage());
         Header.UpdateButton.Click += (_, _) => UpdateChecker.Check(manual: true);
+        Header.ShowUser(true);
+        Header.UserButton.Click += (_, _) => UserDialogs.Choose(OnUserChanged);
 
         BuildNav();
         ProbeChannels();
@@ -74,6 +76,17 @@ public partial class VodHomePage : AppPage
         Loaded += (_, _) => ApplyNavLayout();
         Render();
         Load();
+        // First time in VOD there is no user yet: ask for one straight away. With several, ask who is watching.
+        Loaded += (_, _) => Ui.Post(() => UserDialogs.Ensure(OnUserChanged));
+    }
+
+    /// A different user is watching: show their lists.
+    private void OnUserChanged()
+    {
+        Header.ShowUser(true);
+        _heroIndex = 0;
+        Render();
+        if (_loaded) LoadNextEpisodes();
     }
 
     public override IInputElement? InitialFocus => _navItems.FirstOrDefault().Card;

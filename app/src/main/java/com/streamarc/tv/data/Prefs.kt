@@ -82,7 +82,10 @@ class Prefs(context: Context) {
 
     // ---- Favorites -----------------------------------------------------
 
-    private fun favKey(service: Service, kind: ContentKind) = k(service, "favs_${kind.name.lowercase()}")
+    private fun favKey(service: Service, kind: ContentKind): String {
+        val base = k(service, "favs_${kind.name.lowercase()}")
+        return if (service == Service.VOD) VodUsers.scope(base) else base
+    }
 
     fun favorites(service: Service, kind: ContentKind): Set<String> =
         sp.getStringSet(favKey(service, kind), emptySet())?.toSet() ?: emptySet()
@@ -156,8 +159,8 @@ class Prefs(context: Context) {
 
     /** How the movie and show lists are ordered: default, newest, rating, year or name. */
     var vodSort: String
-        get() = sp.getString("vod_sort", "default") ?: "default"
-        set(value) { sp.edit().putString("vod_sort", value).apply() }
+        get() = sp.getString(VodUsers.scope("vod_sort"), "default") ?: "default"
+        set(value) { sp.edit().putString(VodUsers.scope("vod_sort"), value).apply() }
 
     /** Open the app by itself when the box starts. */
     var openOnBoot: Boolean
@@ -190,12 +193,12 @@ class Prefs(context: Context) {
 
     /** Newest episode (season * 10000 + number) seen so far for each My List show, by series id. */
     fun knownEpisodes(): Map<String, Int> =
-        (sp.getString("known_episodes", null) ?: "").split(';').mapNotNull { e ->
+        (sp.getString(VodUsers.scope("known_episodes"), null) ?: "").split(';').mapNotNull { e ->
             val p = e.split('=')
             if (p.size == 2) p[1].toIntOrNull()?.let { p[0] to it } else null
         }.toMap()
     fun setKnownEpisodes(map: Map<String, Int>) {
-        sp.edit().putString("known_episodes", map.entries.joinToString(";") { "${it.key}=${it.value}" }).apply()
+        sp.edit().putString(VodUsers.scope("known_episodes"), map.entries.joinToString(";") { "${it.key}=${it.value}" }).apply()
     }
 
     /** New episodes waiting to be downloaded (tab separated lines, see Reminders). */

@@ -238,7 +238,11 @@ public sealed class Prefs
 
     // ---- Favorites -----------------------------------------------------
 
-    private static string FavKey(Service s, ContentKind kind) => K(s, $"favs_{kind.ToString().ToLowerInvariant()}");
+    private static string FavKey(Service s, ContentKind kind)
+    {
+        var k = K(s, $"favs_{kind.ToString().ToLowerInvariant()}");
+        return s == Service.VOD ? VodUsers.Scope(k) : k;
+    }
 
     public HashSet<string> Favorites(Service s, ContentKind kind) => GetSet(FavKey(s, kind));
 
@@ -271,19 +275,19 @@ public sealed class Prefs
     public Dictionary<string, int> KnownEpisodes()
     {
         var d = new Dictionary<string, int>();
-        foreach (var e in (GetString("known_episodes") ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var e in (GetString(VodUsers.Scope("known_episodes")) ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries))
         {
             var p = e.Split('=');
             if (p.Length == 2 && int.TryParse(p[1], out var v)) d[p[0]] = v;
         }
         return d;
     }
-    public void SetKnownEpisodes(Dictionary<string, int> map) => PutString("known_episodes", string.Join(";", map.Select(kv => $"{kv.Key}={kv.Value}")));
+    public void SetKnownEpisodes(Dictionary<string, int> map) => PutString(VodUsers.Scope("known_episodes"), string.Join(";", map.Select(kv => $"{kv.Key}={kv.Value}")));
     /// New episodes waiting to be downloaded (tab separated lines, see Reminders).
     public HashSet<string> PendingEpisodes { get => GetSet("pending_episodes"); set => PutSet("pending_episodes", value); }
 
     /// How the movie and show lists are ordered: default, newest, rating, year or name.
-    public string VodSort { get => GetString("vod_sort") ?? "default"; set => PutString("vod_sort", value); }
+    public string VodSort { get => GetString(VodUsers.Scope("vod_sort")) ?? "default"; set => PutString(VodUsers.Scope("vod_sort"), value); }
 
     public string? SkippedVersion { get => GetString("skipped_version"); set => PutString("skipped_version", value); }
     public bool AutoCheckUpdates { get => GetBool("auto_check_updates", true); set => PutBool("auto_check_updates", value); }
@@ -341,6 +345,10 @@ public sealed class Prefs
 
     /// Main window placement, so the app opens where it was left.
     public string? WindowPlacement { get => GetString("window_placement"); set => PutString("window_placement", value); }
+
+    /// Raw string access for VodUsers.
+    public static string? RawGet(string key) => GetString(key);
+    public static void RawPut(string key, string? value) => PutString(key, value);
 
     /// Generic JSON blob storage used by WatchProgress and TransferStore (kept in separate files on Android).
     public static string? Blob(string name) => GetString("blob_" + name);
