@@ -103,6 +103,9 @@ class VodHomeActivity : AppCompatActivity() {
         b.header.btnSettings.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
         b.header.btnUpdate.setOnClickListener { UpdateChecker.check(this, manual = true) }
         b.header.boxGuide.visibility = View.GONE   // the guide belongs to Live TV
+        b.header.boxUser.visibility = View.VISIBLE
+        b.header.btnUser.setOnClickListener { UserDialogs.choose(this) { onUserChanged() } }
+        showUser()
 
         b.navHome.isSelected = true
         b.navHome.setOnClickListener { b.listRows.smoothScrollToPosition(0) }
@@ -120,6 +123,22 @@ class VodHomeActivity : AppCompatActivity() {
         applyNavLayout()
         render()
         load()
+        // First time in VOD there is no user yet: ask for one straight away. With several, ask who is watching.
+        UserDialogs.ensure(this) { onUserChanged() }
+    }
+
+    private fun showUser() {
+        val u = com.streamarc.tv.data.VodUsers.current() ?: return
+        b.header.btnUser.setImageDrawable(UserDialogs.avatar(u.name, u.color))
+        b.header.txtUserName.text = u.name
+    }
+
+    /** A different user is watching: show their lists. */
+    private fun onUserChanged() {
+        showUser()
+        heroIndex = 0
+        render()
+        if (loaded) loadNextEpisodes()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

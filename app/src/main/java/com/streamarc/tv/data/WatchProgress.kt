@@ -43,6 +43,7 @@ object WatchProgress {
     private val gson = Gson()
     private val type = TypeToken.getParameterized(HashMap::class.java, String::class.java, Entry::class.java).type
     @Volatile private var cache: HashMap<String, Entry>? = null
+    @Volatile private var cacheKey: String? = null
 
     fun init(context: Context) {
         sp = context.applicationContext.getSharedPreferences("streamarc_watch", Context.MODE_PRIVATE)
@@ -137,8 +138,13 @@ object WatchProgress {
     /** Drops the in-memory copy after a backup import so the next read comes from disk. */
     fun reload() = synchronized(this) { cache = null }
 
-    private fun map(): HashMap<String, Entry> = cache ?: run {
-        val json = sp.getString("entries", null)
+    /** Deletes a stored entry set (a removed user's). */
+    fun wipe(storeKey: String) = synchronized(this) { sp.edit().remove(storeKey).commit(); cache = null }
+
+    private fun map(): HashMap<String, Entry> = cache?.takeIf { cacheKey == VodUsers.watchKey() } ?: run {
+        val storeKey = VodUsers.watchKey()
+        cacheKey = storeKey
+        val json = sp.getString(storeKey, null)
         val m: HashMap<String, Entry> = try {
             if (json == null) HashMap() else gson.fromJson(json, type) ?: HashMap()
         } catch (_: Exception) { HashMap() }
@@ -151,6 +157,6 @@ object WatchProgress {
             val drop = m.entries.sortedBy { it.value.updatedAt }.take(m.size - MAX_ENTRIES).map { it.key }
             for (k in drop) m.remove(k)
         }
-        sp.edit().putString("entries", gson.toJson(m, type)).apply()
+        sp.edit().putString(VodUsers.watchKey(), gson.toJson(m, type)).apply()
     }
 }

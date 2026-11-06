@@ -8,7 +8,7 @@ import org.json.JSONObject
 /**
  * Everything worth carrying to a new box in one JSON file: settings, favourites, hidden
  * categories and channels, default category, layout, buffer, multi-view slots, watched
- * positions, and (optionally) the sign-in details.
+ * positions, VOD users (each with their own watched list and My List), and (optionally) the sign-in details.
  */
 object Backup {
     private const val SCHEMA = 1
@@ -43,6 +43,11 @@ object Backup {
         root.put("prefs", prefs)
         val watch = context.getSharedPreferences(WATCH, Context.MODE_PRIVATE).getString("entries", null)
         if (watch != null) root.put("watch", JSONObject(watch))
+        // Every other user's watched list and progress.
+        val wsp = context.getSharedPreferences(WATCH, Context.MODE_PRIVATE)
+        val others = JSONObject()
+        for ((key, value) in wsp.all) if (key.startsWith("entries_") && value is String) others.put(key, JSONObject(value))
+        if (others.length() > 0) root.put("watchUsers", others)
         return root.toString(2)
     }
 
@@ -75,6 +80,12 @@ object Backup {
             WatchProgress.reload()
             watched = w.length()
         }
+        root.optJSONObject("watchUsers")?.let { o ->
+            val ed2 = context.getSharedPreferences(WATCH, Context.MODE_PRIVATE).edit()
+            for (key in o.keys()) { ed2.putString(key, o.getJSONObject(key).toString()); watched += o.getJSONObject(key).length() }
+            ed2.commit()
+        }
+        VodUsers.reload()
         return "$count settings, $watched watched items"
     }
 }

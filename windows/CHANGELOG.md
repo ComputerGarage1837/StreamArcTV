@@ -3,6 +3,11 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.29 — 2026-11-06
+
+### Added
+- Users on Video on Demand. Each person gets their own watched list and progress, My List, sort choice and new-episode tracking. The first time VOD is opened you're asked to make a user straight away; everything that was already watched or in My List becomes that first user's. A round avatar at the top of the VOD home switches user (or adds, renames and removes users), and with more than one user "Who's watching?" is offered each time the app starts. Users and their lists are included in Export and Import.
+
 ## v1.1.28 — 2026-11-06
 
 ### Changed

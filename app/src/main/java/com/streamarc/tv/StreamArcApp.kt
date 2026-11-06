@@ -30,6 +30,7 @@ class StreamArcApp : Application() {
             }
         }
         com.streamarc.tv.data.WatchProgress.init(this)
+        com.streamarc.tv.data.VodUsers.init(this)
         Thread { com.streamarc.tv.player.TimeshiftServer.cleanup(this) }.start()
     }
 

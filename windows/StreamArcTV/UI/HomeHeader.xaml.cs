@@ -12,6 +12,17 @@ public partial class HomeHeader : UserControl
 
     public Button UpdateButton => BtnUpdate;
     public Button SettingsButton => BtnSettings;
+    public Button UserButton => BtnUser;
+
+    /// Shows the round avatar of the current VOD user (hidden when there is none yet).
+    public void ShowUser(bool visible)
+    {
+        BoxUser.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        var u = Data.VodUsers.Current;
+        if (!visible || u == null) return;
+        BtnUser.Content = UserDialogs.Avatar(u.Name, u.Color, 38);
+        TxtUserName.Text = u.Name;
+    }
 
     public HomeHeader()
     {
