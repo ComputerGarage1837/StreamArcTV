@@ -3,6 +3,13 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.75 — 2026-11-06
+
+### Fixed
+- Opening a live channel full screen from the guide now closes the guide's preview first. The
+  preview is a second connection on the same account, and on accounts that allow only one the
+  provider could refuse the full-screen stream (HTTP 403) while the preview was still open.
+
 ## v1.0.74 — 2026-11-05
 
 ### Changed
