@@ -269,6 +269,7 @@ public static class EpgCache
             if (disk != null)
             {
                 lock (Guides) Guides[s] = disk.Value;
+                AppLog.I("Epg", $"{s} guide from disk: {disk.Value.Guide.ById.Count} channels, {(Format.NowMs - disk.Value.At) / 60_000} min old");
                 if (Format.NowMs - disk.Value.At > REFRESH_MS) RefreshInBackground(s, account);
                 return true;
             }
@@ -288,13 +289,17 @@ public static class EpgCache
         var to = from + 50 * 3600;      // two days so a disk copy still covers the grid later
         try
         {
+            var started = Format.NowMs;
+            AppLog.I("Epg", $"{s} guide: downloading whole listing (xmltv)");
             var guide = await XtreamApi.FullGuide(s, account, from, to, onProgress).ConfigureAwait(false);
             XmltvParser.Guide? current;
             lock (Guides) current = Guides.TryGetValue(s, out var c) ? c.Guide : null;
+            AppLog.I("Epg", $"{s} guide downloaded: {guide.ById.Count} channels, {guide.ById.Values.Sum(l => l.Count)} programmes in {(Format.NowMs - started) / 1000}s");
             if (guide.ById.Count == 0) throw new InvalidOperationException("Empty guide");
             if (current != null && !AtLeastAsComplete(guide, current))
             {
                 // The panel is probably regenerating its EPG; keep the good copy and try later.
+                AppLog.W("Epg", $"{s} guide: new listing is less complete than the kept one ({current.ById.Count} channels); keeping the old copy");
                 lock (Guides) GuideFailedAt[s] = Format.NowMs;
                 return current.ById.Count > 0;
             }
@@ -306,11 +311,13 @@ public static class EpgCache
         catch (XtreamApi.GuideTooLarge)
         {
             // Caller decided the file is too big; don't retry the full download for a while.
+            AppLog.W("Epg", $"{s} guide: too large; using per-channel lookups");
             lock (Guides) GuideFailedAt[s] = Format.NowMs + 6 * 60 * 60 * 1000L;
             return GuideLoaded(s);
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            AppLog.E("Epg", $"{s} guide download failed", e);
             lock (Guides) GuideFailedAt[s] = Format.NowMs;
             return GuideLoaded(s);
         }
@@ -398,18 +405,49 @@ public static class EpgCache
         }
     }
 
+    // Some panels have no per-channel listings at all and answer every request with an empty list.
+    // Asking for each of thousands of channels anyway is pure load on the panel (and can get the
+    // account rate-limited or blocked), so after a run of empty answers the lookups are paused.
+    private const int EMPTY_STREAK_LIMIT = 40;
+    private const long SHORT_EPG_PAUSE_MS = 6 * 60 * 60 * 1000L;
+    private static readonly Dictionary<Service, int> EmptyStreak = new();
+    private static readonly Dictionary<Service, int> RequestCount = new();
+
+    /// True while per-channel lookups are paused for this service (the panel had nothing for any channel).
+    public static bool ShortEpgPaused(Service s) => Prefs.Instance.ShortEpgOffUntil(s) > Format.NowMs;
+
     /// Programmes for the channel, fetching (at most 6 at a time) when not cached.
     public static async Task<List<EpgProgramme>> Get(Service s, Account account, string streamId)
     {
         var p = Peek(s, streamId);
         if (p != null) return p;
+        if (ShortEpgPaused(s)) return new();
         await Gate.WaitAsync();
         try
         {
             p = Peek(s, streamId);
             if (p != null) return p;
+            if (ShortEpgPaused(s)) return new();
             List<EpgProgramme> list;
             try { list = await XtreamApi.ShortEpg(s, account, streamId); } catch { list = new(); }
+            lock (EmptyStreak)
+            {
+                var n = (RequestCount.TryGetValue(s, out var rc) ? rc : 0) + 1;
+                RequestCount[s] = n;
+                if (n % 500 == 0) AppLog.W("Epg", $"{s}: {n} per-channel programme requests this session");
+                if (list.Count == 0)
+                {
+                    var streak = (EmptyStreak.TryGetValue(s, out var es) ? es : 0) + 1;
+                    EmptyStreak[s] = streak;
+                    if (streak >= EMPTY_STREAK_LIMIT)
+                    {
+                        Prefs.Instance.SetShortEpgOffUntil(s, Format.NowMs + SHORT_EPG_PAUSE_MS);
+                        EmptyStreak[s] = 0;
+                        AppLog.W("Epg", $"{s}: the panel returned no programme data for {EMPTY_STREAK_LIMIT} channels in a row; per-channel lookups paused for {SHORT_EPG_PAUSE_MS / 3_600_000} h");
+                    }
+                }
+                else EmptyStreak[s] = 0;
+            }
             // A panel hiccup that returns nothing must not wipe programmes we already had.
             List<EpgProgramme>? previous;
             lock (Cache) previous = Cache.TryGetValue(Key(s, streamId), out var e) ? e.List : null;

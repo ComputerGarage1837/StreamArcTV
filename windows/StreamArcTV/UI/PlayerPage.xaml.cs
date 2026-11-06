@@ -730,12 +730,15 @@ public partial class PlayerPage : AppPage
         var why = _lastLoadError;
         AppLog.E(TAG, $"player error: {why ?? "unknown"}");
         var providerRefused = why != null && why.Contains("HTTP", StringComparison.Ordinal) && !why.Contains("timed out", StringComparison.Ordinal);
-        if (_isLive && !providerRefused && _retries < MAX_RETRIES)
+        // "Too many connections" often just means the previous stream (a guide preview, say) is still
+        // closing on the provider's side, so give it a few seconds and try again before giving up.
+        var busy = _isLive && why != null && (why.Contains("HTTP 403") || why.Contains("HTTP 429") || why.Contains("HTTP 458") || why.Contains("HTTP 509"));
+        if (_isLive && (!providerRefused || busy) && _retries < (busy ? 3 : MAX_RETRIES))
         {
             _retries++;
-            var delay = 1000 * _retries;
+            var delay = (busy ? 2500 : 1000) * _retries;
             BufferBox.Visibility = Visibility.Visible;
-            TxtBuffer.Text = $"Reconnecting… ({_retries} of {MAX_RETRIES})";
+            TxtBuffer.Text = busy ? $"The provider is still closing the previous stream… retrying ({_retries} of 3)" : $"Reconnecting… ({_retries} of {MAX_RETRIES})";
             _pendingRetry = true;
             _retryTimer.Interval = TimeSpan.FromMilliseconds(delay);
             _retryTimer.Stop();

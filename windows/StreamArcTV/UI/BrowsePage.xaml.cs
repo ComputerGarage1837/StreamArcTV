@@ -22,6 +22,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
     public const string GENRE_PREFIX = "__genre__:";
     /// Above this, the whole-guide file is not worth downloading; channels are fetched individually.
     private const long FULL_GUIDE_LIMIT = 60L * 1024 * 1024;
+    private const int PREFETCH_LIMIT = 60;
 
     private readonly Service _service;
     private readonly Prefs _prefs = Prefs.Instance;
@@ -553,6 +554,9 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         string url;
         try { url = XtreamApi.StreamUrl(_service, _account, stream, _prefs.LiveFormat, IsLive); }
         catch (Exception e) { ShowError(string.IsNullOrWhiteSpace(e.Message) ? "Couldn't load content." : e.Message); return; }
+        // The preview is a second connection on the same account; many accounts allow only one, so the
+        // provider would refuse the full-screen stream (HTTP 403) while the preview is still open.
+        if (IsLive) ReleasePreview();
         var key = _kind == ContentKind.MOVIE && stream.StreamId != null ? WatchProgress.MovieKey(_service, stream.StreamId) : null;
         if (key != null) WatchProgress.Describe(key, WatchProgress.KIND_MOVIE, stream.Name ?? "", stream.Image, stream.ContainerExtension, stream.StreamId!);
         Nav.Push(new PlayerPage(url, stream.Name ?? "", IsLive, key));
@@ -634,6 +638,7 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
         var mode = _prefs.GuideMode;
         var remembered = _prefs.GuideSize(_service);
         var usePerChannel = mode == "channel" || (mode == "auto" && remembered > FULL_GUIDE_LIMIT);
+        AppLog.I("Epg", $"guide mode={mode} remembered={remembered / (1024 * 1024)}MB perChannel={usePerChannel} channels={_allStreams.Count} shortEpgPaused={EpgCache.ShortEpgPaused(_service)}");
         long lastBytes = 0;
         var ok = false;
         if (!usePerChannel)
@@ -692,7 +697,9 @@ public partial class BrowsePage : AppPage, EpgGridView.IListener
     {
         _prefetchCts?.Cancel();
         var cts = _prefetchCts = new CancellationTokenSource();
-        var channels = _allStreams;
+        // Only the first screens' worth up front; the grid asks for the rest as rows scroll into view
+        // (OnNeedEpg). Sweeping every channel of a big list meant thousands of requests per visit.
+        var channels = _allStreams.Take(PREFETCH_LIMIT).ToList();
         var total = channels.Count;
         var done = 0;
         long lastShown = 0;

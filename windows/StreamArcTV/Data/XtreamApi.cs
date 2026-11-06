@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Web;
+using StreamArcTV.Util;
 
 namespace StreamArcTV.Data;
 
@@ -253,6 +254,7 @@ public static class XtreamApi
     {
         var trimmed = body.Trim();
         // Some panels answer with an object (e.g. an error) instead of a list.
+        if (trimmed.StartsWith('<')) throw new ApiException(HTML_MESSAGE);
         if (!trimmed.StartsWith("[")) return new();
         try { return JsonSerializer.Deserialize<List<T>>(trimmed, Json.Options) ?? new(); }
         catch (JsonException) { throw new ApiException("Unexpected response from server"); }
@@ -267,28 +269,57 @@ public static class XtreamApi
         return sb.ToString();
     }
 
+    private const string HTML_MESSAGE =
+        "The service sent back a web page instead of data. That usually means a block page, a maintenance page or too many requests. Try again in a few minutes.";
+
+    private static string HttpMessage(int code) => code switch
+    {
+        401 or 403 => $"The service refused the request (HTTP {code}). Check the username and password; if they are right, the account may be over its connection limit or temporarily blocked for making too many requests. Wait a few minutes and try again.",
+        404 => "The service's address was not found (HTTP 404). The service may have moved.",
+        429 or 458 or 509 => $"Too many connections on this account at once (HTTP {code}). Close the app on other devices and try again.",
+        >= 500 and <= 599 => $"The service's server has a problem right now (HTTP {code}). Try again in a few minutes.",
+        _ => $"The service returned an error (HTTP {code})."
+    };
+
     private static async Task<string> Get(string url)
     {
         var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.UserAgent.ParseAdd(USER_AGENT);
         req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
+        var safe = AppLog.SafeUrl(url);
+        var started = Environment.TickCount64;
         try
         {
             using var resp = await Client.SendAsync(req).ConfigureAwait(false);
             var text = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ct = resp.Content.Headers.ContentType?.MediaType ?? "";
+            var ms = Environment.TickCount64 - started;
+            var code = (int)resp.StatusCode;
             if (!resp.IsSuccessStatusCode)
             {
-                if (resp.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-                    throw new ApiException("Invalid username or password");
-                throw new ApiException($"Server error (HTTP {(int)resp.StatusCode})");
+                AppLog.E("Api", $"GET {safe} -> HTTP {code} ({ct}, {text.Length} chars, {ms}ms) body: {Snippet(text)}");
+                throw new ApiException(HttpMessage(code));
             }
-            if (string.IsNullOrWhiteSpace(text)) throw new ApiException("Empty response from server");
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                AppLog.E("Api", $"GET {safe} -> HTTP {code} but an empty body ({ms}ms)");
+                throw new ApiException("Empty response from server");
+            }
+            if (ct.Contains("html", StringComparison.OrdinalIgnoreCase) && text.TrimStart().StartsWith('<'))
+            {
+                AppLog.E("Api", $"GET {safe} -> HTTP {code} returned a web page instead of data ({ct}, {ms}ms): {Snippet(text)}");
+                throw new ApiException(HTML_MESSAGE);
+            }
+            AppLog.I("Api", $"GET {safe} -> HTTP {code} ({ct}, {text.Length} chars, {ms}ms)");
             return text;
         }
         catch (Exception e) when (e is HttpRequestException or IOException or TaskCanceledException)
         {
+            AppLog.E("Api", $"GET {safe} failed after {Environment.TickCount64 - started}ms: {e.GetType().Name}: {e.Message}");
             throw new ApiException($"Can't reach server: {(e is TaskCanceledException ? "timed out" : e.Message)}");
         }
     }
+
+    private static string Snippet(string text) => text.Length <= 300 ? text.Replace('\n', ' ') : text[..300].Replace('\n', ' ');
 }
