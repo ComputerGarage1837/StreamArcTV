@@ -69,7 +69,7 @@ public partial class SeriesPage : AppPage
             Extras.ShowCast(info.Cast);
             var catalogue = await CatalogCache.Get(_service, account, ContentKind.SERIES);
             if (Finished) return;
-            var similar = Tmdb.SimilarIn(info, catalogue, _seriesId, genre);
+            var similar = Tmdb.SimilarIn(info, catalogue, _seriesId, _title);
             Extras.ShowSimilar(similar, s => { if (s.Id != null) Nav.Push(new SeriesPage(_service, s.Id, s.Name ?? "", s.Image, s.Plot)); });
         }
         catch { }

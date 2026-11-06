@@ -3,6 +3,11 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.31 — 2026-11-06
+
+### Fixed
+- "More like this" is far more accurate. It now shows only titles that match what The Movie Database lists as similar, plus other titles of the same series or franchise, instead of padding the row with unrelated shows from the same genre. If nothing relevant is available the row is simply not shown.
+
 ## v1.1.30 — 2026-11-06
 
 ### Added
