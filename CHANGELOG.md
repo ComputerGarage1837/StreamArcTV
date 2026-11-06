@@ -3,6 +3,11 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.84 — 2026-11-06
+
+### Fixed
+- "More like this" no longer comes up short. As well as the titles The Movie Database lists as similar, it now also includes the most popular titles that share the same genres (for example kids' animation), as long as they are on your VOD, so obvious matches are no longer missed.
+
 ## v1.0.83 — 2026-11-06
 
 ### Fixed

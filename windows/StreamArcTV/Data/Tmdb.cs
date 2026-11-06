@@ -92,6 +92,32 @@ public static class Tmdb
                     if (Str(e, series ? "name" : "title") is { } t) titles.Add(t);
                     if (Str(e, series ? "original_name" : "original_title") is { } ot) titles.Add(ot);
                 }
+        // Popular titles that share this one's genres (kids + animation, crime + drama, ...): catches the obvious
+        // neighbours that TMDB's own short "similar" list leaves out.
+        var genreIds = new List<string>();
+        if (d.TryGetProperty("genres", out var gs) && gs.ValueKind == JsonValueKind.Array)
+            foreach (var g in gs.EnumerateArray()) if (Str(g, "id") is { } gid) genreIds.Add(gid);
+        if (genreIds.Count > 0)
+        {
+            async Task<List<string>> Discover(IEnumerable<string> ids)
+            {
+                var found = new List<string>();
+                for (var page = 1; page <= 3; page++)
+                {
+                    var u = $"{Api}discover/{kind}?api_key={Key}&with_genres={string.Join(",", ids)}&sort_by=popularity.desc&vote_count.gte=30&include_adult=false&page={page}";
+                    if (await GetAsync(u) is not { } r || !r.TryGetProperty("results", out var rs) || rs.GetArrayLength() == 0) break;
+                    foreach (var e in rs.EnumerateArray())
+                    {
+                        if (Str(e, series ? "name" : "title") is { } t) found.Add(t);
+                        if (Str(e, series ? "original_name" : "original_title") is { } ot) found.Add(ot);
+                    }
+                }
+                return found;
+            }
+            var more = await Discover(genreIds.Take(3));
+            if (more.Count < 30 && genreIds.Count > 2) more = await Discover(genreIds.Take(2));
+            titles.AddRange(more);
+        }
         return new Info(cast, titles);
     }
 
@@ -102,7 +128,7 @@ public static class Tmdb
     /// Titles from the catalogue that TMDB lists as similar, so everything shown can be played here, followed by
     /// other titles of the same franchise (same opening words). Nothing is padded in by genre: a short, right list
     /// beats a long one that includes unrelated shows.
-    public static List<Stream> SimilarIn(Info info, IEnumerable<Stream> catalogue, string? selfId, string selfTitle, int max = 20)
+    public static List<Stream> SimilarIn(Info info, IEnumerable<Stream> catalogue, string? selfId, string selfTitle, int max = 30)
     {
         var rank = new Dictionary<string, int>();
         var i = 0;

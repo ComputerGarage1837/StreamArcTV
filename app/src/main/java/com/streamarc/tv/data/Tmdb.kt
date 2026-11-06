@@ -84,6 +84,31 @@ object Tmdb {
                 (o.str(if (series) "original_name" else "original_title"))?.let { titles.add(it) }
             }
         }
+        // Popular titles that share this one's genres (kids + animation, crime + drama, ...): catches the obvious
+        // neighbours that TMDB's own short "similar" list leaves out.
+        val genreIds = details.getAsJsonArray("genres")?.mapNotNull { it.asJsonObject.str("id") } ?: emptyList()
+        if (genreIds.isNotEmpty()) {
+            fun discover(ids: List<String>): List<String> {
+                val out = ArrayList<String>()
+                for (page in 1..3) {
+                    val u = API.toHttpUrl().newBuilder().addPathSegments("discover/$kind")
+                        .addQueryParameter("api_key", KEY).addQueryParameter("with_genres", ids.joinToString(","))
+                        .addQueryParameter("sort_by", "popularity.desc").addQueryParameter("vote_count.gte", "30")
+                        .addQueryParameter("include_adult", "false").addQueryParameter("page", page.toString()).build()
+                    val r = get(u)?.getAsJsonArray("results") ?: break
+                    if (r.size() == 0) break
+                    r.forEach { e ->
+                        val o = e.asJsonObject
+                        o.str(if (series) "name" else "title")?.let { out.add(it) }
+                        o.str(if (series) "original_name" else "original_title")?.let { out.add(it) }
+                    }
+                }
+                return out
+            }
+            var found = discover(genreIds.take(3))
+            if (found.size < 30 && genreIds.size > 2) found = discover(genreIds.take(2))
+            titles.addAll(found)
+        }
         return Info(cast, titles)
     }
 
@@ -93,10 +118,10 @@ object Tmdb {
 
     /**
      * Titles from [catalogue] that TMDB lists as similar, so everything shown can be played here, followed by
-     * other titles of the same franchise (same opening words). Nothing is padded in by genre: a short, right
-     * list beats a long one that includes unrelated shows.
+     * other titles of the same franchise (same opening words). TMDB's own genre classification supplies the
+     * popular neighbours; the provider's loose genre text is never used to pad the list.
      */
-    fun similarIn(info: Info, catalogue: List<Stream>, selfId: String?, selfTitle: String, max: Int = 20): List<Stream> {
+    fun similarIn(info: Info, catalogue: List<Stream>, selfId: String?, selfTitle: String, max: Int = 30): List<Stream> {
         val rank = HashMap<String, Int>()
         info.similarTitles.map { norm(it) }.filter { it.isNotEmpty() }.forEachIndexed { i, t -> rank.putIfAbsent(t, i) }
         val others = catalogue.filter { it.id != selfId && !it.name.isNullOrBlank() }
