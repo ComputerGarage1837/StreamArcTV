@@ -232,6 +232,10 @@ public sealed class Prefs
     public long GuideSize(Service s) => GetLong(K(s, "guide_size"), 0);
     public void SetGuideSize(Service s, long bytes) => PutLong(K(s, "guide_size"), bytes);
 
+    /// Until this time (epoch ms) per-channel programme lookups are skipped: the panel answered empty for every channel asked.
+    public long ShortEpgOffUntil(Service s) => GetLong(K(s, "short_epg_off_until"), 0);
+    public void SetShortEpgOffUntil(Service s, long until) => PutLong(K(s, "short_epg_off_until"), until);
+
     // ---- Favorites -----------------------------------------------------
 
     private static string FavKey(Service s, ContentKind kind) => K(s, $"favs_{kind.ToString().ToLowerInvariant()}");

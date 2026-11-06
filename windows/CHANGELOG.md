@@ -3,6 +3,27 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.23 — 2026-11-06
+
+### Fixed
+- The guide no longer floods the provider. Opening a guide used to ask for each channel's
+  programme listing one by one for every channel in the list (nearly four thousand requests for
+  the 24/7 channels), which can get an account blocked or refused for a while: that is what made
+  the previews and channels fail with errors. Now only the first screens are fetched up front and
+  the rest as you scroll, and after forty empty answers in a row the per-channel lookups pause for
+  six hours.
+- A channel that the provider refuses because the previous stream is still closing (HTTP 403,
+  typically right after a preview) is retried a few times before an error is shown, and opening a
+  channel full screen now closes the preview first.
+- Error messages are plain and accurate: a web page where data was expected (a block or
+  maintenance page) is reported as such instead of as a parsing problem, and a refusal (HTTP 403)
+  no longer says the password is wrong.
+- The spinner no longer reports "'G' name cannot be found" in the log.
+
+### Added
+- The exportable log now records every request to the service with its outcome and timing, and
+  the guide's download, disk copy and per-channel activity, so the next problem can be read from it.
+
 ## v1.1.22 — 2026-11-05
 
 ### Changed
