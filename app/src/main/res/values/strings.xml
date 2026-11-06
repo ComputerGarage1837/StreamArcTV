@@ -397,4 +397,8 @@
     <string name="user_name_needed">Enter a name.</string>
     <string name="user_name_taken">Another user already has that name.</string>
     <string name="user_switched_fmt">Watching as %1$s</string>
+    <string name="cast_heading">Cast</string>
+    <string name="similar_heading">More like this</string>
+    <string name="cast_heading">Cast</string>
+    <string name="similar_heading">More like this</string>
 </resources>

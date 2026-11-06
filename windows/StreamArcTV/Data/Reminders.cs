@@ -32,6 +32,7 @@ public static class Reminders
         try
         {
             var prefs = Prefs.Instance;
+            Prefs.AutoBackupIfDue();
             if (prefs.RemindersOn)
             {
                 try { await CheckExpiry(); } catch (Exception e) { AppLog.W(TAG, "expiry check failed: " + e.Message); }

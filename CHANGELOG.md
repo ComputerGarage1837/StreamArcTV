@@ -3,6 +3,15 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.82 — 2026-11-06
+
+### Added
+- Cast photos. Movie and show pages now show the cast as round photos with their names and roles, followed by a "More like this" row of similar movies or shows that are available on your VOD, below everything else.
+- Weekly automatic backup. Once a week the app quietly saves a backup of everything (settings, users and their lists, watched positions, sign-ins) in its own folder and deletes the previous one, so only the newest is kept and it never fills the box. Restore it with Import in Settings.
+
+### Fixed
+- Import now also restores VOD users and each user's own watched list and My List.
+
 ## v1.0.81 — 2026-11-06
 
 ### Added

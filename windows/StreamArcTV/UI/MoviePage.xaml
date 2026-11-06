@@ -15,6 +15,7 @@
             <TextBlock x:Name="TxtTitle" Grid.Column="1" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" MaxHeight="76" />
         </Grid>
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Focusable="False" Padding="16,0,16,16">
+            <StackPanel>
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                 <Border Width="160" Height="230" Background="#0C1F3B" CornerRadius="8" ClipToBounds="True" VerticalAlignment="Top">
@@ -34,6 +35,8 @@
                     </WrapPanel>
                 </StackPanel>
             </Grid>
+            <ui:ExtrasPanel x:Name="Extras" />
+            </StackPanel>
         </ScrollViewer>
     </Grid>
 </ui:AppPage>

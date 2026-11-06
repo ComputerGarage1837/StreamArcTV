@@ -37,6 +37,25 @@ public partial class MoviePage : AppPage
         };
         RenderButtons();
         LoadDetails();
+        LoadExtras();
+    }
+
+    /// Actor photos and similar titles (from TMDB), matched to what this provider actually has.
+    private async void LoadExtras()
+    {
+        try
+        {
+            var info = await Tmdb.Lookup(_stream.Name ?? "", null, series: false);
+            if (Finished) return;
+            Extras.ShowCast(info.Cast);
+            var account = _prefs.Account(_service);
+            if (account == null) return;
+            var catalogue = await CatalogCache.Get(_service, account, ContentKind.MOVIE);
+            if (Finished) return;
+            var similar = Tmdb.SimilarIn(info, catalogue, _id, _details?.Genre ?? _stream.Genre);
+            Extras.ShowSimilar(similar, s => Nav.Push(new MoviePage(_service, s)));
+        }
+        catch { }
     }
 
     public override IInputElement? InitialFocus => BtnPlay;

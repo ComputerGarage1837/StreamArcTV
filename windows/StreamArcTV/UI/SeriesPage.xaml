@@ -29,7 +29,10 @@
             </StackPanel>
         </Grid>
         <ScrollViewer x:Name="Scroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" Focusable="False" Margin="0,12,0,0" Padding="12,0,12,16">
-            <StackPanel x:Name="List" />
+            <StackPanel>
+                <StackPanel x:Name="List" />
+                <ui:ExtrasPanel x:Name="Extras" />
+            </StackPanel>
         </ScrollViewer>
         <Control x:Name="Progress" Grid.Row="2" Style="{StaticResource Spinner}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
         <TextBlock x:Name="TxtError" Grid.Row="2" Foreground="{StaticResource DangerBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" TextWrapping="Wrap" Visibility="Collapsed" />

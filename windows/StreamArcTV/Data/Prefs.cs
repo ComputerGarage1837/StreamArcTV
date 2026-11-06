@@ -99,6 +99,26 @@ public sealed class Prefs
         }
     }
 
+    /// Silent weekly backup of everything (settings, users and their lists, watched positions, sign-ins) into
+    /// %LocalAppData%\StreamArcTV\backups. Only the newest file is kept, so it never grows.
+    public static void AutoBackupIfDue()
+    {
+        try
+        {
+            var dir = Path.Combine(AppPaths.Data, "backups");
+            Directory.CreateDirectory(dir);
+            var existing = new DirectoryInfo(dir).GetFiles("stream-arc-tv-auto-backup-*.json");
+            var newest = existing.OrderByDescending(f => f.LastWriteTimeUtc).FirstOrDefault();
+            if (newest != null && DateTime.UtcNow - newest.LastWriteTimeUtc < TimeSpan.FromDays(7)) return;
+            var file = Path.Combine(dir, $"stream-arc-tv-auto-backup-{DateTime.Now:yyyy-MM-dd}.json");
+            var tmp = Path.Combine(dir, "auto-backup.tmp");
+            System.IO.File.WriteAllText(tmp, Export());
+            System.IO.File.Move(tmp, file, true);
+            foreach (var f in existing) if (!string.Equals(f.FullName, file, StringComparison.OrdinalIgnoreCase)) { try { f.Delete(); } catch { } }
+        }
+        catch (Exception e) { AppLog.W("Backup", "weekly backup failed: " + e.Message); }
+    }
+
     /// Replaces the stored data with a backup. Throws with a readable message when the file is
     /// not one. The caller restarts the app so every screen and cache reloads.
     public static void Import(string json)
@@ -119,6 +139,7 @@ public sealed class Prefs
             _dirty = true;
         }
         Flush();
+        VodUsers.Reload();   // users, their lists and watched positions come with the file
     }
 
     // ---- Typed accessors -------------------------------------------------
