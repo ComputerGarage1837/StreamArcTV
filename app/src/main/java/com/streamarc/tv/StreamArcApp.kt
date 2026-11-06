@@ -17,6 +17,7 @@ class StreamArcApp : Application() {
             previous?.uncaughtException(thread, error)
         }
         com.streamarc.tv.data.EpgCache.init(this)
+        try { com.streamarc.tv.reminders.Reminders.schedule(this) } catch (e: Exception) { com.streamarc.tv.util.AppLog.w("Reminders", "not scheduled: ${e.message}") }
         if (android.os.Build.VERSION.SDK_INT < 25) {
             // Poster and logo downloads go through the shared client too, so the extra trusted roots apply to them.
             try {

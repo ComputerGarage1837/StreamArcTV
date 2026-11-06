@@ -3,6 +3,18 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.78 — 2026-11-06
+
+### Added
+- Reminders. A notification a week before a subscription ends, another the day before, and one
+  when it has ended, for both Live TV and Video on Demand. The app checks the account itself every
+  few hours, so the date is current even when you haven't opened it.
+- New episode alerts. When a show in My List gets a new episode, a notification opens that show.
+- Auto-download new episodes (Settings → Reminders and alerts, off by default): new episodes of
+  My List shows are downloaded by themselves overnight on Wi-Fi, ready to watch offline, and queued
+  as soon as the app is opened on Wi-Fi. The existing Wi-Fi-only and delete-after-watching settings
+  still apply.
+
 ## v1.0.77 — 2026-11-06
 
 ### Added

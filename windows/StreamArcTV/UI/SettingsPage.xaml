@@ -74,6 +74,11 @@
                 <Button x:Name="RowDiagnostics" Content="Category diagnostics" Style="{StaticResource SettingsRow}" HorizontalContentAlignment="Left" />
                 <Button x:Name="RowLogs" Content="Export logs" Style="{StaticResource SettingsRow}" HorizontalContentAlignment="Left" />
 
+                <!-- Reminders -->
+                <TextBlock Text="REMINDERS AND ALERTS" Style="{StaticResource SectionHeader}" />
+                <CheckBox x:Name="SwitchReminders" Content="Subscription and new episode reminders" Style="{StaticResource Switch}" />
+                <CheckBox x:Name="SwitchAutoDownloadNew" Content="Download new episodes of My List shows by themselves (overnight)" Style="{StaticResource Switch}" />
+
                 <!-- Storage -->
                 <TextBlock Text="STORAGE" Style="{StaticResource SectionHeader}" />
                 <CheckBox x:Name="SwitchWifiOnly" Content="Download only on Wi-Fi / Ethernet" Style="{StaticResource Switch}" />

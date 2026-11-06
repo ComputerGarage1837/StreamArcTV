@@ -259,6 +259,28 @@ public sealed class Prefs
     /// The VOD account offers 24/7 live channels (found by asking its panel); controls the entry on the VOD home.
     public bool VodChannelsAvailable { get => GetBool("vod_channels_available", false); set => PutBool("vod_channels_available", value); }
 
+    /// Reminders and alerts: subscription expiry and new episodes of My List shows.
+    public bool RemindersOn { get => GetBool("reminders", true); set => PutBool("reminders", value); }
+    /// Download new episodes of My List shows by themselves, overnight.
+    public bool AutoDownloadNew { get => GetBool("auto_download_new", false); set => PutBool("auto_download_new", value); }
+    /// "<expiry epoch seconds>:<stage>" of the last expiry reminder sent for a service.
+    public string? ExpiryNotified(Service s) => GetString(K(s, "expiry_notified"));
+    public void SetExpiryNotified(Service s, string value) => PutString(K(s, "expiry_notified"), value);
+    /// Newest episode (season * 10000 + number) seen so far for each My List show, by series id.
+    public Dictionary<string, int> KnownEpisodes()
+    {
+        var d = new Dictionary<string, int>();
+        foreach (var e in (GetString("known_episodes") ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var p = e.Split('=');
+            if (p.Length == 2 && int.TryParse(p[1], out var v)) d[p[0]] = v;
+        }
+        return d;
+    }
+    public void SetKnownEpisodes(Dictionary<string, int> map) => PutString("known_episodes", string.Join(";", map.Select(kv => $"{kv.Key}={kv.Value}")));
+    /// New episodes waiting to be downloaded (tab separated lines, see Reminders).
+    public HashSet<string> PendingEpisodes { get => GetSet("pending_episodes"); set => PutSet("pending_episodes", value); }
+
     /// How the movie and show lists are ordered: default, newest, rating, year or name.
     public string VodSort { get => GetString("vod_sort") ?? "default"; set => PutString("vod_sort", value); }
 
