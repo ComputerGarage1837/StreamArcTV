@@ -88,7 +88,7 @@ class SeriesActivity : AppCompatActivity() {
             val info = com.streamarc.tv.data.Tmdb.lookup(title, null, series = true)
             extras.showCast(info.cast)
             val catalogue = try { com.streamarc.tv.data.CatalogCache.get(this@SeriesActivity, service, account, com.streamarc.tv.data.ContentKind.SERIES) } catch (_: Exception) { emptyList() }
-            val similar = com.streamarc.tv.data.Tmdb.similarIn(info, catalogue, seriesId, genre)
+            val similar = com.streamarc.tv.data.Tmdb.similarIn(info, catalogue, seriesId, title)
             extras.showSimilar(similar) { s ->
                 s.id?.let { startActivity(intent(this@SeriesActivity, service, it, s.name.orEmpty(), s.image, s.plot)) }
             }

@@ -89,29 +89,24 @@ object Tmdb {
 
     private fun norm(s: String) = cleanTitle(s).lowercase().replace(Regex("[^a-z0-9]+"), " ").trim()
 
+    private val STOP = setOf("the", "a", "an", "and", "of", "in", "on", "for", "to", "part", "season", "movie", "show")
+
     /**
-     * Titles from [catalogue] that TMDB lists as similar, so everything shown can be played here; if
-     * there are few, the rest is filled with the catalogue's titles of the same genre.
+     * Titles from [catalogue] that TMDB lists as similar, so everything shown can be played here, followed by
+     * other titles of the same franchise (same opening words). Nothing is padded in by genre: a short, right
+     * list beats a long one that includes unrelated shows.
      */
-    fun similarIn(info: Info, catalogue: List<Stream>, selfId: String?, genre: String?, max: Int = 20): List<Stream> {
-        val wanted = info.similarTitles.map { norm(it) }.filter { it.isNotEmpty() }
+    fun similarIn(info: Info, catalogue: List<Stream>, selfId: String?, selfTitle: String, max: Int = 20): List<Stream> {
         val rank = HashMap<String, Int>()
-        wanted.forEachIndexed { i, t -> rank.putIfAbsent(t, i) }
-        val matched = catalogue.asSequence()
-            .filter { it.id != selfId && !it.name.isNullOrBlank() }
-            .mapNotNull { s -> rank[norm(s.name!!)]?.let { s to it } }
-            .sortedBy { it.second }.map { it.first }.distinctBy { it.id }.toList()
-        val out = ArrayList(matched.take(max))
-        if (out.size < 8) {
-            val g = genre.orEmpty().split(',', '/', '|', ';').map { it.trim().lowercase() }.filter { it.length > 2 }.toSet()
-            if (g.isNotEmpty()) {
-                val have = out.mapNotNull { it.id }.toHashSet()
-                catalogue.asSequence()
-                    .filter { it.id != selfId && it.id !in have && it.genres.any { x -> x.lowercase() in g } }
-                    .sortedByDescending { it.rating?.toDoubleOrNull() ?: 0.0 }
-                    .take(max - out.size).forEach { out.add(it) }
-            }
+        info.similarTitles.map { norm(it) }.filter { it.isNotEmpty() }.forEachIndexed { i, t -> rank.putIfAbsent(t, i) }
+        val others = catalogue.filter { it.id != selfId && !it.name.isNullOrBlank() }
+        val matched = others.mapNotNull { s -> rank[norm(s.name!!)]?.let { s to it } }
+            .sortedBy { it.second }.map { it.first }.distinctBy { it.id }
+        val words = norm(selfTitle).split(' ').filter { it.isNotEmpty() && it !in STOP }
+        val lead = words.take(2).joinToString(" ")
+        val franchise = if (words.isEmpty() || (words.size == 1 && words[0].length < 5)) emptyList() else {
+            others.filter { s -> val n = norm(s.name!!).split(' ').filter { it !in STOP }.joinToString(" "); n.startsWith(lead) }
         }
-        return out
+        return (matched + franchise).distinctBy { it.id }.take(max)
     }
 }

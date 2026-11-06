@@ -89,7 +89,7 @@ class MovieActivity : AppCompatActivity() {
             val info = com.streamarc.tv.data.Tmdb.lookup(name, null, series = false)
             extras.showCast(info.cast)
             val catalogue = try { com.streamarc.tv.data.CatalogCache.get(this@MovieActivity, service, account, ContentKind.MOVIE) } catch (_: Exception) { emptyList() }
-            val similar = com.streamarc.tv.data.Tmdb.similarIn(info, catalogue, id, details?.genre ?: intent.getStringExtra(EXTRA_GENRE))
+            val similar = com.streamarc.tv.data.Tmdb.similarIn(info, catalogue, id, name)
             extras.showSimilar(similar) { s -> startActivity(MovieActivity.intent(this@MovieActivity, service, s)) }
         }
     }

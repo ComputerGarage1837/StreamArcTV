@@ -97,26 +97,23 @@ public static class Tmdb
 
     private static string Norm(string s) => Regex.Replace(CleanTitle(s).ToLowerInvariant(), "[^a-z0-9]+", " ").Trim();
 
-    /// Titles from the catalogue that TMDB lists as similar, so everything shown can be played here; if there are
-    /// few, the rest is filled with the catalogue's titles of the same genre.
-    public static List<Stream> SimilarIn(Info info, IEnumerable<Stream> catalogue, string? selfId, string? genre, int max = 20)
+    private static readonly HashSet<string> Stop = new() { "the", "a", "an", "and", "of", "in", "on", "for", "to", "part", "season", "movie", "show" };
+
+    /// Titles from the catalogue that TMDB lists as similar, so everything shown can be played here, followed by
+    /// other titles of the same franchise (same opening words). Nothing is padded in by genre: a short, right list
+    /// beats a long one that includes unrelated shows.
+    public static List<Stream> SimilarIn(Info info, IEnumerable<Stream> catalogue, string? selfId, string selfTitle, int max = 20)
     {
         var rank = new Dictionary<string, int>();
         var i = 0;
         foreach (var t in info.SimilarTitles) { var n = Norm(t); if (n.Length > 0) rank.TryAdd(n, i); i++; }
-        var list = catalogue.ToList();
-        var matched = list.Where(s => s.Id != selfId && !string.IsNullOrWhiteSpace(s.Name))
-            .Select(s => (s, ok: rank.TryGetValue(Norm(s.Name!), out var r), r))
-            .Where(x => x.ok).OrderBy(x => x.r).Select(x => x.s)
-            .GroupBy(s => s.Id).Select(g => g.First()).Take(max).ToList();
-        if (matched.Count < 8 && !string.IsNullOrWhiteSpace(genre))
-        {
-            var g = genre.Split(',', '/', '|', ';').Select(x => x.Trim().ToLowerInvariant()).Where(x => x.Length > 2).ToHashSet();
-            var have = matched.Select(s => s.Id).ToHashSet();
-            matched.AddRange(list.Where(s => s.Id != selfId && !have.Contains(s.Id) && s.Genres.Any(x => g.Contains(x.ToLowerInvariant())))
-                .OrderByDescending(s => double.TryParse(s.Rating, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var rt) ? rt : 0)
-                .Take(max - matched.Count));
-        }
-        return matched;
+        var others = catalogue.Where(s => s.Id != selfId && !string.IsNullOrWhiteSpace(s.Name)).ToList();
+        var matched = others.Where(s => rank.ContainsKey(Norm(s.Name!))).OrderBy(s => rank[Norm(s.Name!)]).ToList();
+        var words = Norm(selfTitle).Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => !Stop.Contains(w)).ToList();
+        var lead = string.Join(' ', words.Take(2));
+        var franchise = words.Count == 0 || (words.Count == 1 && words[0].Length < 5)
+            ? new List<Stream>()
+            : others.Where(s => string.Join(' ', Norm(s.Name!).Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => !Stop.Contains(w))).StartsWith(lead)).ToList();
+        return matched.Concat(franchise).GroupBy(s => s.Id).Select(g => g.First()).Take(max).ToList();
     }
 }

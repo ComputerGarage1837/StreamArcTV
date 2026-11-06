@@ -52,7 +52,7 @@ public partial class MoviePage : AppPage
             if (account == null) return;
             var catalogue = await CatalogCache.Get(_service, account, ContentKind.MOVIE);
             if (Finished) return;
-            var similar = Tmdb.SimilarIn(info, catalogue, _id, _details?.Genre ?? _stream.Genre);
+            var similar = Tmdb.SimilarIn(info, catalogue, _id, _stream.Name ?? "");
             Extras.ShowSimilar(similar, s => Nav.Push(new MoviePage(_service, s)));
         }
         catch { }
