@@ -24,6 +24,13 @@ public static class VodUsers
 
     public static readonly string[] Colors = { "#7C3AED", "#22D3EE", "#F59E0B", "#EF4444", "#10B981", "#EC4899", "#3B82F6", "#84CC16" };
 
+    /// The viewer chose to continue without a user: don't ask again (they can still add one from the avatar).
+    public static bool Skipped
+    {
+        get => Prefs.RawGet("vod_users_skipped") == "1";
+        set => Prefs.RawPut("vod_users_skipped", value ? "1" : null);
+    }
+
     /// True once "Who's watching?" has been settled since the app started.
     public static bool ChosenThisLaunch { get; set; }
 

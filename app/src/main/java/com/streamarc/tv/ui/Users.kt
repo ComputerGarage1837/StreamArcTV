@@ -45,9 +45,11 @@ class AvatarDrawable(name: String, color: Int) : Drawable() {
 object UserDialogs {
 
     /** Settles who is watching when VOD opens: asks for a first user if there is none, offers the choice once per launch if there are several. */
-    fun ensure(activity: Activity, onChanged: () -> Unit) {
+    fun ensure(activity: Activity, onChanged: () -> Unit, onBack: () -> Unit = {}) {
         if (!VodUsers.hasUsers()) {
-            create(activity, first = true) { VodUsers.chosenThisLaunch = true; onChanged() }
+            // Someone who chose to continue without a user is not asked again; they can add one from the avatar.
+            if (VodUsers.skipped) { VodUsers.chosenThisLaunch = true; return }
+            create(activity, first = true, onBack = onBack) { VodUsers.chosenThisLaunch = true; onChanged() }
         } else if (VodUsers.all().size > 1 && !VodUsers.chosenThisLaunch) {
             VodUsers.chosenThisLaunch = true
             choose(activity, onChanged)
@@ -90,6 +92,7 @@ object UserDialogs {
 
     /** Pick who is watching. */
     fun choose(activity: Activity, onChanged: () -> Unit) {
+        if (!VodUsers.hasUsers()) { create(activity, first = false) { onChanged() }; return }
         val cur = VodUsers.current()
         val d = listDialog(activity, R.string.whos_watching, { col, dlg ->
             var first: View? = null
@@ -119,7 +122,7 @@ object UserDialogs {
     }
 
     /** Add a user (or, with [edit], rename / recolour one). */
-    fun create(activity: Activity, first: Boolean, edit: VodUsers.User? = null, onDone: () -> Unit) {
+    fun create(activity: Activity, first: Boolean, edit: VodUsers.User? = null, onBack: () -> Unit = {}, onDone: () -> Unit) {
         val ctx = activity
         var color = edit?.color ?: VodUsers.COLORS[VodUsers.all().size % VodUsers.COLORS.size]
         val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(ctx, 20), dp(ctx, 8), dp(ctx, 20), dp(ctx, 4)) }
@@ -131,7 +134,8 @@ object UserDialogs {
         val input = EditText(ctx).apply {
             setHint(R.string.user_name_hint); setSingleLine(); inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
             setTextColor(ctx.getColor(R.color.text)); setHintTextColor(ctx.getColor(R.color.text_muted))
-            setText(edit?.name ?: ""); setSelection(text.length)
+            setText(edit?.name ?: defaultName()); setSelection(text.length)
+            id = View.generateViewId()
             filters = arrayOf(android.text.InputFilter.LengthFilter(20))
         }
         fun refresh() { preview.setImageDrawable(AvatarDrawable(input.text.toString(), color)) }
@@ -145,6 +149,7 @@ object UserDialogs {
         for (c in VodUsers.COLORS) {
             val v = ImageView(ctx).apply {
                 layoutParams = LinearLayout.LayoutParams(dp(ctx, 30), dp(ctx, 30)).apply { marginStart = dp(ctx, 5); marginEnd = dp(ctx, 5) }
+                id = View.generateViewId()
                 setImageDrawable(AvatarDrawable(" ", c)); isFocusable = true; isClickable = true
                 setBackgroundResource(R.drawable.fg_focus_circle)
                 setPadding(dp(ctx, 2), dp(ctx, 2), dp(ctx, 2), dp(ctx, 2))
@@ -158,13 +163,29 @@ object UserDialogs {
         val b = AlertDialog.Builder(ctx)
             .setTitle(if (edit != null) R.string.user_rename else R.string.new_user_title)
             .setView(col)
-            .setCancelable(!first)
+            .setCancelable(true)
             .setPositiveButton(if (edit != null) R.string.user_save else R.string.user_create, null)
-        if (!first) b.setNegativeButton(android.R.string.cancel, null)
+        if (first) {
+            // Never a dead end: continue without a user (and don't ask again), or go back to the main menu.
+            b.setNegativeButton(R.string.user_skip) { _, _ -> VodUsers.skipped = true; VodUsers.chosenThisLaunch = true }
+            b.setNeutralButton(R.string.user_back) { _, _ -> onBack() }
+            b.setOnCancelListener { onBack() }
+        } else b.setNegativeButton(android.R.string.cancel, null)
         val dlg = b.create()
+        // The on-screen keyboard only opens when OK is pressed on the name box, so a remote always reaches the buttons.
+        dlg.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+        input.setOnKeyListener { v, keyCode, event ->
+            if (event.action == android.view.KeyEvent.ACTION_UP && (keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER || keyCode == android.view.KeyEvent.KEYCODE_ENTER)) {
+                (ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)?.showSoftInput(v, 0)
+                true
+            } else false
+        }
         dlg.setOnShowListener {
-            input.requestFocus()
-            dlg.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val create = dlg.getButton(AlertDialog.BUTTON_POSITIVE)
+            create.requestFocus()
+            input.nextFocusDownId = dotViews.first().id
+            for (d in dotViews) { d.nextFocusUpId = input.id; d.nextFocusDownId = create.id }
+            create.setOnClickListener {
                 val name = input.text.toString().trim()
                 when {
                     name.isEmpty() -> input.error = ctx.getString(R.string.user_name_needed)
@@ -178,6 +199,13 @@ object UserDialogs {
             }
         }
         dlg.show()
+    }
+
+    /** "User 1", "User 2", ... the first name not already taken, so a box without a keyboard can just press Create. */
+    private fun defaultName(): String {
+        var n = VodUsers.all().size + 1
+        while (VodUsers.nameTaken("User $n")) n++
+        return "User $n"
     }
 
     /** Edit or remove users. */

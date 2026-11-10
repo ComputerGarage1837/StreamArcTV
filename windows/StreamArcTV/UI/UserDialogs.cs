@@ -30,11 +30,13 @@ public static class UserDialogs
 
     /// Settles who is watching when VOD opens: asks for a first user if there is none, offers the choice
     /// once per launch if there are several.
-    public static void Ensure(Action onChanged)
+    public static void Ensure(Action onChanged, Action onBack)
     {
         if (!VodUsers.HasUsers)
         {
-            Create(first: true, null, () => { VodUsers.ChosenThisLaunch = true; onChanged(); });
+            // Someone who chose to continue without a user is not asked again; they can add one from the avatar.
+            if (VodUsers.Skipped) { VodUsers.ChosenThisLaunch = true; return; }
+            Create(first: true, null, () => { VodUsers.ChosenThisLaunch = true; onChanged(); }, onBack);
         }
         else if (VodUsers.All().Count > 1 && !VodUsers.ChosenThisLaunch)
         {
@@ -57,6 +59,7 @@ public static class UserDialogs
     /// Pick who is watching.
     public static void Choose(Action onChanged)
     {
+        if (!VodUsers.HasUsers) { Create(false, null, onChanged); return; }
         var cur = VodUsers.Current;
         var panel = new StackPanel { MinWidth = 340 };
         DialogWindow? win = null;
@@ -96,10 +99,10 @@ public static class UserDialogs
     }
 
     /// Add a user (or, with edit, rename / recolour one).
-    public static void Create(bool first, VodUsers.User? edit, Action onDone)
+    public static void Create(bool first, VodUsers.User? edit, Action onDone, Action? onBack = null)
     {
         var color = edit?.Color ?? VodUsers.Colors[VodUsers.All().Count % VodUsers.Colors.Length];
-        var name = edit?.Name ?? "";
+        var name = edit?.Name ?? DefaultName();
         while (true)
         {
             var col = new StackPanel { MinWidth = 340 };
@@ -128,9 +131,19 @@ public static class UserDialogs
             }
             col.Children.Add(preview); col.Children.Add(input); col.Children.Add(dots);
             Refresh();
-            var r = Dialogs.Custom(edit != null ? "Rename or change colour" : "Create a user", col, edit != null ? "Save" : "Create",
-                first ? null : "Cancel", focus: input, cancelable: !first);
-            if (r != DialogResultKind.Positive) return;
+            // First time: never a dead end. Continue without a user (and don't ask again), or go back to the main menu.
+            var r = first
+                ? Dialogs.Custom("Create a user", col, "Create", "Continue without a user", neutral: "Back", focus: input, cancelable: true)
+                : Dialogs.Custom(edit != null ? "Rename or change colour" : "Create a user", col, edit != null ? "Save" : "Create", "Cancel", focus: input);
+            if (r != DialogResultKind.Positive)
+            {
+                if (first)
+                {
+                    if (r == DialogResultKind.Negative) { VodUsers.Skipped = true; VodUsers.ChosenThisLaunch = true; }
+                    else onBack?.Invoke();   // Back button or Esc
+                }
+                return;
+            }
             name = input.Text.Trim();
             if (name.Length == 0) { Dialogs.Toast("Enter a name."); continue; }
             if (VodUsers.NameTaken(name, edit?.Id)) { Dialogs.Toast("Another user already has that name."); continue; }
@@ -139,6 +152,14 @@ public static class UserDialogs
             onDone();
             return;
         }
+    }
+
+    /// "User 1", "User 2", ... the first name not already taken, so Create can simply be pressed.
+    private static string DefaultName()
+    {
+        var n = VodUsers.All().Count + 1;
+        while (VodUsers.NameTaken($"User {n}")) n++;
+        return $"User {n}";
     }
 
     /// Edit or remove users.

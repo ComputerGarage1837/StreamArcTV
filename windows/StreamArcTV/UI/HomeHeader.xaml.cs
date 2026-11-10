@@ -19,7 +19,14 @@ public partial class HomeHeader : UserControl
     {
         BoxUser.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         var u = Data.VodUsers.Current;
-        if (!visible || u == null) return;
+        if (!visible) return;
+        if (u == null)
+        {
+            // No user (continued without one): the avatar is a "+" that opens the creator.
+            BtnUser.Content = UserDialogs.Avatar("+", "#475569", 38);
+            TxtUserName.Text = "Add user";
+            return;
+        }
         BtnUser.Content = UserDialogs.Avatar(u.Name, u.Color, 38);
         TxtUserName.Text = u.Name;
     }

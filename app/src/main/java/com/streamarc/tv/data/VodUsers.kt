@@ -27,6 +27,11 @@ object VodUsers {
     private lateinit var sp: SharedPreferences
     private var users: List<User> = emptyList()
     @Volatile private var active: String = ""
+    /** The viewer chose to continue without a user: don't ask again (they can still add one from the avatar). */
+    var skipped: Boolean
+        get() = sp.getBoolean("vod_users_skipped", false)
+        set(value) { sp.edit().putBoolean("vod_users_skipped", value).apply() }
+
     /** True once the "Who's watching?" question has been settled since the app started. */
     @Volatile var chosenThisLaunch = false
 

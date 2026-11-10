@@ -124,11 +124,17 @@ class VodHomeActivity : AppCompatActivity() {
         render()
         load()
         // First time in VOD there is no user yet: ask for one straight away. With several, ask who is watching.
-        UserDialogs.ensure(this) { onUserChanged() }
+        UserDialogs.ensure(this, { onUserChanged() }, { finish() })
     }
 
     private fun showUser() {
-        val u = com.streamarc.tv.data.VodUsers.current() ?: return
+        val u = com.streamarc.tv.data.VodUsers.current()
+        if (u == null) {
+            // No user (continued without one): the avatar is a "+" that opens the creator.
+            b.header.btnUser.setImageDrawable(UserDialogs.avatar("+", 0xFF475569.toInt()))
+            b.header.txtUserName.text = getString(R.string.add_user)
+            return
+        }
         b.header.btnUser.setImageDrawable(UserDialogs.avatar(u.name, u.color))
         b.header.txtUserName.text = u.name
     }

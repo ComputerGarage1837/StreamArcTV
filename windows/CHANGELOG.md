@@ -3,6 +3,11 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.33 — 2026-11-10
+
+### Fixed
+- The "Create a user" screen that appears the first time VOD is opened could not be closed. It now has "Continue without a user" (you aren't asked again; add one any time from the round icon at the top of VOD) and "Back" (returns to the main menu), and Back/Esc also leave it.
+
 ## v1.1.32 — 2026-11-06
 
 ### Fixed
