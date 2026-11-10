@@ -399,4 +399,6 @@
     <string name="user_switched_fmt">Watching as %1$s</string>
     <string name="cast_heading">Cast</string>
     <string name="similar_heading">More like this</string>
+    <string name="user_skip">Continue without a user</string>
+    <string name="user_back">Back</string>
 </resources>

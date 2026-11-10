@@ -77,7 +77,7 @@ public partial class VodHomePage : AppPage
         Render();
         Load();
         // First time in VOD there is no user yet: ask for one straight away. With several, ask who is watching.
-        Loaded += (_, _) => Ui.Post(() => UserDialogs.Ensure(OnUserChanged));
+        Loaded += (_, _) => Ui.Post(() => UserDialogs.Ensure(OnUserChanged, Finish));
     }
 
     /// A different user is watching: show their lists.

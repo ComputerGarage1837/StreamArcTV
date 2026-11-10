@@ -3,6 +3,11 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.85 — 2026-11-10
+
+### Fixed
+- The "Create a user" screen that appears the first time VOD is opened could not be closed. It now has "Continue without a user" (you aren't asked again; add one any time from the round icon at the top of VOD) and "Back" (returns to the main menu), and Back/Esc also leave it. On boxes the remote now reaches every button: the on-screen keyboard only opens when OK is pressed on the name box, and a name is filled in so Create can simply be pressed.
+
 ## v1.0.84 — 2026-11-06
 
 ### Fixed
