@@ -218,6 +218,15 @@ object EpgCache {
      */
     fun guideFor(service: Service, epgChannelId: String?, channelName: String? = null): List<EpgProgramme>? {
         val g = synchronized(guides) { guides[service] }?.second ?: return null
+        return findIn(g, epgChannelId, channelName)?.takeIf { l ->
+            // Nothing current or upcoming (an old copy whose programmes have ended, or a channel a partial download
+            // never reached): treat as missing so the caller looks the channel up on its own instead.
+            val now = System.currentTimeMillis() / 1000
+            l.any { it.end > now }
+        }
+    }
+
+    private fun findIn(g: XmltvParser.Guide, epgChannelId: String?, channelName: String?): List<EpgProgramme>? {
         val id = epgChannelId?.trim()?.takeIf { it.isNotEmpty() }
         if (id != null) {
             g.byId[id]?.let { return it }

@@ -246,6 +246,15 @@ public static class EpgCache
     {
         XmltvParser.Guide g;
         lock (Guides) { if (!Guides.TryGetValue(s, out var e)) return null; g = e.Guide; }
+        var found = FindIn(g, epgChannelId, channelName);
+        // Nothing current or upcoming (an old copy whose programmes have ended, or a channel a partial download never
+        // reached): treat as missing so the caller looks the channel up on its own instead.
+        var now = Format.NowSec;
+        return found != null && found.Any(p => p.End > now) ? found : null;
+    }
+
+    private static List<EpgProgramme>? FindIn(XmltvParser.Guide g, string? epgChannelId, string? channelName)
+    {
         var id = epgChannelId?.Trim();
         if (!string.IsNullOrEmpty(id))
         {
