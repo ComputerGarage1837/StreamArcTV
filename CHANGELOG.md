@@ -3,6 +3,11 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.87 — 2026-11-11
+
+### Fixed
+- Going back to the app's home screen after opening a movie or show on boxes with limited memory. Opening a movie or show page could start a background refresh of the whole (now very large) movie list, which ran the box out of memory and restarted the app. The "More like this" row now only uses the list already stored on the box; the list is still refreshed in the background from the VOD home.
+
 ## v1.0.86 — 2026-11-11
 
 ### Fixed

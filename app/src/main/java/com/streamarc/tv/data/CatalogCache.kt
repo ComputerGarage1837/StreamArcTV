@@ -59,6 +59,21 @@ object CatalogCache {
         }
     }
 
+    /**
+     * The list as it is right now (memory, else the disk copy) and never a download: used by pages that only
+     * want to look things up (the "More like this" row), so opening one can't start a refresh of a huge list on
+     * a small-memory box. Empty when there is nothing stored yet.
+     */
+    suspend fun getStored(context: Context, service: Service, kind: ContentKind): List<Stream> {
+        val k = key(service, kind)
+        synchronized(lists) { lists[k] }?.let { return it.second }
+        return mutex.withLock {
+            synchronized(lists) { lists[k] }?.let { return@withLock it.second }
+            val disk = try { withContext(Dispatchers.IO) { readDisk(context, k) } } catch (_: OutOfMemoryError) { null }
+            if (disk != null) { synchronized(lists) { lists[k] = disk }; disk.second } else emptyList()
+        }
+    }
+
     private fun refreshInBackground(context: Context, service: Service, account: Account, kind: ContentKind) {
         val k = key(service, kind)
         synchronized(refreshing) { if (!refreshing.add(k)) return }
