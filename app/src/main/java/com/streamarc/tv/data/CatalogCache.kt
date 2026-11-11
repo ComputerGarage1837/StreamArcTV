@@ -49,7 +49,9 @@ object CatalogCache {
                 if (System.currentTimeMillis() - disk.first > TTL_MS) refreshInBackground(context, service, account, kind)
                 return@withLock disk.second
             }
-            val all = XtreamApi.streams(service, account, null, kind)
+            val all = try { XtreamApi.streams(service, account, null, kind) } catch (_: OutOfMemoryError) {
+                throw XtreamApi.ApiException("This device ran out of memory loading the list. Close other apps and try again.")
+            }
             val now = System.currentTimeMillis()
             synchronized(lists) { lists[k] = now to all }
             withContext(Dispatchers.IO) { writeDisk(context, k, now, all) }
@@ -67,6 +69,9 @@ object CatalogCache {
                 synchronized(lists) { lists[k] = now to all }
                 writeDisk(context.applicationContext, k, now, all)
             } catch (_: Exception) {
+            } catch (_: OutOfMemoryError) {
+                // Not enough memory to hold a second copy of a huge list: keep the one we have.
+                com.streamarc.tv.util.AppLog.w("Catalog", "out of memory refreshing $k; keeping the existing list")
             } finally {
                 synchronized(refreshing) { refreshing.remove(k) }
             }

@@ -91,9 +91,13 @@ object XmltvParser {
     private val fmtNoZone = SimpleDateFormat("yyyyMMddHHmmss", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
 
     /** Result of a parse: programmes by channel id, plus display-name → id for loose matching. */
-    class Guide(val byId: Map<String, List<EpgProgramme>>, val idByName: Map<String, String>)
+    class Guide(val byId: Map<String, List<EpgProgramme>>, val idByName: Map<String, String>, val partial: Boolean = false)
 
-    fun parse(input: java.io.InputStream, from: Long, to: Long): Guide {
+    /**
+     * With [keepPartial], a download that breaks off part-way (the connection was cut) returns what had been read so
+     * far, flagged [Guide.partial], instead of throwing it all away.
+     */
+    fun parse(input: java.io.InputStream, from: Long, to: Long, keepPartial: Boolean = false): Guide {
         val out = HashMap<String, ArrayList<EpgProgramme>>()
         val names = HashMap<String, String>()
         var channelId: String? = null
@@ -108,6 +112,8 @@ object XmltvParser {
         var desc = ""
         var inProgramme = false
         var text: String? = null
+        var partial = false
+        try {
         while (event != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
             when (event) {
                 org.xmlpull.v1.XmlPullParser.START_TAG -> when (parser.name) {
@@ -146,8 +152,13 @@ object XmltvParser {
             }
             event = parser.next()
         }
+        } catch (e: Exception) {
+            if (e is XtreamApi.GuideTooLarge || !keepPartial || out.isEmpty()) throw e
+            com.streamarc.tv.util.AppLog.w("Epg", "guide download broke off (${e.javaClass.simpleName}: ${e.message}); keeping the ${out.size} channels read so far")
+            partial = true
+        }
         for (list in out.values) list.sortBy { it.start }
-        return Guide(out, names)
+        return Guide(out, names, partial)
     }
 
     /** Loose key for name matching: lowercase, no punctuation/spaces, no HD/FHD/4K suffixes. */
@@ -267,12 +278,22 @@ object EpgCache {
         val started = System.currentTimeMillis()
         com.streamarc.tv.util.AppLog.i("Epg", "${service.name} guide: downloading whole listing (xmltv)")
         return try {
-            val guide = XtreamApi.fullGuide(service, account, from, to, onProgress)
+            val guide = try {
+                XtreamApi.fullGuide(service, account, from, to, onProgress)
+            } catch (e: XtreamApi.GuideTooLarge) { throw e
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                // One quiet retry: a cut-off download usually works the second time.
+                com.streamarc.tv.util.AppLog.w("Epg", "${service.name} guide download failed (${e.message}); trying once more")
+                kotlinx.coroutines.delay(2_000)
+                XtreamApi.fullGuide(service, account, from, to, onProgress)
+            }
             val current = synchronized(guides) { guides[service] }?.second
             val programmes = guide.byId.values.sumOf { it.size }
             com.streamarc.tv.util.AppLog.i("Epg", "${service.name} guide downloaded: ${guide.byId.size} channels, $programmes programmes " +
                 "in ${(System.currentTimeMillis() - started) / 1000}s")
             if (guide.byId.isEmpty()) throw IllegalStateException("Empty guide")
+            if (guide.partial) com.streamarc.tv.util.AppLog.w("Epg", "${service.name} guide: only part of the listing arrived")
             if (current != null && !atLeastAsComplete(guide, current)) {
                 // The panel is probably regenerating its EPG; keep the good copy and try later.
                 com.streamarc.tv.util.AppLog.w("Epg", "${service.name} guide: new listing is less complete than the kept one " +
@@ -280,8 +301,11 @@ object EpgCache {
                 synchronized(guides) { guideFailedAt[service] = System.currentTimeMillis() }
                 return current.byId.isNotEmpty()
             }
-            val at = System.currentTimeMillis()
-            synchronized(guides) { guides[service] = at to guide; guideFailedAt.remove(service) }
+            var at = System.currentTimeMillis()
+            // A partial guide is kept (better than an old one) but counts as already due for a refresh, so the
+            // rest is fetched again soon.
+            if (guide.partial) at -= (REFRESH_MS - RETRY_MS)
+            synchronized(guides) { guides[service] = at to guide; if (guide.partial) guideFailedAt[service] = System.currentTimeMillis() else guideFailedAt.remove(service) }
             appContext?.let { ctx -> withContext(Dispatchers.IO) { writeDisk(ctx, service, at, guide) } }
             true
         } catch (e: XtreamApi.GuideTooLarge) {
@@ -296,12 +320,15 @@ object EpgCache {
         }
     }
 
+    /**
+     * Compared on what is still to come: a new listing only has to cover most of what the kept one covers from
+     * now on. An old copy whose programmes have mostly ended therefore never blocks a fresh (even partial) one.
+     */
     private fun atLeastAsComplete(fresh: XmltvParser.Guide, old: XmltvParser.Guide): Boolean {
-        val oldChannels = old.byId.size
-        val oldProgrammes = old.byId.values.sumOf { it.size }
-        val newChannels = fresh.byId.size
-        val newProgrammes = fresh.byId.values.sumOf { it.size }
-        return newChannels >= oldChannels * 0.7 && newProgrammes >= oldProgrammes * 0.5
+        val now = System.currentTimeMillis() / 1000
+        fun channels(g: XmltvParser.Guide) = g.byId.values.count { l -> l.any { it.end > now } }
+        fun programmes(g: XmltvParser.Guide) = g.byId.values.sumOf { l -> l.count { it.end > now } }
+        return channels(fresh) >= channels(old) * 0.7 && programmes(fresh) >= programmes(old) * 0.5
     }
 
     private val bgScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)

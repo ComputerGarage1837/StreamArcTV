@@ -92,8 +92,9 @@ object XtreamApi {
                 ContentKind.SERIES -> "get_series"
             }
             val extra = if (categoryId != null) mapOf("category_id" to categoryId) else emptyMap()
-            val body = get(apiUrl(service, account.username, account.password, action, extra))
-            parseList<Stream>(body)
+            // Read as a stream: the whole-catalogue lists are tens of megabytes, and building them as one
+            // string first ran small boxes out of memory.
+            getListStreamed<Stream>(apiUrl(service, account.username, account.password, action, extra))
         }
 
     /** Episodes of a series grouped by season (`get_series_info`). */
@@ -204,7 +205,10 @@ object XtreamApi {
                 .header("User-Agent", USER_AGENT)
                 .header("Accept-Encoding", "gzip")
                 .build()
+            // HTTP/1.1: the provider's HTTP/2 layer kept cutting this long download off with
+            // "stream was reset: INTERNAL_ERROR" after about a minute.
             val slowClient = client.newBuilder()
+                .protocols(listOf(okhttp3.Protocol.HTTP_1_1))
                 .readTimeout(180, TimeUnit.SECONDS)
                 .callTimeout(0, TimeUnit.MILLISECONDS)
                 .build()
@@ -229,7 +233,7 @@ object XtreamApi {
                     }
                     val gzip = resp.header("Content-Encoding")?.contains("gzip", ignoreCase = true) == true
                     val input: java.io.InputStream = if (gzip) java.util.zip.GZIPInputStream(counting, 64 * 1024) else counting
-                    input.use { XmltvParser.parse(it, fromEpoch, toEpoch) }
+                    input.use { XmltvParser.parse(it, fromEpoch, toEpoch, keepPartial = true) }
                 }
             } catch (e: GuideTooLarge) {
                 throw e
@@ -322,6 +326,51 @@ object XtreamApi {
         if (action != null) b.addQueryParameter("action", action)
         extra.forEach { (k, v) -> b.addQueryParameter(k, v) }
         return b.build()
+    }
+
+    /** Like [get] + [parseList], but parses the JSON array straight off the wire without holding it as a string. */
+    private inline fun <reified T> getListStreamed(url: HttpUrl): List<T> {
+        val req = Request.Builder()
+            .url(url)
+            .header("User-Agent", USER_AGENT)
+            .header("Accept", "application/json, */*")
+            .build()
+        val safe = com.streamarc.tv.util.AppLog.safeUrl(url.toString())
+        val started = System.currentTimeMillis()
+        try {
+            client.newCall(req).execute().use { resp ->
+                val ct = resp.header("Content-Type").orEmpty()
+                if (!resp.isSuccessful) {
+                    val text = resp.body?.source()?.let { runCatching { it.readUtf8(300) }.getOrNull() }.orEmpty()
+                    com.streamarc.tv.util.AppLog.e("Api", "GET $safe -> HTTP ${resp.code} ($ct, ${System.currentTimeMillis() - started}ms) body: ${text.replace('\n', ' ')}")
+                    throw HttpException(resp.code)
+                }
+                val body = resp.body ?: throw BadResponseException()
+                val reader = com.google.gson.stream.JsonReader(java.io.BufferedReader(body.charStream(), 64 * 1024))
+                reader.isLenient = true
+                val first = try { reader.peek() } catch (_: java.io.EOFException) { throw BadResponseException() }
+                    catch (_: com.google.gson.stream.MalformedJsonException) { throw BadResponseException() }
+                when (first) {
+                    com.google.gson.stream.JsonToken.BEGIN_ARRAY -> {
+                        @Suppress("UNCHECKED_CAST")
+                        val adapter = gson.getAdapter(TypeToken.getParameterized(List::class.java, T::class.java)) as com.google.gson.TypeAdapter<List<T>>
+                        val list = try { adapter.read(reader) ?: emptyList() } catch (e: JsonSyntaxException) { throw BadResponseException() }
+                        com.streamarc.tv.util.AppLog.i("Api", "GET $safe -> HTTP ${resp.code} ($ct, ${list.size} items, ${System.currentTimeMillis() - started}ms)")
+                        return list
+                    }
+                    // A panel's own error message is an object: nothing to list. Anything else is a block page.
+                    com.google.gson.stream.JsonToken.BEGIN_OBJECT -> return emptyList()
+                    else -> {
+                        com.streamarc.tv.util.AppLog.e("Api", "GET $safe -> HTTP ${resp.code} returned something other than a list ($ct)")
+                        throw BadResponseException()
+                    }
+                }
+            }
+        } catch (e: IOException) {
+            com.streamarc.tv.util.AppLog.e("Api", "GET $safe failed after ${System.currentTimeMillis() - started}ms: ${e.javaClass.simpleName}: ${e.message}" +
+                (e.cause?.let { " <- ${it.javaClass.simpleName}: ${it.message}" } ?: ""))
+            throw NetworkException("Can't reach server: ${e.message ?: "network error"}", e)
+        }
     }
 
     private fun get(url: HttpUrl): String {

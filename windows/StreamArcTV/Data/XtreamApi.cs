@@ -197,7 +197,7 @@ public static class XtreamApi
             var counting = new CountingStream(raw, total, onProgress);
             var gzip = resp.Content.Headers.ContentEncoding.Any(e => e.Contains("gzip", StringComparison.OrdinalIgnoreCase));
             await using System.IO.Stream input = gzip ? new GZipStream(counting, CompressionMode.Decompress) : counting;
-            var guide = await Task.Run(() => XmltvParser.Parse(input, fromEpoch, toEpoch), cts.Token).ConfigureAwait(false);
+            var guide = await Task.Run(() => XmltvParser.Parse(input, fromEpoch, toEpoch, keepPartial: true), cts.Token).ConfigureAwait(false);
             counting.Finish();
             return guide;
         }

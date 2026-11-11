@@ -4,7 +4,7 @@ package com.streamarc.tv.data
  * How much of a stream the player keeps ahead. Bigger buffers ride out network hiccups and let
  * you pause for longer, at the cost of more RAM. Playback starts as soon as one second is ready
  * ([playbackMs]) and resumes after a stall just as fast; the level only changes how far ahead it keeps downloading. The byte figure is a
- * ceiling; the player also caps it to half of the app's heap. Levels with [diskMinutes] > 0 keep
+ * ceiling; the player also caps it to a quarter of the app's heap. Levels with [diskMinutes] > 0 keep
  * the stream on device storage instead, and only use a modest in-memory buffer in front of it.
  */
 enum class BufferLevel(

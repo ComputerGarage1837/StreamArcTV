@@ -454,7 +454,8 @@ class PlayerActivity : AppCompatActivity() {
 
         // Buffer sizes come from the user's choice; the byte cap keeps huge buffers inside
         // roughly half of the heap this device gives the app so we never run out of memory.
-        val heapCap = (Runtime.getRuntime().maxMemory() / 2).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        // A quarter of the app's memory at most: half left no room for the catalogue and guide on 224 MB boxes.
+        val heapCap = (Runtime.getRuntime().maxMemory() / 4).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(level.minBufferMs, level.maxBufferMs, level.playbackMs, level.rebufferMs)
             .setTargetBufferBytes(level.bytes.coerceAtMost(heapCap))
@@ -644,7 +645,7 @@ class PlayerActivity : AppCompatActivity() {
         val key = watchKey ?: return
         val p = player ?: return
         val now = SystemClock.elapsedRealtime()
-        if (!force && now - lastProgressSave < 5_000) return
+        if (!force && now - lastProgressSave < 15_000) return
         lastProgressSave = now
         val duration = p.duration
         val pos = p.currentPosition
