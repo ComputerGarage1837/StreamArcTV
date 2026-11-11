@@ -3,6 +3,12 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.86 — 2026-11-11
+
+### Fixed
+- Crashes on boxes with limited memory. The app was stopping with an out-of-memory error, both partway through a movie and while refreshing the (now very large) movie list in the background. The player's buffer now takes no more than a quarter of the app's memory instead of half, the movie and show lists are read piece by piece instead of as one huge block, and if a background refresh still can't fit it now keeps the existing list instead of crashing.
+- TV guide not loading on some connections. The guide download was being cut off by the provider part-way through, and the app threw away everything it had received and kept showing an old guide. The guide now downloads over a more reliable connection type, retries once, and keeps whatever part arrived (retrying again soon for the rest). A new or partial guide now replaces an old one that has mostly expired. Channels the downloaded guide has nothing current for are now looked up individually instead of showing "No programme information".
+
 ## v1.0.85 — 2026-11-10
 
 ### Fixed

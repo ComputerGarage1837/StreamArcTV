@@ -84,7 +84,9 @@ public static class XmltvParser
         public Dictionary<string, List<EpgProgramme>> ById { get; }
         public Dictionary<string, string> IdByName { get; }
         private Dictionary<string, string>? _lowerIds;
-        public Guide(Dictionary<string, List<EpgProgramme>> byId, Dictionary<string, string> idByName) { ById = byId; IdByName = idByName; }
+        /// True when the download broke off part-way and only what had arrived was kept.
+        public bool Partial { get; }
+        public Guide(Dictionary<string, List<EpgProgramme>> byId, Dictionary<string, string> idByName, bool partial = false) { ById = byId; IdByName = idByName; Partial = partial; }
 
         /// Case-insensitive id lookup through a lazily built index (no scans per guide row).
         public List<EpgProgramme>? ByIdIgnoreCase(string id)
@@ -95,7 +97,9 @@ public static class XmltvParser
         }
     }
 
-    public static Guide Parse(System.IO.Stream input, long from, long to)
+    /// With keepPartial, a download that breaks off part-way (the connection was cut) returns what had been read so far,
+    /// flagged Partial, instead of throwing it all away.
+    public static Guide Parse(System.IO.Stream input, long from, long to, bool keepPartial = false)
     {
         var outMap = new Dictionary<string, List<EpgProgramme>>();
         var names = new Dictionary<string, string>();
@@ -107,6 +111,9 @@ public static class XmltvParser
         var title = ""; var desc = "";
         var inProgramme = false;
         StringBuilder? text = null;
+        var partial = false;
+        try
+        {
         while (r.Read())
         {
             switch (r.NodeType)
@@ -166,8 +173,14 @@ public static class XmltvParser
                     break;
             }
         }
+        }
+        catch (Exception e) when (keepPartial && outMap.Count > 0 && e is not XtreamApi.GuideTooLarge)
+        {
+            AppLog.W("Epg", $"guide download broke off ({e.GetType().Name}: {e.Message}); keeping the {outMap.Count} channels read so far");
+            partial = true;
+        }
         foreach (var list in outMap.Values) list.Sort((a, b) => a.Start.CompareTo(b.Start));
-        return new Guide(outMap, names);
+        return new Guide(outMap, names, partial);
     }
 
     private static readonly Regex Quality = new(@"\b(uhd|fhd|hd|sd|4k)\b", RegexOptions.Compiled);
@@ -233,6 +246,15 @@ public static class EpgCache
     {
         XmltvParser.Guide g;
         lock (Guides) { if (!Guides.TryGetValue(s, out var e)) return null; g = e.Guide; }
+        var found = FindIn(g, epgChannelId, channelName);
+        // Nothing current or upcoming (an old copy whose programmes have ended, or a channel a partial download never
+        // reached): treat as missing so the caller looks the channel up on its own instead.
+        var now = Format.NowSec;
+        return found != null && found.Any(p => p.End > now) ? found : null;
+    }
+
+    private static List<EpgProgramme>? FindIn(XmltvParser.Guide g, string? epgChannelId, string? channelName)
+    {
         var id = epgChannelId?.Trim();
         if (!string.IsNullOrEmpty(id))
         {
@@ -291,11 +313,20 @@ public static class EpgCache
         {
             var started = Format.NowMs;
             AppLog.I("Epg", $"{s} guide: downloading whole listing (xmltv)");
-            var guide = await XtreamApi.FullGuide(s, account, from, to, onProgress).ConfigureAwait(false);
+            XmltvParser.Guide guide;
+            try { guide = await XtreamApi.FullGuide(s, account, from, to, onProgress).ConfigureAwait(false); }
+            catch (Exception e) when (e is not XtreamApi.GuideTooLarge)
+            {
+                // One quiet retry: a cut-off download usually works the second time.
+                AppLog.W("Epg", $"{s} guide download failed ({e.Message}); trying once more");
+                await Task.Delay(2000).ConfigureAwait(false);
+                guide = await XtreamApi.FullGuide(s, account, from, to, onProgress).ConfigureAwait(false);
+            }
             XmltvParser.Guide? current;
             lock (Guides) current = Guides.TryGetValue(s, out var c) ? c.Guide : null;
             AppLog.I("Epg", $"{s} guide downloaded: {guide.ById.Count} channels, {guide.ById.Values.Sum(l => l.Count)} programmes in {(Format.NowMs - started) / 1000}s");
             if (guide.ById.Count == 0) throw new InvalidOperationException("Empty guide");
+            if (guide.Partial) AppLog.W("Epg", $"{s} guide: only part of the listing arrived");
             if (current != null && !AtLeastAsComplete(guide, current))
             {
                 // The panel is probably regenerating its EPG; keep the good copy and try later.
@@ -304,7 +335,10 @@ public static class EpgCache
                 return current.ById.Count > 0;
             }
             var at = Format.NowMs;
-            lock (Guides) { Guides[s] = (at, guide); GuideFailedAt.Remove(s); }
+            // A partial guide is kept (better than an old one) but counts as already due for a refresh, so the
+            // rest is fetched again soon.
+            if (guide.Partial) at -= REFRESH_MS - RETRY_MS;
+            lock (Guides) { Guides[s] = (at, guide); if (guide.Partial) GuideFailedAt[s] = Format.NowMs; else GuideFailedAt.Remove(s); }
             _ = Task.Run(() => WriteDisk(s, at, guide));
             return true;
         }
@@ -323,13 +357,14 @@ public static class EpgCache
         }
     }
 
+    /// Compared on what is still to come: a new listing only has to cover most of what the kept one covers from now
+    /// on. An old copy whose programmes have mostly ended therefore never blocks a fresh (even partial) one.
     private static bool AtLeastAsComplete(XmltvParser.Guide fresh, XmltvParser.Guide old)
     {
-        var oldChannels = old.ById.Count;
-        var oldProgrammes = old.ById.Values.Sum(l => l.Count);
-        var newChannels = fresh.ById.Count;
-        var newProgrammes = fresh.ById.Values.Sum(l => l.Count);
-        return newChannels >= oldChannels * 0.7 && newProgrammes >= oldProgrammes * 0.5;
+        var now = Format.NowSec;
+        int Channels(XmltvParser.Guide g) => g.ById.Values.Count(l => l.Any(p => p.End > now));
+        int Programmes(XmltvParser.Guide g) => g.ById.Values.Sum(l => l.Count(p => p.End > now));
+        return Channels(fresh) >= Channels(old) * 0.7 && Programmes(fresh) >= Programmes(old) * 0.5;
     }
 
     private static void RefreshInBackground(Service s, Account account)

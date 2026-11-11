@@ -3,6 +3,11 @@
 All notable changes to the Windows edition are listed here. The section for each version is shown
 to users inside the app when an update is available.
 
+## v1.1.34 — 2026-11-11
+
+### Fixed
+- TV guide not loading on some connections. If the guide download was cut off part-way, everything received was thrown away and an old guide kept showing. The guide now retries once and keeps whatever part arrived (retrying again soon for the rest), and a new or partial guide replaces an old one that has mostly expired. Channels the downloaded guide has nothing current for are now looked up individually instead of showing "No programme information".
+
 ## v1.1.33 — 2026-11-10
 
 ### Fixed
