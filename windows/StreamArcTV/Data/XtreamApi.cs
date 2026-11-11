@@ -197,8 +197,11 @@ public static class XtreamApi
             var counting = new CountingStream(raw, total, onProgress);
             var gzip = resp.Content.Headers.ContentEncoding.Any(e => e.Contains("gzip", StringComparison.OrdinalIgnoreCase));
             await using System.IO.Stream input = gzip ? new GZipStream(counting, CompressionMode.Decompress) : counting;
+            var t0 = Environment.TickCount64;
             var guide = await Task.Run(() => XmltvParser.Parse(input, fromEpoch, toEpoch, keepPartial: true), cts.Token).ConfigureAwait(false);
             counting.Finish();
+            var secs = Math.Max(0.1, (Environment.TickCount64 - t0) / 1000.0);
+            AppLog.I("Epg", $"guide transfer: {counting.Count / (1024 * 1024)} MB over the wire (gzip={gzip}), {(int)(counting.Count / 1024 / secs)} KB/s");
             return guide;
         }
         catch (GuideTooLarge) { throw; }
@@ -215,6 +218,7 @@ public static class XtreamApi
         private readonly long _total;
         private readonly Action<long, long>? _onProgress;
         private long _count, _lastReport;
+        public long Count => _count;
         private bool _finished;
 
         public CountingStream(System.IO.Stream inner, long total, Action<long, long>? onProgress)

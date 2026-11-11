@@ -233,7 +233,12 @@ object XtreamApi {
                     }
                     val gzip = resp.header("Content-Encoding")?.contains("gzip", ignoreCase = true) == true
                     val input: java.io.InputStream = if (gzip) java.util.zip.GZIPInputStream(counting, 64 * 1024) else counting
-                    input.use { XmltvParser.parse(it, fromEpoch, toEpoch, keepPartial = true) }
+                    val t0 = System.currentTimeMillis()
+                    val guide = input.use { XmltvParser.parse(it, fromEpoch, toEpoch, keepPartial = true) }
+                    val secs = ((System.currentTimeMillis() - t0) / 1000.0).coerceAtLeast(0.1)
+                    com.streamarc.tv.util.AppLog.i("Epg", "guide transfer: ${counting.count / (1024 * 1024)} MB over the wire (gzip=$gzip), " +
+                        "${(counting.count / 1024 / secs).toInt()} KB/s, protocol=${resp.protocol}")
+                    guide
                 }
             } catch (e: GuideTooLarge) {
                 throw e
