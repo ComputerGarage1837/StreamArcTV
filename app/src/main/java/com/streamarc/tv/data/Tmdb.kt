@@ -25,11 +25,19 @@ object Tmdb {
     private val none = Info(emptyList(), emptyList())
 
     /** Drops the clutter providers put in names: "EN - Title (2019) 4K [Multi-Sub]". */
+    // Built once: the matching below runs over every title in the catalogue (tens of thousands), and compiling
+    // these for each one made small boxes grind and run out of memory.
+    private val RE_BRACKETS = Regex("[\\[(].*?[\\])]")
+    private val RE_PREFIX = Regex("^\\s*[A-Za-z]{2,3}\\s*[-:|]\\s+")
+    private val RE_QUALITY = Regex("\\b(4K|UHD|FHD|HD|SD|HDR|1080p|720p|2160p|MULTI|SUBS?)\\b", RegexOption.IGNORE_CASE)
+    private val RE_SPACES = Regex("\\s+")
+    private val RE_NONALNUM = Regex("[^a-z0-9]+")
+
     fun cleanTitle(raw: String): String {
-        var t = raw.replace(Regex("[\\[(].*?[\\])]"), " ")
-        t = t.replace(Regex("^\\s*[A-Za-z]{2,3}\\s*[-:|]\\s+"), "")
-        t = t.replace(Regex("\\b(4K|UHD|FHD|HD|SD|HDR|1080p|720p|2160p|MULTI|SUBS?)\\b", RegexOption.IGNORE_CASE), " ")
-        return t.replace(Regex("\\s+"), " ").trim(' ', '-', '|', ':')
+        var t = raw.replace(RE_BRACKETS, " ")
+        t = t.replace(RE_PREFIX, "")
+        t = t.replace(RE_QUALITY, " ")
+        return t.replace(RE_SPACES, " ").trim(' ', '-', '|', ':')
     }
 
     fun yearOf(raw: String, year: String?): String? =
@@ -112,7 +120,7 @@ object Tmdb {
         return Info(cast, titles)
     }
 
-    private fun norm(s: String) = cleanTitle(s).lowercase().replace(Regex("[^a-z0-9]+"), " ").trim()
+    private fun norm(s: String) = cleanTitle(s).lowercase().replace(RE_NONALNUM, " ").trim()
 
     private val STOP = setOf("the", "a", "an", "and", "of", "in", "on", "for", "to", "part", "season", "movie", "show")
 
@@ -124,13 +132,14 @@ object Tmdb {
     fun similarIn(info: Info, catalogue: List<Stream>, selfId: String?, selfTitle: String, max: Int = 30): List<Stream> {
         val rank = HashMap<String, Int>()
         info.similarTitles.map { norm(it) }.filter { it.isNotEmpty() }.forEachIndexed { i, t -> rank.putIfAbsent(t, i) }
-        val others = catalogue.filter { it.id != selfId && !it.name.isNullOrBlank() }
-        val matched = others.mapNotNull { s -> rank[norm(s.name!!)]?.let { s to it } }
+        // Each title is normalised once (it is the expensive part on a catalogue of tens of thousands).
+        val others = catalogue.filter { it.id != selfId && !it.name.isNullOrBlank() }.map { it to norm(it.name!!) }
+        val matched = others.mapNotNull { (s, n) -> rank[n]?.let { s to it } }
             .sortedBy { it.second }.map { it.first }.distinctBy { it.id }
         val words = norm(selfTitle).split(' ').filter { it.isNotEmpty() && it !in STOP }
         val lead = words.take(2).joinToString(" ")
         val franchise = if (words.isEmpty() || (words.size == 1 && words[0].length < 5)) emptyList() else {
-            others.filter { s -> val n = norm(s.name!!).split(' ').filter { it !in STOP }.joinToString(" "); n.startsWith(lead) }
+            others.filter { (_, n) -> n.split(' ').filter { it !in STOP }.joinToString(" ").startsWith(lead) }.map { it.first }
         }
         return (matched + franchise).distinctBy { it.id }.take(max)
     }
