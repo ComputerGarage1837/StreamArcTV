@@ -135,6 +135,10 @@ object Reminders {
         val account = prefs.account(service) ?: return
         val ids = prefs.favorites(service, ContentKind.SERIES).take(MAX_SHOWS)
         if (ids.isEmpty()) return
+        // A background check must never compete with the app for memory: skip it when the heap is already tight.
+        val rt = Runtime.getRuntime()
+        val free = rt.maxMemory() - (rt.totalMemory() - rt.freeMemory())
+        if (free < 96L * 1024 * 1024) { AppLog.i(TAG, "episode check skipped: only ${free shr 20} MB of memory free"); return }
         val names = try {
             CatalogCache.get(context, service, account, ContentKind.SERIES).associateBy { it.id }
         } catch (_: Exception) { emptyMap() }

@@ -219,14 +219,24 @@ class VodHomeActivity : AppCompatActivity() {
         b.progress.visibility = if (movies.isEmpty()) View.VISIBLE else View.GONE
         lifecycleScope.launch {
             try {
+                val t0 = android.os.SystemClock.elapsedRealtime()
                 movies = CatalogCache.get(this@VodHomeActivity, service, account, ContentKind.MOVIE)
                 series = CatalogCache.get(this@VodHomeActivity, service, account, ContentKind.SERIES)
+                com.streamarc.tv.util.AppLog.mem("Vod", "home: lists ready in ${android.os.SystemClock.elapsedRealtime() - t0} ms (${movies.size} movies, ${series.size} shows)")
                 loaded = true
                 b.progress.visibility = View.GONE
                 featured = (CatalogCache.recentlyAdded(movies, 40).filter { !it.image.isNullOrBlank() }.take(4) +
                     CatalogCache.recentlyAdded(series, 40).filter { !it.image.isNullOrBlank() }.take(2))
+                val t1 = android.os.SystemClock.elapsedRealtime()
                 render()
+                com.streamarc.tv.util.AppLog.mem("Vod", "home: first render took ${android.os.SystemClock.elapsedRealtime() - t1} ms")
                 loadNextEpisodes()
+            } catch (e: OutOfMemoryError) {
+                b.progress.visibility = View.GONE
+                if (movies.isEmpty()) {
+                    b.txtError.text = getString(R.string.out_of_memory_list)
+                    b.txtError.visibility = View.VISIBLE
+                }
             } catch (e: Exception) {
                 b.progress.visibility = View.GONE
                 if (movies.isEmpty()) {
@@ -239,12 +249,17 @@ class VodHomeActivity : AppCompatActivity() {
 
     /** Series you've started: fetch their episode lists (cached) and pick the next unwatched one. */
     private fun loadNextEpisodes() {
-        val started = WatchProgress.startedSeries()
+        val started = WatchProgress.startedSeries(6)
         if (started.isEmpty()) { nextEpisodes = emptyList(); return }
         lifecycleScope.launch {
+            // At most three shows at a time: each answer is a few hundred KB to parse, and all at once spiked memory.
+            val gate = kotlinx.coroutines.sync.Semaphore(3)
             val cards = started.map { entry ->
                 async(Dispatchers.IO) {
                     val sid = entry.seriesId ?: return@async null
+                    gate.acquire()
+                    try {
+                    
                     val eps = try { SeriesCache.episodes(service, account, sid) } catch (_: Exception) { return@async null }
                     val sorted = SeriesCache.ordered(eps)
                     val idx = sorted.indexOfFirst { it.season == entry.season && it.number == entry.episode }
@@ -262,9 +277,11 @@ class VodHomeActivity : AppCompatActivity() {
                         onClick = { playEpisode(sid, seriesTitle, entry.image, next) },
                         onLongClick = { showSeriesMenu(sid, seriesTitle, entry.image) },
                     )
+                    } finally { gate.release() }
                 }
             }.awaitAll().filterNotNull()
             nextEpisodes = cards
+            com.streamarc.tv.util.AppLog.mem("Vod", "home: next episodes ready (${cards.size})")
             render()
         }
     }

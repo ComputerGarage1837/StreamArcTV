@@ -401,4 +401,5 @@
     <string name="similar_heading">More like this</string>
     <string name="user_skip">Continue without a user</string>
     <string name="user_back">Back</string>
+    <string name="out_of_memory_list">This device ran out of memory loading the list. Close other apps and try again.</string>
 </resources>

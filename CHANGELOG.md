@@ -3,6 +3,14 @@
 All notable changes to Stream Arc TV are listed here. The section for each
 version is shown to users inside the app when an update is available.
 
+## v1.0.88 — 2026-11-24
+
+### Fixed
+- Slow Video on Demand home on boxes with limited memory. The "next episode" row now looks up at most six started shows, three at a time, instead of every show at once, which was slowing the page down and spiking memory. The background new-episode check now skips itself when the app is short of memory, and an out-of-memory error while loading the movie list shows a message instead of closing the app.
+
+### Added
+- The log now records why the app's previous run ended (a crash, the system reclaiming memory, not responding, and so on) on Android 11 and newer, plus how much memory is in use when the VOD home and movie pages load. This tells a silent restart from a crash the next time a log is exported.
+
 ## v1.0.87 — 2026-11-24
 
 ### Fixed
