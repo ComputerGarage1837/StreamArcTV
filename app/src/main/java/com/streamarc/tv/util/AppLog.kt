@@ -33,6 +33,49 @@ object AppLog {
 
     fun i(tag: String, msg: String) = write("I", tag, msg)
     fun w(tag: String, msg: String) = write("W", tag, msg)
+    /** One line with how much of the app's memory limit is in use, e.g. "VOD home: catalogue loaded (heap 118/224 MB)". */
+    fun mem(tag: String, what: String) {
+        val rt = Runtime.getRuntime()
+        i(tag, "$what (heap ${(rt.totalMemory() - rt.freeMemory()) shr 20}/${rt.maxMemory() shr 20} MB)")
+    }
+
+    /**
+     * Why the previous run of the app ended (Android 11 and newer remember this): a crash, the system reclaiming
+     * memory, an ANR, a signal. Logged once per ending; this is what tells a silent restart from a crash.
+     */
+    fun logPreviousExits(context: Context) {
+        if (android.os.Build.VERSION.SDK_INT < 30) return
+        try {
+            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            val sp = context.getSharedPreferences("streamarc", Context.MODE_PRIVATE)
+            val last = sp.getLong("last_exit_logged", 0L)
+            val exits = am.getHistoricalProcessExitReasons(context.packageName, 0, 6).filter { it.timestamp > last }
+            for (x in exits.reversed()) {
+                val reason = when (x.reason) {
+                    android.app.ApplicationExitInfo.REASON_ANR -> "ANR (not responding)"
+                    android.app.ApplicationExitInfo.REASON_CRASH -> "crash (Java exception)"
+                    android.app.ApplicationExitInfo.REASON_CRASH_NATIVE -> "native crash"
+                    android.app.ApplicationExitInfo.REASON_LOW_MEMORY -> "killed by the system: low memory"
+                    android.app.ApplicationExitInfo.REASON_SIGNALED -> "killed by a signal"
+                    android.app.ApplicationExitInfo.REASON_USER_REQUESTED -> "closed by the user"
+                    android.app.ApplicationExitInfo.REASON_USER_STOPPED -> "stopped by the user"
+                    android.app.ApplicationExitInfo.REASON_EXIT_SELF -> "the app exited itself"
+                    android.app.ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "a dependency died"
+                    android.app.ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "excessive resource use"
+                    android.app.ApplicationExitInfo.REASON_PERMISSION_CHANGE -> "permission change"
+                    android.app.ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "initialization failure"
+                    else -> "other (${x.reason})"
+                }
+                val ts = fmt.format(Date(x.timestamp))
+                i("Exit", "previous run ended at $ts: $reason; status=${x.status} importance=${x.importance} " +
+                    "rss=${x.rss shr 10}MB pss=${x.pss shr 10}MB desc=${x.description ?: "-"}")
+            }
+            exits.maxOfOrNull { it.timestamp }?.let { sp.edit().putLong("last_exit_logged", it).apply() }
+        } catch (e: Throwable) {
+            i("Exit", "couldn't read why the previous run ended: ${e.message}")
+        }
+    }
+
     fun e(tag: String, msg: String, t: Throwable? = null) =
         write("E", tag, if (t != null) msg + "\n" + Log.getStackTraceString(t) else msg)
 

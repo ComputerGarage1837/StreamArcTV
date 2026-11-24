@@ -66,6 +66,7 @@ class MovieActivity : AppCompatActivity() {
             renderButtons()
         }
         b.btnPlay.requestFocus()
+        com.streamarc.tv.util.AppLog.mem("Movie", "page opened: '$name'")
         val extras = ExtrasView(this)
         b.scrollContent.addView(extras)
 
@@ -96,6 +97,7 @@ class MovieActivity : AppCompatActivity() {
                     com.streamarc.tv.data.Tmdb.similarIn(info, catalogue, id, name)
                 }
                 extras.showSimilar(similar) { s -> startActivity(MovieActivity.intent(this@MovieActivity, service, s)) }
+                com.streamarc.tv.util.AppLog.mem("Movie", "extras ready (${info.cast.size} cast, ${similar.size} similar)")
             } catch (_: Exception) {
             } catch (_: OutOfMemoryError) {
             }
