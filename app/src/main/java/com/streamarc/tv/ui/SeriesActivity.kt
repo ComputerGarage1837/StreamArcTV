@@ -84,15 +84,23 @@ class SeriesActivity : AppCompatActivity() {
     /** Actor photos and similar shows (from TMDB), matched to what this provider actually has. */
     private fun loadExtras(extras: ExtrasView, account: com.streamarc.tv.data.Account, genre: String?, seriesId: String) {
         lifecycleScope.launch {
-            val title = b.txtTitle.text.toString()
-            val info = com.streamarc.tv.data.Tmdb.lookup(title, null, series = true)
-            extras.showCast(info.cast)
-            val catalogue = try { com.streamarc.tv.data.CatalogCache.getStored(this@SeriesActivity, service, com.streamarc.tv.data.ContentKind.SERIES) } catch (_: Exception) { emptyList() }
-            val similar = com.streamarc.tv.data.Tmdb.similarIn(info, catalogue, seriesId, title)
-            extras.showSimilar(similar) { s ->
-                s.id?.let { startActivity(intent(this@SeriesActivity, service, it, s.name.orEmpty(), s.image, s.plot)) }
+            // Optional extras: whatever goes wrong here (no memory, no network) must never take the page down.
+            try {
+                val title = b.txtTitle.text.toString()
+                val info = com.streamarc.tv.data.Tmdb.lookup(title, null, series = true)
+                extras.showCast(info.cast)
+                // Only the list already in memory (the VOD home loaded it); no disk read, no download.
+                val catalogue = com.streamarc.tv.data.CatalogCache.peek(service, com.streamarc.tv.data.ContentKind.SERIES) ?: emptyList()
+                val similar = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    com.streamarc.tv.data.Tmdb.similarIn(info, catalogue, seriesId, title)
+                }
+                extras.showSimilar(similar) { s ->
+                    s.id?.let { startActivity(intent(this@SeriesActivity, service, it, s.name.orEmpty(), s.image, s.plot)) }
+                }
+                adapter.notifyDataSetChanged()
+            } catch (_: Exception) {
+            } catch (_: OutOfMemoryError) {
             }
-            adapter.notifyDataSetChanged()
         }
     }
 

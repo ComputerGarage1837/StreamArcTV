@@ -86,11 +86,19 @@ class MovieActivity : AppCompatActivity() {
     /** Actor photos and similar titles (from TMDB), matched to what this provider actually has. */
     private fun loadExtras(extras: ExtrasView, account: com.streamarc.tv.data.Account) {
         lifecycleScope.launch {
-            val info = com.streamarc.tv.data.Tmdb.lookup(name, null, series = false)
-            extras.showCast(info.cast)
-            val catalogue = try { com.streamarc.tv.data.CatalogCache.getStored(this@MovieActivity, service, ContentKind.MOVIE) } catch (_: Exception) { emptyList() }
-            val similar = com.streamarc.tv.data.Tmdb.similarIn(info, catalogue, id, name)
-            extras.showSimilar(similar) { s -> startActivity(MovieActivity.intent(this@MovieActivity, service, s)) }
+            // Optional extras: whatever goes wrong here (no memory, no network) must never take the page down.
+            try {
+                val info = com.streamarc.tv.data.Tmdb.lookup(name, null, series = false)
+                extras.showCast(info.cast)
+                // Only the list already in memory (the VOD home loaded it); no disk read, no download.
+                val catalogue = com.streamarc.tv.data.CatalogCache.peek(service, ContentKind.MOVIE) ?: emptyList()
+                val similar = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    com.streamarc.tv.data.Tmdb.similarIn(info, catalogue, id, name)
+                }
+                extras.showSimilar(similar) { s -> startActivity(MovieActivity.intent(this@MovieActivity, service, s)) }
+            } catch (_: Exception) {
+            } catch (_: OutOfMemoryError) {
+            }
         }
     }
 
